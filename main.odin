@@ -325,7 +325,6 @@ dfs :: proc(image: ^rl.Image, x, y: i32, prev_color, new_color: rl.Color) {
 }
 
 draw_canvas :: proc(area: Rec) {
-	// rl.DrawRectangleRec(rec, rl.BLACK)
 	src_rec := Rec { 0, 0, f32(app.project.width), f32(app.project.height) }
 	rl.DrawTexturePro(app.bg_texture, src_rec, area, { 0, 0 }, 0, rl.WHITE)
 	if len(app.project.layers) > 1 && app.project.current_layer > 0{
