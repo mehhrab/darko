@@ -5,6 +5,7 @@ import rl "vendor:raylib"
 import sa "core:container/small_array"
 import "core:mem"
 import "rec"
+import "ui"
 
 // for ease of use
 Rec :: rec.Rec
@@ -68,8 +69,9 @@ main :: proc() {
 	init_project(&project, 8, 8)
 	app.project = project
 
-	// ui.init()
-	// defer ui.deinit()
+	ui.init()
+	defer ui.deinit()
+	
 	{
 		layer: Layer
 		init_layer(&layer)
@@ -77,6 +79,14 @@ main :: proc() {
 	}
 
 	for rl.WindowShouldClose() == false {
+		ui.begin()
+		if ui.button(0, "click", { 10, 200, 100, 50 }) {
+			layer: Layer
+			init_layer(&layer)
+			add_layer_on_top(&layer)
+		}
+		ui.end()
+	
 		update_zoom(&app.project.zoom)
 		canvas_rec := center_rec(
 			{ 0, 0, 100 * app.project.zoom, 100 *  app.project.zoom },
@@ -121,10 +131,11 @@ main :: proc() {
 		draw_grid(canvas_rec)
 
 		preview_rec := Rec { 50, 50, 200, 200 }
-		rl.DrawRectangleRec(preview_rec, rl.BLACK)
+		rl.DrawRectangleRec(preview_rec, rl.DARKBLUE)
 		x, y := rec.get_center_of_rec(preview_rec)
 		draw_sprite_stack(&app.project.layers, x, y, 10)
 
+		ui.draw()
 		rl.EndDrawing()
 	}
 	rl.CloseWindow()
