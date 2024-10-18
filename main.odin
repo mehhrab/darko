@@ -79,6 +79,7 @@ main :: proc() {
 	}
 
 	for rl.WindowShouldClose() == false {
+		// ui
 		ui.begin()
 		if ui.button(0, "click", { 10, 200, 100, 50 }) {
 			layer: Layer
@@ -86,7 +87,8 @@ main :: proc() {
 			add_layer_on_top(&layer)
 		}
 		ui.end()
-	
+
+		// update
 		update_zoom(&app.project.zoom)
 		canvas_rec := center_rec(
 			{ 0, 0, 100 * app.project.zoom, 100 *  app.project.zoom },
@@ -123,6 +125,7 @@ main :: proc() {
 			app.image_changed = false
 		}
 
+		// draw
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.DARKGRAY)
 		rl.DrawFPS(10, 10)
