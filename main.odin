@@ -80,13 +80,13 @@ main :: proc() {
 
 	for rl.WindowShouldClose() == false {
 		// ui
-		ui.begin()
-		if ui.button(0, "click", { 10, 200, 100, 50 }) {
-			layer: Layer
-			init_layer(&layer)
-			add_layer_on_top(&layer)
-		}
-		ui.end()
+		// ui.begin()
+		// if ui.button(1, "click", { 10, 200, 100, 50 }) {
+		// 	layer: Layer
+		// 	init_layer(&layer)
+		// 	add_layer_on_top(&layer)
+		// }
+		// ui.end()
 
 		// update
 		update_zoom(&app.project.zoom)
@@ -120,8 +120,11 @@ main :: proc() {
 			}
 		}
 		if app.image_changed == true {
-			rl.UnloadTexture(get_current_layer().texture)
-			get_current_layer().texture = rl.LoadTextureFromImage(get_current_layer().image)
+			// rl.UnloadTexture(get_current_layer().texture)
+			// get_current_layer().texture = rl.LoadTextureFromImage(get_current_layer().image)
+			colors := rl.LoadImageColors(get_current_layer().image)
+			rl.UpdateTexture(get_current_layer().texture, colors)
+			rl.UnloadImageColors(colors)
 			app.image_changed = false
 		}
 
