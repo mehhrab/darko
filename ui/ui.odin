@@ -81,6 +81,7 @@ draw :: proc() {
 			}
 		}
 	}
+	clear(&ctx.draw_commands)
 }
 
 update_widget :: proc(id: ID, rec: Rec) {
