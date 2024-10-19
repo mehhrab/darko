@@ -276,14 +276,16 @@ update_tools :: proc(area: Rec) {
 		end_undo()
 	}
 	// fill
-	if rl.IsMouseButtonPressed(.MIDDLE) {
-		x, y := get_mouse_pos_in_canvas(area)
-		
-		color := rl.BLACK
-		
-		append(&app.undos, rl.ImageCopy(get_current_layer().image))
-		fill(&get_current_layer().image, x, y, color)
-		app.image_changed = true
+	if ui.is_mouse_in_rec(area) == true {
+		if rl.IsMouseButtonPressed(.MIDDLE) {
+			x, y := get_mouse_pos_in_canvas(area)
+			
+			color := rl.BLACK
+			
+			append(&app.undos, rl.ImageCopy(get_current_layer().image))
+			fill(&get_current_layer().image, x, y, color)
+			app.image_changed = true
+		}
 	}
 	// undo
 	if rl.IsKeyPressed(.Z) {
