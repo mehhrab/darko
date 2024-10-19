@@ -7,6 +7,8 @@ import "core:mem"
 import "rec"
 import "ui"
 
+LOCK_FPS :: #config(LOCK_FPS, true)
+
 // for ease of use
 Rec :: rec.Rec
 
@@ -60,7 +62,9 @@ main :: proc() {
 
 	rl.SetConfigFlags({rl.ConfigFlags.WINDOW_RESIZABLE})
 	rl.InitWindow(600, 500, "hello")
-	rl.SetTargetFPS(30)
+	when LOCK_FPS {
+		rl.SetTargetFPS(30)
+	}
 
 	init_app()
 	defer deinit_app()
@@ -80,13 +84,13 @@ main :: proc() {
 
 	for rl.WindowShouldClose() == false {
 		// ui
-		// ui.begin()
-		// if ui.button(1, "click", { 10, 200, 100, 50 }) {
-		// 	layer: Layer
-		// 	init_layer(&layer)
-		// 	add_layer_on_top(&layer)
-		// }
-		// ui.end()
+		ui.begin()
+		if ui.button(1, "click", { 10, 200, 100, 50 }) {
+			layer: Layer
+			init_layer(&layer)
+			add_layer_on_top(&layer)
+		}
+		ui.end()
 
 		// update
 		update_zoom(&app.project.zoom)
