@@ -14,7 +14,7 @@ Rec :: rec.Rec
 
 App :: struct {
 	project: Project,
-	temp_undo_image: rl.Image,
+	temp_undo_image: Maybe(rl.Image),
 	undos: [dynamic]rl.Image,
 	image_changed: bool,
 	bg_texture: rl.Texture,
@@ -247,46 +247,48 @@ draw_sprite_stack :: proc(layers: ^[dynamic]Layer, x, y: f32, scale: f32) {
 }
 
 update_tools :: proc(area: Rec) {
-	if rl.IsMouseButtonDown(.LEFT) {
-		if app.temp_undo_image == {} {
-			fmt.println("image empty")
-			app.temp_undo_image = rl.ImageCopy(get_current_layer().image)
+	// pencil
+	if ui.is_mouse_in_rec(area) == true {
+		if rl.IsMouseButtonPressed(.LEFT) {
+			begin_undo()
 		}
-		x, y := get_mouse_pos_in_canvas(area)
-		rl.ImageDrawPixel(&get_current_layer().image, x, y, rl.BLUE)
-		app.image_changed = true
+		if rl.IsMouseButtonDown(.LEFT) {
+			x, y := get_mouse_pos_in_canvas(area)
+			rl.ImageDrawPixel(&get_current_layer().image, x, y, rl.BLUE)
+			app.image_changed = true
+		}	
 	}
-	else if rl.IsMouseButtonDown(.RIGHT) {
-		x, y := get_mouse_pos_in_canvas(area)
-		rl.ImageDrawPixel(&get_current_layer().image, x, y, rl.BLANK)
-		app.image_changed = true
+	if rl.IsMouseButtonReleased(.LEFT) {
+		end_undo()
 	}
-	else if rl.IsMouseButtonPressed(.MIDDLE) {
+	// eraser
+	if ui.is_mouse_in_rec(area) == true {
+			if rl.IsMouseButtonPressed(.RIGHT) {
+				begin_undo()
+			}
+			if rl.IsMouseButtonDown(.RIGHT) {
+				x, y := get_mouse_pos_in_canvas(area)
+				rl.ImageDrawPixel(&get_current_layer().image, x, y, rl.BLANK)
+				app.image_changed = true
+			}
+	}
+	if rl.IsMouseButtonReleased(.RIGHT) {
+		end_undo()
+	}
+	// fill
+	if rl.IsMouseButtonPressed(.MIDDLE) {
 		x, y := get_mouse_pos_in_canvas(area)
 		
-		current_color := rl.GetImageColor(get_current_layer().image, x, y)
 		color := rl.BLACK
-		if current_color == color {
-			return
-		}
 		
 		append(&app.undos, rl.ImageCopy(get_current_layer().image))
 		fill(&get_current_layer().image, x, y, color)
 		app.image_changed = true
 	}
-	if rl.IsMouseButtonReleased(.LEFT) {
-		image := rl.ImageCopy(app.temp_undo_image)
-		append(&app.undos, image)
-		rl.UnloadImage(app.temp_undo_image)
-		app.temp_undo_image = {}
-		fmt.printfln("len {}", len(app.undos))
-		app.image_changed = true
-	}
+	// undo
 	if rl.IsKeyPressed(.Z) {
 		if len(app.undos) > 0 {
-			//rl.UnloadImage(app.project.layers[app.project.current_layer].image)
 			image := rl.ImageCopy(app.undos[len(app.undos) - 1])
-			fmt.printfln("{}", rl.GetImageColor(image, 0, 0))
 			app.project.layers[app.project.current_layer].image = image
 			rl.UnloadImage(app.undos[len(app.undos) - 1])
 			pop(&app.undos)
@@ -356,6 +358,19 @@ draw_grid :: proc(rec: Rec) {
 		rl.DrawLineV({ rec.x, y }, { rec.x + rec.width, y }, rl.BLACK)
 		y += y_step
 	}
+}
+
+begin_undo :: proc() {
+	app.temp_undo_image = rl.ImageCopy(get_current_layer().image)
+}
+
+end_undo :: proc() {
+		temp_undo_image, exists := app.temp_undo_image.?
+		if exists == true {
+			image := rl.ImageCopy(temp_undo_image)
+			append(&app.undos, image)
+			rl.UnloadImage(temp_undo_image)
+		}
 }
 
 // NOTE: rec x and y is not used
