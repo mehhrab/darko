@@ -63,7 +63,7 @@ main :: proc() {
 	rl.SetConfigFlags({rl.ConfigFlags.WINDOW_RESIZABLE})
 	rl.InitWindow(600, 500, "hello")
 	when LOCK_FPS {
-		rl.SetTargetFPS(30)
+		rl.SetTargetFPS(60)
 	}
 
 	init_app()
