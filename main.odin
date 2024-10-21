@@ -85,7 +85,15 @@ main :: proc() {
 	for rl.WindowShouldClose() == false {
 		// ui
 		ui.begin()
-		if ui.button(1, "click", { 10, 200, 100, 50 }) {
+		if ui.begin_pop("new", { 200, 200, 200, 200 }) {
+			ui.button(ui.gen_id_auto(), "xd", { 180, 220, 100, 20 })
+		}
+		ui.end_popup()
+		
+		if ui.button(ui.gen_id_auto(), "click", { 10, 300, 100, 50 }) {
+			ui.open_popup("new")
+		}
+		if ui.button(88, "click", { 10, 500, 100, 50 }) {
 			layer: Layer
 			init_layer(&layer)
 			add_layer_on_top(&layer)
