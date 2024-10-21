@@ -11,12 +11,12 @@ Rec :: rec.Rec
 
 Ctx :: struct {
 	hovered_id: ID,
-  active_id: ID,
+	active_id: ID,
 	draw_commands: [dynamic]Draw_Command,
-  // HACK: we can only have on popup
+	// HACK: we can only have on popup
 	opened_popup: string,
 	current_popup: string,
-  popup: Popup,
+	popup: Popup,
 	popup_time: f32,
 	any_hovered: bool,
 }
@@ -78,7 +78,7 @@ gen_id_auto :: proc(loc := #caller_location) -> ID {
 
 draw :: proc() {
 	for &command in ctx.draw_commands {
-			draw_command(&command)
+		draw_command(&command)
 	}
 
 	if ctx.opened_popup != "" {

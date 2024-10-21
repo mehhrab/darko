@@ -112,14 +112,14 @@ main :: proc() {
 		update_tools(canvas_rec)
 		
 		if rl.IsKeyPressed(.SPACE) {
-				layer: Layer
-				init_layer(&layer)
-				add_layer_above_current(&layer)
+			layer: Layer
+			init_layer(&layer)
+			add_layer_above_current(&layer)
 		}
 		if rl.IsKeyPressed(.S) {
-				layer: Layer
-				init_layer(&layer)
-				add_layer_on_top(&layer)
+			layer: Layer
+			init_layer(&layer)
+			add_layer_on_top(&layer)
 		}
 		if rl.IsKeyPressed(.UP) {
 			app.project.current_layer += 1
@@ -271,12 +271,12 @@ update_tools :: proc(area: Rec) {
 	}
 	// eraser
 	if ui.is_mouse_in_rec(area) {
-			if rl.IsMouseButtonDown(.RIGHT) {
-				begin_undo()
-				x, y := get_mouse_pos_in_canvas(area)
-				rl.ImageDrawPixel(&get_current_layer().image, x, y, rl.BLANK)
-				app.image_changed = true
-			}
+		if rl.IsMouseButtonDown(.RIGHT) {
+			begin_undo()
+			x, y := get_mouse_pos_in_canvas(area)
+			rl.ImageDrawPixel(&get_current_layer().image, x, y, rl.BLANK)
+			app.image_changed = true
+		}
 	}
 	if rl.IsMouseButtonReleased(.RIGHT) {
 		end_undo()
