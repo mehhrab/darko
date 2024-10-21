@@ -85,8 +85,11 @@ main :: proc() {
 	for rl.WindowShouldClose() == false {
 		// ui
 		ui.begin()
-		if ui.begin_pop("new", { 200, 200, 200, 200 }) {
-			ui.button(ui.gen_id_auto(), "xd", { 180, 220, 100, 20 })
+		if ui.begin_popup("new", { 200, 200, 200, 200 }) {
+			if ui.button(ui.gen_id_auto(), "xd", { 210, 210, 100, 40 }) {
+				fmt.printfln("x")
+				ui.close_current_popup()
+			}
 		}
 		ui.end_popup()
 		
@@ -130,7 +133,7 @@ main :: proc() {
 				app.project.current_layer = len(app.project.layers) - 1
 			}
 		}
-		if app.image_changed == true {
+		if app.image_changed  {
 			// rl.UnloadTexture(get_current_layer().texture)
 			// get_current_layer().texture = rl.LoadTextureFromImage(get_current_layer().image)
 			colors := rl.LoadImageColors(get_current_layer().image)
@@ -255,7 +258,7 @@ draw_sprite_stack :: proc(layers: ^[dynamic]Layer, x, y: f32, scale: f32) {
 
 update_tools :: proc(area: Rec) {
 	// pencil
-	if ui.is_mouse_in_rec(area) == true {
+	if ui.is_mouse_in_rec(area) {
 		if rl.IsMouseButtonDown(.LEFT) {
 			begin_undo()
 			x, y := get_mouse_pos_in_canvas(area)
@@ -267,7 +270,7 @@ update_tools :: proc(area: Rec) {
 		end_undo()
 	}
 	// eraser
-	if ui.is_mouse_in_rec(area) == true {
+	if ui.is_mouse_in_rec(area) {
 			if rl.IsMouseButtonDown(.RIGHT) {
 				begin_undo()
 				x, y := get_mouse_pos_in_canvas(area)
@@ -279,7 +282,7 @@ update_tools :: proc(area: Rec) {
 		end_undo()
 	}
 	// fill
-	if ui.is_mouse_in_rec(area) == true {
+	if ui.is_mouse_in_rec(area)  {
 		if rl.IsMouseButtonPressed(.MIDDLE) {
 			x, y := get_mouse_pos_in_canvas(area)
 			
@@ -373,14 +376,14 @@ begin_undo :: proc() {
 }
 
 end_undo :: proc() {
-		temp_undo_image, exists := app.temp_undo_image.?
-		fmt.printfln("{}", exists)
-		if exists == true {
-			image := rl.ImageCopy(temp_undo_image)
-			append(&app.undos, image)
-			rl.UnloadImage(temp_undo_image)
-			app.temp_undo_image = nil
-		}
+	temp_undo_image, exists := app.temp_undo_image.?
+	fmt.printfln("{}", exists)
+	if exists  {
+		image := rl.ImageCopy(temp_undo_image)
+		append(&app.undos, image)
+		rl.UnloadImage(temp_undo_image)
+		app.temp_undo_image = nil
+	}
 }
 
 // NOTE: rec x and y is not used

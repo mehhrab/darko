@@ -17,13 +17,9 @@ Ctx :: struct {
 	opened_popup: string,
 	current_popup: string,
   popup: Popup,
-  last_frame_popup: Popup,
+	popup_time: f32,
+	any_hovered: bool,
 }
-
-// if button openpopup("file")
-// if popupopen("ope") 
-// 	do stuff 
-//	endpopup()
 
 ID :: u32
 
@@ -64,12 +60,16 @@ begin :: proc() {
 		ctx.opened_popup = ""
 		fmt.println("closing")
 	}
+	if ctx.opened_popup != "" {
+		ctx.popup_time += rl.GetFrameTime()
+	}
 }
 
 end :: proc() {
 	if rl.IsMouseButtonReleased(.LEFT) {
 		ctx.active_id = 0
 	}
+	ctx.any_hovered = false
 }
 
 gen_id_auto :: proc(loc := #caller_location) -> ID {
@@ -83,54 +83,59 @@ draw :: proc() {
 
 	if ctx.opened_popup != "" {
 		screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
-		rl.DrawRectangleRec(screen_rec, { 0, 0, 0, 100 })
+		opacity := ctx.popup_time * 100 * 5
+		if opacity >= 100 {
+			opacity = 100
+		}
+		rl.DrawRectangleRec(screen_rec, { 0, 0, 0, u8((opacity / 255) * 255) })
 		for &command in ctx.popup.draw_commands {
 			draw_command(&command)
 		}
 	}
 	
-	// for command in ctx.popup.draw_commands {
-	// 	switch kind in command.kind {
-	// 		case Draw_Rect: {
-	// 			rl.DrawRectangleRec(kind.rec, kind.color)
-	// 		}
-	// 		case Draw_Text: {
-	// 			x, y := rec.get_center_of_rec(kind.rec)
-	// 			rl.DrawText(kind.text, i32(x), i32(y), rl.WHITE)
-	// 		}
-	// 	}
-	// }
 	clear(&ctx.draw_commands)
 	clear(&ctx.popup.draw_commands)
 	free_all(context.temp_allocator)
 }
 
 draw_command :: proc(command: ^Draw_Command) {
-		switch kind in command^ {
-			case Draw_Rect: {
-				rl.DrawRectangleRec(kind.rec, kind.color)
-			}
-			case Draw_Text: {
-				font_size := i32(24)
-				text := strings.clone_to_cstring(kind.text, context.temp_allocator)
-				_x, _y := rec.get_center_of_rec(kind.rec)
-				x := i32(_x)
-				y := i32(_y)
-				x -= rl.MeasureText(text, font_size) / 2
-				y -= font_size / 2
-				rl.DrawText(text, x, y, font_size, rl.WHITE)
-			}
+	switch kind in command^ {
+		case Draw_Rect: {
+			rl.DrawRectangleRec(kind.rec, kind.color)
 		}
+		case Draw_Text: {
+			font_size := i32(24)
+			text := strings.clone_to_cstring(kind.text, context.temp_allocator)
+			_x, _y := rec.get_center_of_rec(kind.rec)
+			x := i32(_x)
+			y := i32(_y)
+			x -= rl.MeasureText(text, font_size) / 2
+			y -= font_size / 2
+			rl.DrawText(text, x, y, font_size, rl.WHITE)
+		}
+	}
 }
 
 open_popup :: proc(name: string) {
+	ctx.hovered_id = 0
+	ctx.active_id = 0
 	ctx.opened_popup = name
+	ctx.popup_time = 0
+}
+
+close_current_popup :: proc() {
+	ctx.opened_popup = ""
+	ctx.popup.rec = {}
 }
 
 // NOTE: name is also used as the id
-begin_pop :: proc(name: string, rec: Rec) -> (is_open: bool) {
+begin_popup :: proc(name: string, rec: Rec) -> (is_open: bool) {
+	if is_mouse_in_rec(rec) {
+		ctx.any_hovered = true
+	}
 	ctx.current_popup = name
 	ctx.popup.rec = rec
+	 
 	// if ctx.opened_popup == name
 	return name == ctx.opened_popup
 }
@@ -147,7 +152,11 @@ update_widget :: proc(id: ID, rec: Rec) {
 	if ctx.opened_popup != ctx.current_popup && ctx.opened_popup != "" {
 		return
 	}
-	if is_mouse_in_rec(rec) == true && (ctx.active_id == 0 || ctx.active_id == id) {
+	hovered := is_mouse_in_rec(rec)
+	if hovered {
+		ctx.any_hovered = true
+	}
+	if hovered && (ctx.active_id == 0 || ctx.active_id == id) {
 		ctx.hovered_id = id
 		if rl.IsMouseButtonPressed(.LEFT) {
 			ctx.active_id = id
