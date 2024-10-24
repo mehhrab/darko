@@ -73,7 +73,7 @@ deinit :: proc() {
 }
 
 begin :: proc() {
-	if ctx.opened_popup != "" && rl.IsMouseButtonReleased(.LEFT) && is_mouse_in_rec(ctx.popup.rec) == false {
+	if ctx.opened_popup != "" && rl.IsMouseButtonPressed(.LEFT) && is_mouse_in_rec(ctx.popup.rec) == false {
 		ctx.opened_popup = ""
 		fmt.println("closing")
 	}
