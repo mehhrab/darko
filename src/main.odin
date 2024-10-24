@@ -85,7 +85,7 @@ main :: proc() {
 
 	for rl.WindowShouldClose() == false {
 		// ui
-	gui()
+		gui()
 
 		// update
 		app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 0.3) 
@@ -141,12 +141,12 @@ main :: proc() {
 
 		ui.draw()
 		
-    preview_rec := Rec { 50, 50, 200, 200 }
+		preview_rec := Rec { 50, 50, 200, 200 }
 		rl.DrawRectangleRec(preview_rec, rl.DARKBLUE)
 		x, y := rec.get_center_of_rec(preview_rec)
 		draw_sprite_stack(&app.project.layers, x, y, 10)
 		
-    rl.EndDrawing()
+		rl.EndDrawing()
 	}
 	rl.CloseWindow()
 }

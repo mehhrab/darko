@@ -74,7 +74,7 @@ init :: proc() {
 	ctx.widget_hover_color = { 60, 60, 60, 255 }
 	ctx.widget_active_color = { 30, 30, 30, 255 }
 	ctx.panel_color = { 10, 10, 10, 100 }
-  ctx.accent_color = rl.PURPLE
+	ctx.accent_color = rl.PURPLE
 }
 
 deinit :: proc() {
