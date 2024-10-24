@@ -86,14 +86,15 @@ main :: proc() {
 		// ui
 		ui.begin()
 		if ui.begin_popup("new", { 200, 200, 200, 200 }) {
-			if ui.button(ui.gen_id_auto(), "xd", { 210, 210, 100, 40 }) {
+			if ui.button(ui.gen_id_auto(), "close", { 210, 210, 100, 40 }) {
 				fmt.printfln("x")
 				ui.close_current_popup()
 			}
 		}
+    ui.slider(ui.gen_id_auto(), &app.project.zoom, 0.1, 10, { 210, 300, 100, 40 })
 		ui.end_popup()
 		
-		if ui.button(ui.gen_id_auto(), "click", { 10, 300, 100, 50 }) {
+		if ui.button(ui.gen_id_auto(), "open popup", { 10, 300, 200, 50 }) {
 			ui.open_popup("new")
 		}
 		if ui.button(88, "click", { 10, 500, 100, 50 }) {
@@ -104,12 +105,16 @@ main :: proc() {
 		ui.end()
 
 		// update
-		update_zoom(&app.project.zoom)
+		if ui.is_being_interacted() == false {
+			update_zoom(&app.project.zoom)
+		}
 		canvas_rec := center_rec(
 			{ 0, 0, 100 * app.project.zoom, 100 *  app.project.zoom },
 			{ 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())})
 
-		update_tools(canvas_rec)
+		if ui.is_being_interacted() == false {
+			update_tools(canvas_rec)
+		}
 		
 		if rl.IsKeyPressed(.SPACE) {
 			layer: Layer
