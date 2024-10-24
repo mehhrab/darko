@@ -139,27 +139,30 @@ main :: proc() {
 		draw_canvas(canvas_rec)
 		draw_grid(canvas_rec)
 
-		preview_rec := Rec { 50, 50, 200, 200 }
+		ui.draw()
+		
+    preview_rec := Rec { 50, 50, 200, 200 }
 		rl.DrawRectangleRec(preview_rec, rl.DARKBLUE)
 		x, y := rec.get_center_of_rec(preview_rec)
 		draw_sprite_stack(&app.project.layers, x, y, 10)
-
-		ui.draw()
-		rl.EndDrawing()
+		
+    rl.EndDrawing()
 	}
 	rl.CloseWindow()
 }
 
 gui :: proc() {
-	ui.begin()
+  screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())}
+  ui.begin()
 	ui.panel(ui.gen_id_auto(), { 0, 0, 400, 1000 })
-  if ui.begin_popup("new", { 200, 200, 200, 200 }) {
-		if ui.button(ui.gen_id_auto(), "close", { 210, 210, 100, 40 }) {
+  popup_rec := center_rec({ 200, 200, 300, 200 }, screen_rec)
+  if ui.begin_popup("new", popup_rec) {
+		if ui.button(ui.gen_id_auto(), "close", { popup_rec.x + 10, popup_rec.y + 10, 100, 40 }) {
 			fmt.printfln("x")
 			ui.close_current_popup()
 		}
 	}
-  ui.slider(ui.gen_id_auto(), &app.project.zoom, 0.1, 10, { 210, 300, 100, 40 })
+  ui.slider(ui.gen_id_auto(), &app.project.zoom, 0.1, 10, { popup_rec.x + 10, popup_rec.y + 100, 100, 40 })
   ui.end_popup()
 
 	if ui.button(ui.gen_id_auto(), "open popup", { 10, 300, 200, 50 }) {
