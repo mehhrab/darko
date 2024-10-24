@@ -85,25 +85,7 @@ main :: proc() {
 
 	for rl.WindowShouldClose() == false {
 		// ui
-		ui.begin()
-		if ui.begin_popup("new", { 200, 200, 200, 200 }) {
-			if ui.button(ui.gen_id_auto(), "close", { 210, 210, 100, 40 }) {
-				fmt.printfln("x")
-				ui.close_current_popup()
-			}
-		}
-    ui.slider(ui.gen_id_auto(), &app.project.zoom, 0.1, 10, { 210, 300, 100, 40 })
-		ui.end_popup()
-		
-		if ui.button(ui.gen_id_auto(), "open popup", { 10, 300, 200, 50 }) {
-			ui.open_popup("new")
-		}
-		if ui.button(88, "click", { 10, 500, 100, 50 }) {
-			layer: Layer
-			init_layer(&layer)
-			add_layer_on_top(&layer)
-		}
-		ui.end()
+    gui()
 
 		// update
     app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 0.3) 
@@ -166,6 +148,33 @@ main :: proc() {
 		rl.EndDrawing()
 	}
 	rl.CloseWindow()
+}
+
+gui :: proc() {
+	ui.begin()
+	ui.panel(ui.gen_id_auto(), { 0, 0, 400, 1000 })
+  if ui.begin_popup("new", { 200, 200, 200, 200 }) {
+		if ui.button(ui.gen_id_auto(), "close", { 210, 210, 100, 40 }) {
+			fmt.printfln("x")
+			ui.close_current_popup()
+		}
+	}
+  ui.slider(ui.gen_id_auto(), &app.project.zoom, 0.1, 10, { 210, 300, 100, 40 })
+  ui.end_popup()
+
+	if ui.button(ui.gen_id_auto(), "open popup", { 10, 300, 200, 50 }) {
+		ui.open_popup("new")
+	}
+	if ui.button(88, "click", { 10, 500, 100, 50 }) {
+		layer: Layer
+		init_layer(&layer)
+		add_layer_on_top(&layer)
+	}
+	ui.end()
+}
+
+color_panel :: proc(rec: Rec) {
+
 }
 
 init_app :: proc() {

@@ -10,11 +10,19 @@ import "core:math"
 Rec :: rec.Rec
 
 Ctx :: struct {
-	hovered_id: ID,
-	active_id: ID,
-	draw_commands: [dynamic]Draw_Command,
-	// HACK: we can only have on popup
-	opened_popup: string,
+	hovered_widget: ID,
+	active_widget: ID,
+	
+  // panels sit under widgets and we don't have zindex sooo
+  
+  hovered_panel: ID,
+	active_panel: ID,
+  
+  draw_commands: [dynamic]Draw_Command,
+	
+  // HACK: we can only have on popup
+	
+  opened_popup: string,
 	current_popup: string,
 	popup: Popup,
 	popup_time: f32,
@@ -23,7 +31,6 @@ Ctx :: struct {
 
 	font: rl.Font,
 	font_size: f32,
-	widget_color: rl.Color,
 	widget_hover_color: rl.Color,
 	widget_active_color: rl.Color,
 	accent_color: rl.Color,
@@ -73,9 +80,8 @@ deinit :: proc() {
 }
 
 begin :: proc() {
-	if ctx.opened_popup != "" && rl.IsMouseButtonPressed(.LEFT) && is_mouse_in_rec(ctx.popup.rec) == false {
+	if ctx.opened_popup != "" && rl.IsMouseButtonReleased(.LEFT) && is_mouse_in_rec(ctx.popup.rec) == false {
 		ctx.opened_popup = ""
-		fmt.println("closing")
 	}
 	if ctx.opened_popup != "" {
 		ctx.popup_time += rl.GetFrameTime()
@@ -84,8 +90,9 @@ begin :: proc() {
 
 end :: proc() {
 	if rl.IsMouseButtonReleased(.LEFT) {
-		ctx.active_id = 0
-	}
+		ctx.active_widget = 0
+	  ctx.active_panel = 0
+  }
 }
 
 gen_id_auto :: proc(loc := #caller_location) -> ID {
@@ -132,14 +139,14 @@ draw_command :: proc(command: ^Draw_Command) {
 
 open_popup :: proc(name: string) {
 	ctx.opened_popup = name
-	ctx.hovered_id = 0
-	ctx.active_id = 0
+	ctx.hovered_widget = 0
+	ctx.active_widget = 0
 	ctx.popup_time = 0
 }
 
 close_current_popup :: proc() {
-	ctx.hovered_id = 0
-	ctx.active_id = 0
+	ctx.hovered_widget = 0
+	ctx.active_widget = 0
 	ctx.opened_popup = ""
 	ctx.popup.rec = {}
 }
@@ -166,29 +173,52 @@ update_widget :: proc(id: ID, rec: Rec) {
 		return
 	}
 	hovered := is_mouse_in_rec(rec)
-	if hovered && (ctx.active_id == 0 || ctx.active_id == id) {
-		ctx.hovered_id = id
+	if hovered && (ctx.active_widget == 0 || ctx.active_widget == id) {
+		ctx.hovered_widget = id
 		if rl.IsMouseButtonPressed(.LEFT) {
-			ctx.active_id = id
+			ctx.active_widget = id
 		}
 	}
-	else if ctx.hovered_id == id {
-		ctx.hovered_id = 0
+	else if ctx.hovered_widget == id {
+		ctx.hovered_widget = 0
 	}
 }
 
+update_panel :: proc(id: ID, rec: Rec) {
+	if ctx.opened_popup != ctx.current_popup && ctx.opened_popup != "" {
+		return
+	}
+	hovered := is_mouse_in_rec(rec)
+	if hovered && (ctx.active_panel == 0 || ctx.active_panel == id) {
+		ctx.hovered_panel = id
+		if rl.IsMouseButtonPressed(.LEFT) {
+			ctx.active_panel = id
+		}
+	}
+	else if ctx.hovered_panel == id {
+		ctx.hovered_panel = 0
+	}
+}
+
+panel :: proc(id: ID, rec: Rec) {
+  update_panel(id, rec)
+  push_command(Draw_Rect {
+    rec = rec,
+    color = { 0, 0, 0, 200 }
+  })
+}
 
 button :: proc(id: ID, text: string, rec: Rec) -> (clicked: bool) {	
 	clicked = false
 	update_widget(id, rec)
-	if ctx.hovered_id == id && rl.IsMouseButtonReleased(.LEFT){
+	if ctx.hovered_widget == id && rl.IsMouseButtonReleased(.LEFT){
 		clicked = true
 	}
 	color := ctx.widget_color
-	if ctx.active_id == id {
+	if ctx.active_widget == id {
 		color = ctx.widget_active_color
 	}
-	else if ctx.hovered_id == id {
+	else if ctx.hovered_widget == id {
 		color = ctx.widget_hover_color
 	}
 	push_command(Draw_Rect {
@@ -205,7 +235,7 @@ button :: proc(id: ID, text: string, rec: Rec) -> (clicked: bool) {
 slider :: proc(id: ID, value: ^f32, min, max: f32, rec: Rec) {
 	update_widget(id, rec)
   
-	if ctx.active_id == id && rl.IsMouseButtonDown(.LEFT) {
+	if ctx.active_widget == id && rl.IsMouseButtonDown(.LEFT) {
 		value^ = min + (rl.GetMousePosition().x - rec.x) * (max - min) / rec.width
 	}
 
@@ -236,9 +266,11 @@ push_command :: proc(command: Draw_Command) {
 }
 
 is_being_interacted :: proc() -> (res: bool) {
-	return ctx.hovered_id != 0 ||
-	ctx.active_id != 0 ||
-	(ctx.opened_popup != "")
+	return ctx.hovered_widget != 0 ||
+	ctx.active_widget != 0 ||
+	ctx.hovered_panel != 0 ||
+  ctx.active_panel != 0 ||
+  (ctx.opened_popup != "")
 }
 
 is_mouse_in_rec :: proc(rec: Rec) -> (is_inside: bool) {
