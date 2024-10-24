@@ -18,6 +18,7 @@ App :: struct {
 	undos: [dynamic]rl.Image,
 	image_changed: bool,
 	bg_texture: rl.Texture,
+  lerped_zoom: f32,
 }
 
 Project :: struct {
@@ -105,11 +106,12 @@ main :: proc() {
 		ui.end()
 
 		// update
+    app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 0.3) 
 		if ui.is_being_interacted() == false {
 			update_zoom(&app.project.zoom)
 		}
 		canvas_rec := center_rec(
-			{ 0, 0, 100 * app.project.zoom, 100 *  app.project.zoom },
+			{ 0, 0, 100 * app.lerped_zoom, 100 *  app.lerped_zoom },
 			{ 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())})
 
 		if ui.is_being_interacted() == false {
@@ -182,6 +184,7 @@ init_project :: proc(project: ^Project, width, height: i32) {
 	project.layers = make([dynamic]Layer)
 	
 	//TODO: move some of this outta here
+  app.lerped_zoom = 1
 	app.image_changed = true
 	bg_image := rl.GenImageChecked(width, height, 1, 1, rl.GRAY, rl.WHITE)
 	defer rl.UnloadImage(bg_image)
@@ -231,7 +234,7 @@ get_current_layer :: proc() -> (layer: ^Layer) {
 }
 
 update_zoom :: proc(current_zoom: ^f32) {
-	zoom := current_zoom^ + rl.GetMouseWheelMove() * 0.1
+  zoom := current_zoom^ + rl.GetMouseWheelMove() * 0.3
 	if zoom < 0.1 {
 		zoom = 0.1
 	}
