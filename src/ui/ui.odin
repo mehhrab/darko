@@ -5,7 +5,7 @@ import rl "vendor:raylib"
 import "core:slice"
 import "core:strings"
 import "core:fmt"
-
+import "core:math"
 // for ease of use
 Rec :: rec.Rec
 
@@ -18,7 +18,15 @@ Ctx :: struct {
 	current_popup: string,
 	popup: Popup,
 	popup_time: f32,
-	any_hovered: bool,
+
+	// style
+
+	font: rl.Font,
+	font_size: f32,
+	widget_color: rl.Color,
+	widget_hover_color: rl.Color,
+	widget_active_color: rl.Color,
+	accent_color: rl.Color,
 }
 
 ID :: u32
@@ -48,9 +56,18 @@ ctx: Ctx
 
 init :: proc() {
 	ctx.draw_commands = make([dynamic]Draw_Command)
+
+	ctx.font = rl.LoadFontEx("../assets/HackNerdFont-Bold.ttf", 32, nil, 0)
+	rl.SetTextureFilter(ctx.font.texture, .BILINEAR)
+	ctx.font_size = 20
+	ctx.widget_color = { 20, 20, 20, 255 }
+	ctx.widget_hover_color = { 30, 30, 30, 255 }
+	ctx.widget_active_color = { 10, 10, 10, 255 }
+	ctx.accent_color = rl.PURPLE
 }
 
 deinit :: proc() {
+	rl.UnloadFont(ctx.font)
 	delete(ctx.draw_commands)
 	delete(ctx.popup.draw_commands)
 }
@@ -69,7 +86,6 @@ end :: proc() {
 	if rl.IsMouseButtonReleased(.LEFT) {
 		ctx.active_id = 0
 	}
-	ctx.any_hovered = false
 }
 
 gen_id_auto :: proc(loc := #caller_location) -> ID {
@@ -104,35 +120,32 @@ draw_command :: proc(command: ^Draw_Command) {
 			rl.DrawRectangleRec(kind.rec, kind.color)
 		}
 		case Draw_Text: {
-			font_size := i32(24)
 			text := strings.clone_to_cstring(kind.text, context.temp_allocator)
-			_x, _y := rec.get_center_of_rec(kind.rec)
-			x := i32(_x)
-			y := i32(_y)
-			x -= rl.MeasureText(text, font_size) / 2
-			y -= font_size / 2
-			rl.DrawText(text, x, y, font_size, rl.WHITE)
+			x, y := rec.get_center_of_rec(kind.rec)
+			text_size := rl.MeasureTextEx(ctx.font, text, ctx.font_size, 0)
+			x -= text_size.x / 2
+			y -= text_size.y / 2
+			rl.DrawTextEx(ctx.font, text, {x, y}, ctx.font_size, 0, rl.WHITE)
 		}
 	}
 }
 
 open_popup :: proc(name: string) {
+	ctx.opened_popup = name
 	ctx.hovered_id = 0
 	ctx.active_id = 0
-	ctx.opened_popup = name
 	ctx.popup_time = 0
 }
 
 close_current_popup :: proc() {
+	ctx.hovered_id = 0
+	ctx.active_id = 0
 	ctx.opened_popup = ""
 	ctx.popup.rec = {}
 }
 
 // NOTE: name is also used as the id
 begin_popup :: proc(name: string, rec: Rec) -> (is_open: bool) {
-	if is_mouse_in_rec(rec) {
-		ctx.any_hovered = true
-	}
 	ctx.current_popup = name
 	ctx.popup.rec = rec
 	 
@@ -153,9 +166,6 @@ update_widget :: proc(id: ID, rec: Rec) {
 		return
 	}
 	hovered := is_mouse_in_rec(rec)
-	if hovered {
-		ctx.any_hovered = true
-	}
 	if hovered && (ctx.active_id == 0 || ctx.active_id == id) {
 		ctx.hovered_id = id
 		if rl.IsMouseButtonPressed(.LEFT) {
@@ -169,39 +179,61 @@ update_widget :: proc(id: ID, rec: Rec) {
 
 
 button :: proc(id: ID, text: string, rec: Rec) -> (clicked: bool) {	
+	clicked = false
 	update_widget(id, rec)
 	if ctx.hovered_id == id && rl.IsMouseButtonReleased(.LEFT){
 		clicked = true
 	}
-	color := rl.GREEN
+	color := ctx.widget_color
 	if ctx.active_id == id {
-		color = rl.BLUE
+		color = ctx.widget_active_color
 	}
 	else if ctx.hovered_id == id {
-		color = rl.BLACK
+		color = ctx.widget_hover_color
 	}
 	push_command(Draw_Rect {
-			rec = rec,
-			color = color
+		rec = rec,
+		color = color
 	})
 	push_command(Draw_Text {
-			rec = rec,
-			text = text,
+		rec = rec,
+		text = text,
 	})
-	return
+	return clicked
+}
+
+slider :: proc(id: ID, value: ^f32, min, max: f32, rec: Rec) {
+	update_widget(id, rec)
+  
+	if ctx.active_id == id && rl.IsMouseButtonDown(.LEFT) {
+		value^ = min + (rl.GetMousePosition().x - rec.x) * (max - min) / rec.width
+	}
+
+	value^ = math.clamp(value^, min, max)
+  
+	push_command(Draw_Rect {
+		rec = rec,
+		color = rl.BLUE,
+	})
+	push_command(Draw_Rect {
+		rec = { rec.x, rec.y, (value^ - min) * (rec.width) / (max - min), rec.height },
+		color = rl.WHITE,	
+	})
 }
 
 push_command :: proc(command: Draw_Command) {
-	// if ctx.current_popup != "" && ctx.opened_popup == "" {
-	// 	return
-	// }
-	// if ctx.opened_popup != "" {}
 	if ctx.current_popup != "" {
 		append(&ctx.popup.draw_commands, command)
 	}
 	else {
 		append(&ctx.draw_commands, command)
 	}
+}
+
+is_being_interacted :: proc() -> (res: bool) {
+	return ctx.hovered_id != 0 ||
+	ctx.active_id != 0 ||
+	(ctx.opened_popup != "")
 }
 
 is_mouse_in_rec :: proc(rec: Rec) -> (is_inside: bool) {
