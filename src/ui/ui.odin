@@ -31,6 +31,9 @@ Ctx :: struct {
 
 	font: rl.Font,
 	font_size: f32,
+	roundness: f32,
+  panel_color: rl.Color,
+  widget_color: rl.Color,
 	widget_hover_color: rl.Color,
 	widget_active_color: rl.Color,
 	accent_color: rl.Color,
@@ -67,10 +70,11 @@ init :: proc() {
 	ctx.font = rl.LoadFontEx("../assets/HackNerdFont-Bold.ttf", 32, nil, 0)
 	rl.SetTextureFilter(ctx.font.texture, .BILINEAR)
 	ctx.font_size = 20
-	ctx.widget_color = { 20, 20, 20, 255 }
-	ctx.widget_hover_color = { 30, 30, 30, 255 }
-	ctx.widget_active_color = { 10, 10, 10, 255 }
-	ctx.accent_color = rl.PURPLE
+	ctx.widget_color = { 40, 40, 40, 255 }
+	ctx.widget_hover_color = { 60, 60, 60, 255 }
+	ctx.widget_active_color = { 30, 30, 30, 255 }
+	ctx.panel_color = { 10, 10, 10, 100 }
+  ctx.accent_color = rl.PURPLE
 }
 
 deinit :: proc() {
@@ -204,7 +208,7 @@ panel :: proc(id: ID, rec: Rec) {
   update_panel(id, rec)
   push_command(Draw_Rect {
     rec = rec,
-    color = { 0, 0, 0, 200 }
+    color = ctx.panel_color,
   })
 }
 
