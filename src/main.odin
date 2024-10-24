@@ -18,7 +18,7 @@ App :: struct {
 	undos: [dynamic]rl.Image,
 	image_changed: bool,
 	bg_texture: rl.Texture,
-  lerped_zoom: f32,
+	lerped_zoom: f32,
 }
 
 Project :: struct {
@@ -85,10 +85,10 @@ main :: proc() {
 
 	for rl.WindowShouldClose() == false {
 		// ui
-    gui()
+	gui()
 
 		// update
-    app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 0.3) 
+		app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 0.3) 
 		if ui.is_being_interacted() == false {
 			update_zoom(&app.project.zoom)
 		}
@@ -152,18 +152,18 @@ main :: proc() {
 }
 
 gui :: proc() {
-  screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())}
-  ui.begin()
+	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())}
+	ui.begin()
 	ui.panel(ui.gen_id_auto(), { 0, 0, 400, 1000 })
-  popup_rec := center_rec({ 200, 200, 300, 200 }, screen_rec)
-  if ui.begin_popup("new", popup_rec) {
+	popup_rec := center_rec({ 200, 200, 300, 200 }, screen_rec)
+	if ui.begin_popup("new", popup_rec) {
 		if ui.button(ui.gen_id_auto(), "close", { popup_rec.x + 10, popup_rec.y + 10, 100, 40 }) {
 			fmt.printfln("x")
 			ui.close_current_popup()
 		}
 	}
-  ui.slider(ui.gen_id_auto(), &app.project.zoom, 0.1, 10, { popup_rec.x + 10, popup_rec.y + 100, 100, 40 })
-  ui.end_popup()
+	ui.slider(ui.gen_id_auto(), &app.project.zoom, 0.1, 10, { popup_rec.x + 100, popup_rec.y + 100, 100, 40 })
+	ui.end_popup()
 
 	if ui.button(ui.gen_id_auto(), "open popup", { 10, 300, 200, 50 }) {
 		ui.open_popup("new")
@@ -196,7 +196,7 @@ init_project :: proc(project: ^Project, width, height: i32) {
 	project.layers = make([dynamic]Layer)
 	
 	//TODO: move some of this outta here
-  app.lerped_zoom = 1
+	app.lerped_zoom = 1
 	app.image_changed = true
 	bg_image := rl.GenImageChecked(width, height, 1, 1, rl.GRAY, rl.WHITE)
 	defer rl.UnloadImage(bg_image)
@@ -246,7 +246,7 @@ get_current_layer :: proc() -> (layer: ^Layer) {
 }
 
 update_zoom :: proc(current_zoom: ^f32) {
-  zoom := current_zoom^ + rl.GetMouseWheelMove() * 0.3
+	zoom := current_zoom^ + rl.GetMouseWheelMove() * 0.3
 	if zoom < 0.1 {
 		zoom = 0.1
 	}

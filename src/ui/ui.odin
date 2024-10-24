@@ -13,16 +13,16 @@ Ctx :: struct {
 	hovered_widget: ID,
 	active_widget: ID,
 	
-  // panels sit under widgets and we don't have zindex sooo
-  
-  hovered_panel: ID,
+	// panels sit under widgets and we don't have zindex sooo
+
+	hovered_panel: ID,
 	active_panel: ID,
-  
-  draw_commands: [dynamic]Draw_Command,
+
+	draw_commands: [dynamic]Draw_Command,
 	
-  // HACK: we can only have on popup
+	// HACK: we can only have on popup
 	
-  opened_popup: string,
+	opened_popup: string,
 	current_popup: string,
 	popup: Popup,
 	popup_time: f32,
@@ -32,8 +32,8 @@ Ctx :: struct {
 	font: rl.Font,
 	font_size: f32,
 	roundness: f32,
-  panel_color: rl.Color,
-  widget_color: rl.Color,
+	panel_color: rl.Color,
+	widget_color: rl.Color,
 	widget_hover_color: rl.Color,
 	widget_active_color: rl.Color,
 	accent_color: rl.Color,
@@ -95,8 +95,8 @@ begin :: proc() {
 end :: proc() {
 	if rl.IsMouseButtonReleased(.LEFT) {
 		ctx.active_widget = 0
-	  ctx.active_panel = 0
-  }
+		ctx.active_panel = 0
+	}
 }
 
 gen_id_auto :: proc(loc := #caller_location) -> ID {
@@ -205,11 +205,11 @@ update_panel :: proc(id: ID, rec: Rec) {
 }
 
 panel :: proc(id: ID, rec: Rec) {
-  update_panel(id, rec)
-  push_command(Draw_Rect {
-    rec = rec,
-    color = ctx.panel_color,
-  })
+	update_panel(id, rec)
+	push_command(Draw_Rect {
+		rec = rec,
+		color = ctx.panel_color,
+	})
 }
 
 button :: proc(id: ID, text: string, rec: Rec) -> (clicked: bool) {	
@@ -238,13 +238,13 @@ button :: proc(id: ID, text: string, rec: Rec) -> (clicked: bool) {
 
 slider :: proc(id: ID, value: ^f32, min, max: f32, rec: Rec) {
 	update_widget(id, rec)
-  
+
 	if ctx.active_widget == id && rl.IsMouseButtonDown(.LEFT) {
 		value^ = min + (rl.GetMousePosition().x - rec.x) * (max - min) / rec.width
 	}
 
 	value^ = math.clamp(value^, min, max)
-  
+
 	push_command(Draw_Rect {
 		rec = rec,
 		color = ctx.widget_color,
@@ -253,7 +253,8 @@ slider :: proc(id: ID, value: ^f32, min, max: f32, rec: Rec) {
 		rec = { rec.x, rec.y, (value^ - min) * (rec.width) / (max - min), rec.height },
 		color = ctx.accent_color,	
 	})
-  text := fmt.aprintf("%.2f", value^, allocator = context.temp_allocator)
+	
+	text := fmt.aprintf("%.2f", value^, allocator = context.temp_allocator)
 	push_command(Draw_Text {
 		rec = rec,
 		text = text,
@@ -273,8 +274,8 @@ is_being_interacted :: proc() -> (res: bool) {
 	return ctx.hovered_widget != 0 ||
 	ctx.active_widget != 0 ||
 	ctx.hovered_panel != 0 ||
-  ctx.active_panel != 0 ||
-  (ctx.opened_popup != "")
+	ctx.active_panel != 0 ||
+	(ctx.opened_popup != "")
 }
 
 is_mouse_in_rec :: proc(rec: Rec) -> (is_inside: bool) {
