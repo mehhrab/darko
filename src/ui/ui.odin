@@ -213,11 +213,16 @@ slider :: proc(id: ID, value: ^f32, min, max: f32, rec: Rec) {
   
 	push_command(Draw_Rect {
 		rec = rec,
-		color = rl.BLUE,
+		color = ctx.widget_color,
 	})
 	push_command(Draw_Rect {
 		rec = { rec.x, rec.y, (value^ - min) * (rec.width) / (max - min), rec.height },
-		color = rl.WHITE,	
+		color = ctx.accent_color,	
+	})
+  text := fmt.aprintf("%.2f", value^, allocator = context.temp_allocator)
+	push_command(Draw_Text {
+		rec = rec,
+		text = text,
 	})
 }
 
