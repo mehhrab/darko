@@ -153,24 +153,36 @@ main :: proc() {
 }
 
 gui :: proc() {
-	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())}
-
 	ui.begin()
-	left_panel_rec := Rec { 0, 0, 400, 1000 }
-	ui.panel(ui.gen_id_auto(), left_panel_rec)
+
+	menu_bar_area := Rec { 0, 0, f32(rl.GetScreenWidth()), 50 }
+	menu_bar(menu_bar_area)
+
+	screen_area := Rec { 0, menu_bar_area.height, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())}
+
+	left_panel_area := Rec { screen_area.x, screen_area.y, 400, 1000 }
+	ui.panel(ui.gen_id_auto(), left_panel_area)
 	
-	right_panel_rec := Rec { screen_rec.width - 300, 0, 300, screen_rec.height }
-	ui.panel(ui.gen_id_auto(), right_panel_rec)
-	color_panel(rec.pad(right_panel_rec, 10))
+	right_panel_area := Rec { screen_area.width - 300, screen_area.y, 300, screen_area.height }
+	color_panel(right_panel_area)
 
 	ui.end()
 }
 
-color_panel :: proc(rec: Rec) {
+menu_bar :: proc(area: Rec) {
+	ui.panel(ui.gen_id_auto(), area)
+	ui.button(ui.gen_id_auto(), "File", { area.x, area.y, 60, area.height })
+}
+
+color_panel :: proc(area: Rec) {
+	ui.panel(ui.gen_id_auto(), area)
+	
+	area := rec.pad(area, 10)
+
 	@(static)
 	hsv_color := [3]f32 { 0, 0, 0 }
 
-	slider_rec := Rec { rec.x, rec.y, rec.width, 40 }
+	slider_rec := Rec { area.x, area.y, area.width, 40 }
 	ui.slider(ui.gen_id_auto(), &hsv_color[0], 0, 360, slider_rec)
 	slider_rec.y += 50
 	ui.slider(ui.gen_id_auto(), &hsv_color[1], 0, 1, slider_rec)
