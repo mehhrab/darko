@@ -73,7 +73,8 @@ main :: proc() {
 
 	project: Project
 	init_project(&project, 8, 8)
-	app.project = project
+	open_project(&project)
+	defer close_project()
 
 	ui.init()
 	defer ui.deinit()
@@ -207,25 +208,31 @@ init_project :: proc(project: ^Project, width, height: i32) {
 	project.height = height
 	project.layers = make([dynamic]Layer)
 	project.current_color = { 10, 10, 10, 255 }
+}
 
-	//TODO: move some of this outta here
+deinit_project :: proc(project: ^Project) {
+	for &layer in project.layers {
+		deinit_layer(&layer)
+	}
+	delete(project.layers)
+}
+
+open_project :: proc(project: ^Project) {
+	app.project = project^
+	
 	app.lerped_zoom = 1
 	app.image_changed = true
-	bg_image := rl.GenImageChecked(width, height, 1, 1, rl.GRAY, rl.WHITE)
+	bg_image := rl.GenImageChecked(project.width, project.height, 1, 1, rl.GRAY, rl.WHITE)
 	defer rl.UnloadImage(bg_image)
 	app.bg_texture = rl.LoadTextureFromImage(bg_image)
 }
 
-deinit_project :: proc(project: ^Project) {
+close_project :: proc() {
 	for image in app.undos {
 		rl.UnloadImage(image)
 	}
 	delete(app.undos)
 	rl.UnloadTexture(app.bg_texture)
-	for &layer in project.layers {
-		deinit_layer(&layer)
-	}
-	delete(project.layers)
 }
 
 init_layer :: proc(layer: ^Layer) {
