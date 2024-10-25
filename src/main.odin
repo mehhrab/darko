@@ -23,6 +23,7 @@ App :: struct {
 
 Project :: struct {
 	zoom: f32,
+	current_color: rl.Color,
 	width, height: i32,
 	current_layer: int,
 	layers: [dynamic]Layer,
@@ -153,31 +154,30 @@ main :: proc() {
 
 gui :: proc() {
 	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())}
-	ui.begin()
-	ui.panel(ui.gen_id_auto(), { 0, 0, 400, 1000 })
-	popup_rec := center_rec({ 200, 200, 300, 200 }, screen_rec)
-	if ui.begin_popup("new", popup_rec) {
-		if ui.button(ui.gen_id_auto(), "close", { popup_rec.x + 10, popup_rec.y + 10, 100, 40 }) {
-			fmt.printfln("x")
-			ui.close_current_popup()
-		}
-		ui.slider(ui.gen_id_auto(), &app.project.zoom, 0.1, 10, { popup_rec.x + 100, popup_rec.y + 100, 100, 40 })
-	}
-	ui.end_popup()
 
-	if ui.button(ui.gen_id_auto(), "open popup", { 10, 300, 200, 50 }) {
-		ui.open_popup("new")
-	}
-	if ui.button(88, "click", { 10, 500, 100, 50 }) {
-		layer: Layer
-		init_layer(&layer)
-		add_layer_on_top(&layer)
-	}
+	ui.begin()
+	left_panel_rec := Rec { 0, 0, 400, 1000 }
+	ui.panel(ui.gen_id_auto(), left_panel_rec)
+	
+	right_panel_rec := Rec { screen_rec.width - 300, 0, 300, screen_rec.height }
+	ui.panel(ui.gen_id_auto(), right_panel_rec)
+	color_panel(rec.pad(right_panel_rec, 10))
+
 	ui.end()
 }
 
 color_panel :: proc(rec: Rec) {
+	@(static)
+	hsv_color := [3]f32 { 0, 0, 0 }
 
+	slider_rec := Rec { rec.x, rec.y, rec.width, 40 }
+	ui.slider(ui.gen_id_auto(), &hsv_color[0], 0, 360, slider_rec)
+	slider_rec.y += 50
+	ui.slider(ui.gen_id_auto(), &hsv_color[1], 0, 1, slider_rec)
+	slider_rec.y += 50
+	ui.slider(ui.gen_id_auto(), &hsv_color[2], 0, 1, slider_rec)
+
+	app.project.current_color = rl.ColorFromHSV(hsv_color[0], hsv_color[1], hsv_color[2])
 }
 
 init_app :: proc() {
@@ -194,7 +194,8 @@ init_project :: proc(project: ^Project, width, height: i32) {
 	project.width = width
 	project.height = height
 	project.layers = make([dynamic]Layer)
-	
+	project.current_color = { 10, 10, 10, 255 }
+
 	//TODO: move some of this outta here
 	app.lerped_zoom = 1
 	app.image_changed = true
@@ -282,7 +283,7 @@ update_tools :: proc(area: Rec) {
 		if rl.IsMouseButtonDown(.LEFT) {
 			begin_undo()
 			x, y := get_mouse_pos_in_canvas(area)
-			rl.ImageDrawPixel(&get_current_layer().image, x, y, rl.BLUE)
+			rl.ImageDrawPixel(&get_current_layer().image, x, y, app.project.current_color)
 			app.image_changed = true
 		}	
 	}
@@ -306,10 +307,8 @@ update_tools :: proc(area: Rec) {
 		if rl.IsMouseButtonPressed(.MIDDLE) {
 			x, y := get_mouse_pos_in_canvas(area)
 			
-			color := rl.BLACK
-			
 			append(&app.undos, rl.ImageCopy(get_current_layer().image))
-			fill(&get_current_layer().image, x, y, color)
+			fill(&get_current_layer().image, x, y, app.project.current_color)
 			app.image_changed = true
 		}
 	}
