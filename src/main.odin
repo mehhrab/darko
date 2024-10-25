@@ -62,7 +62,7 @@ main :: proc() {
 	}
 
 	rl.SetConfigFlags({rl.ConfigFlags.WINDOW_RESIZABLE})
-	rl.InitWindow(600, 500, "hello")
+	rl.InitWindow(1200, 700, "hello")
 	when LOCK_FPS {
 		rl.SetTargetFPS(60)
 	}
@@ -161,8 +161,8 @@ gui :: proc() {
 			fmt.printfln("x")
 			ui.close_current_popup()
 		}
+		ui.slider(ui.gen_id_auto(), &app.project.zoom, 0.1, 10, { popup_rec.x + 100, popup_rec.y + 100, 100, 40 })
 	}
-	ui.slider(ui.gen_id_auto(), &app.project.zoom, 0.1, 10, { popup_rec.x + 100, popup_rec.y + 100, 100, 40 })
 	ui.end_popup()
 
 	if ui.button(ui.gen_id_auto(), "open popup", { 10, 300, 200, 50 }) {
