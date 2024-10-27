@@ -236,29 +236,40 @@ button :: proc(id: ID, text: string, rec: Rec) -> (clicked: bool) {
 	return clicked
 }
 
-slider :: proc(id: ID, value: ^f32, min, max: f32, rec: Rec) {
+slider_f32 :: proc(id: ID, value: ^f32, min, max: f32, rec: Rec, format: string = "%.2f", step: f32 = 0) {
+	last_value := value^
 	update_widget(id, rec)
 
 	if ctx.active_widget == id && rl.IsMouseButtonDown(.LEFT) {
-		value^ = min + (rl.GetMousePosition().x - rec.x) * (max - min) / rec.width
+		last_value = min + (rl.GetMousePosition().x - rec.x) * (max - min) / rec.width
+		if step != 0 {
+			last_value = (math.round(last_value / step)) * step
+		}
 	}
-
-	value^ = math.clamp(value^, min, max)
+	
+	last_value = math.clamp(last_value, min, max)
+	value^ = last_value
 
 	push_command(Draw_Rect {
 		rec = rec,
 		color = ctx.widget_color,
 	})
 	push_command(Draw_Rect {
-		rec = { rec.x, rec.y, (value^ - min) * (rec.width) / (max - min), rec.height },
+		rec = { rec.x, rec.y, (last_value - min) * (rec.width) / (max - min), rec.height },
 		color = ctx.accent_color,	
 	})
 	
-	text := fmt.aprintf("%.2f", value^, allocator = context.temp_allocator)
+	text := fmt.aprintf(format, last_value, allocator = context.temp_allocator)
 	push_command(Draw_Text {
 		rec = rec,
 		text = text,
 	})
+}
+
+slider_i32 :: proc(id: ID, value: ^i32, min, max: i32, rec: Rec, step: i32 = 1) {
+	value_f32 := math.round(f32(value^))
+	slider_f32(id, &value_f32, f32(min), f32(max), rec, "%.0f", f32(step))
+	value^ = i32(value_f32)
 }
 
 push_command :: proc(command: Draw_Command) {
