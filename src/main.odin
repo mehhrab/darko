@@ -137,7 +137,6 @@ main :: proc() {
 		// draw
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.DARKGRAY)
-		rl.DrawFPS(10, 10)
 
 		draw_canvas(canvas_rec)
 		draw_grid(canvas_rec)
@@ -149,6 +148,7 @@ main :: proc() {
 		x, y := rec.get_center_of_rec(preview_rec)
 		draw_sprite_stack(&app.project.layers, x, y, 10)
 		
+		rl.DrawFPS(10, 10)
 		rl.EndDrawing()
 	}
 	rl.CloseWindow()
