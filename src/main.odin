@@ -13,6 +13,8 @@ LOCK_FPS :: #config(LOCK_FPS, true)
 Rec :: rec.Rec
 
 App :: struct {
+	width: i32,
+	height: i32,
 	project: Project,
 	temp_undo_image: Maybe(rl.Image),
 	undos: [dynamic]rl.Image,
@@ -94,8 +96,9 @@ main :: proc() {
 		if ui.is_being_interacted() == false {
 			update_zoom(&app.project.zoom)
 		}
+		
 		canvas_rec := center_rec(
-			{ 0, 0, 100 * app.lerped_zoom, 100 *  app.lerped_zoom },
+			{ 0, 0, f32(app.project.width) * 10 * app.lerped_zoom, f32(app.project.height) * 10 *  app.lerped_zoom },
 			{ 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())})
 
 		if ui.is_being_interacted() == false {
@@ -124,9 +127,7 @@ main :: proc() {
 				app.project.current_layer = len(app.project.layers) - 1
 			}
 		}
-		if app.image_changed  {
-			// rl.UnloadTexture(get_current_layer().texture)
-			// get_current_layer().texture = rl.LoadTextureFromImage(get_current_layer().image)
+		if app.image_changed {
 			colors := rl.LoadImageColors(get_current_layer().image)
 			defer rl.UnloadImageColors(colors)
 			rl.UpdateTexture(get_current_layer().texture, colors)
@@ -166,13 +167,32 @@ gui :: proc() {
 	
 	right_panel_area := Rec { screen_area.width - 300, screen_area.y, 300, screen_area.height }
 	color_panel(right_panel_area)
+	
+	// popups
+	popup_rec := center_rec({ 0, 0, 400, 300 }, screen_area)
+	if ui.begin_popup("new", popup_rec) {
+		ui.slider_i32(ui.gen_id_auto(), &app.width, 2, 30, { popup_rec.x + 10, popup_rec.y + 10, 300, 40 })
+		ui.slider_i32(ui.gen_id_auto(), &app.height, 2, 30, { popup_rec.x + 10, popup_rec.y + 50, 300, 40 })
+		if ui.button(ui.gen_id_auto(), "new", { popup_rec.x + 10, popup_rec.y + 100, 100, 40 }) {
+			close_project()
+			project: Project
+			init_project(&project, app.width, app.height)
+			open_project(&project)
 
+			layer: Layer
+			init_layer(&layer)
+			add_layer(&layer, 0)
+		}	
+	}
+	ui.end_popup()
 	ui.end()
 }
 
 menu_bar :: proc(area: Rec) {
 	ui.panel(ui.gen_id_auto(), area)
-	ui.button(ui.gen_id_auto(), "File", { area.x, area.y, 60, area.height })
+	if ui.button(ui.gen_id_auto(), "file", { area.x, area.y, 60, area.height }) {
+		ui.open_popup("new")
+	}
 }
 
 color_panel :: proc(area: Rec) {
@@ -184,11 +204,11 @@ color_panel :: proc(area: Rec) {
 	hsv_color := [3]f32 { 0, 0, 0 }
 
 	slider_rec := Rec { area.x, area.y, area.width, 40 }
-	ui.slider(ui.gen_id_auto(), &hsv_color[0], 0, 360, slider_rec)
+	ui.slider_f32(ui.gen_id_auto(), &hsv_color[0], 0, 360, slider_rec)
 	slider_rec.y += 50
-	ui.slider(ui.gen_id_auto(), &hsv_color[1], 0, 1, slider_rec)
+	ui.slider_f32(ui.gen_id_auto(), &hsv_color[1], 0, 1, slider_rec)
 	slider_rec.y += 50
-	ui.slider(ui.gen_id_auto(), &hsv_color[2], 0, 1, slider_rec)
+	ui.slider_f32(ui.gen_id_auto(), &hsv_color[2], 0, 1, slider_rec)
 
 	app.project.current_color = rl.ColorFromHSV(hsv_color[0], hsv_color[1], hsv_color[2])
 }
@@ -228,6 +248,8 @@ open_project :: proc(project: ^Project) {
 }
 
 close_project :: proc() {
+	deinit_project(&app.project)
+
 	for image in app.undos {
 		rl.UnloadImage(image)
 	}
@@ -322,7 +344,7 @@ update_tools :: proc(area: Rec) {
 		end_undo()
 	}
 	// fill
-	if ui.is_mouse_in_rec(area)  {
+	if ui.is_mouse_in_rec(area) {
 		if rl.IsMouseButtonPressed(.MIDDLE) {
 			x, y := get_mouse_pos_in_canvas(area)
 			
@@ -416,7 +438,7 @@ begin_undo :: proc() {
 end_undo :: proc() {
 	temp_undo_image, exists := app.temp_undo_image.?
 	fmt.printfln("{}", exists)
-	if exists  {
+	if exists {
 		image := rl.ImageCopy(temp_undo_image)
 		append(&app.undos, image)
 		rl.UnloadImage(temp_undo_image)
