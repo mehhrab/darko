@@ -12,12 +12,8 @@ Rec :: rec.Rec
 Ctx :: struct {
 	hovered_widget: ID,
 	active_widget: ID,
-	
-	// panels sit under widgets and we don't have zindex sooo
-
 	hovered_panel: ID,
 	active_panel: ID,
-
 	draw_commands: [dynamic]Draw_Command,
 	
 	// HACK: we can only have on popup
@@ -84,7 +80,11 @@ deinit :: proc() {
 }
 
 begin :: proc() {
-	if ctx.opened_popup != "" && rl.IsMouseButtonReleased(.LEFT) && is_mouse_in_rec(ctx.popup.rec) == false {
+	if ctx.opened_popup != "" &&
+		rl.IsMouseButtonReleased(.LEFT) &&
+		is_mouse_in_rec(ctx.popup.rec) == false &&
+		ctx.active_widget == 0 &&
+		ctx.active_panel == 0 {
 		ctx.opened_popup = ""
 	}
 	if ctx.opened_popup != "" {
