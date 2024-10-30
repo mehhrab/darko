@@ -218,7 +218,6 @@ init_app :: proc() {
 }
 
 deinit_app :: proc() {
-	deinit_project(&app.project)
 }
 
 init_project :: proc(project: ^Project, width, height: i32) {
