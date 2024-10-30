@@ -436,7 +436,6 @@ begin_undo :: proc() {
 
 end_undo :: proc() {
 	temp_undo_image, exists := app.temp_undo_image.?
-	fmt.printfln("{}", exists)
 	if exists {
 		image := rl.ImageCopy(temp_undo_image)
 		append(&app.undos, image)

@@ -147,7 +147,6 @@ draw :: proc() {
 			notif_y = wh - offset + offset * (ctx.notif_time - 0.5) / 0.5
 		}
 		else {
-			fmt.printfln("popup finished")
 			ctx.notif_text = ""
 		}
 		if ctx.notif_text != "" {
