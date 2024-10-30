@@ -15,7 +15,8 @@ Ctx :: struct {
 	hovered_panel: ID,
 	active_panel: ID,
 	draw_commands: [dynamic]Draw_Command,
-	
+	notif_text: string,
+	notif_time: f32,	
 	// HACK: we can only have on popup
 	
 	opened_popup: string,
@@ -90,6 +91,9 @@ begin :: proc() {
 	if ctx.opened_popup != "" {
 		ctx.popup_time += rl.GetFrameTime()
 	}
+	if ctx.notif_text != "" {
+		ctx.notif_time += rl.GetFrameTime()
+	}
 }
 
 end :: proc() {
@@ -120,6 +124,38 @@ draw :: proc() {
 		}
 	}
 	
+	if ctx.notif_text != "" {
+		ww := f32(rl.GetScreenWidth())
+		wh := f32(rl.GetScreenHeight())
+
+		text := strings.clone_to_cstring(ctx.notif_text, context.temp_allocator)
+		offset := f32(80)
+		padding := f32(10)
+		text_size := rl.MeasureTextEx(ctx.font, text, ctx.font_size, 0)
+		notif_w := text_size.x + padding * 2
+		notif_h := text_size.y + padding * 2
+		notif_x := ww / 2 - text_size.x / 2 + padding
+		notif_y := f32(0)
+		
+		if ctx.notif_time < 0.2 {
+			notif_y = wh - offset * (ctx.notif_time / 0.2)
+		}
+		else if ctx.notif_time >= 0.2 && ctx.notif_time < 0.5 {
+			notif_y = wh - offset
+		} 
+		else if ctx.notif_time >= 0.5 && ctx.notif_time <= 1 {
+			notif_y = wh - offset + offset * (ctx.notif_time - 0.5) / 0.5
+		}
+		else {
+			fmt.printfln("popup finished")
+			ctx.notif_text = ""
+		}
+		if ctx.notif_text != "" {
+			notif_y += padding
+			rl.DrawRectangleRec({ notif_x, notif_y, notif_w, notif_h }, rl.BLACK)
+			rl.DrawTextEx(ctx.font, text, { notif_x + padding, notif_y + padding }, ctx.font_size, 0, rl.WHITE)
+		}
+	}	
 	clear(&ctx.draw_commands)
 	clear(&ctx.popup.draw_commands)
 	free_all(context.temp_allocator)
@@ -170,6 +206,11 @@ end_popup :: proc() {
 		rec = ctx.popup.rec,
 	})
 	ctx.current_popup = ""
+}
+
+show_notif :: proc(text: string) {
+	ctx.notif_text = text
+	ctx.notif_time = 0
 }
 
 update_widget :: proc(id: ID, rec: Rec) {

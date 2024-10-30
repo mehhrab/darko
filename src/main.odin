@@ -13,8 +13,7 @@ LOCK_FPS :: #config(LOCK_FPS, true)
 Rec :: rec.Rec
 
 App :: struct {
-	width: i32,
-	height: i32,
+	width: i32, height: i32,
 	project: Project,
 	temp_undo_image: Maybe(rl.Image),
 	undos: [dynamic]rl.Image,
@@ -32,8 +31,6 @@ Project :: struct {
 }
 
 Layer :: struct {
-	// undos: [dynamic]rl.Image,
-	// redos: [dynamic]rl.Image,
 	image: rl.Image,
 	texture: rl.Texture,
 }
@@ -182,6 +179,9 @@ gui :: proc() {
 			layer: Layer
 			init_layer(&layer)
 			add_layer(&layer, 0)
+
+			ui.close_current_popup()
+			ui.show_notif("project is created")
 		}	
 	}
 	ui.end_popup()
