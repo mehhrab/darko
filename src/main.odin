@@ -448,7 +448,7 @@ end_undo :: proc() {
 
 // NOTE: rec x and y is not used
 center_rec :: proc(rec: Rec, area: Rec) -> (centered_rec: Rec) {
-	x := area.width / 2 - rec.width / 2
-	y := area.height / 2 - rec.height / 2
+	x := area.x + area.width / 2 - rec.width / 2
+	y := area.y + area.height / 2 - rec.height / 2
 	return { x, y, rec.width, rec.height }
 }
