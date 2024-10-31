@@ -70,13 +70,12 @@ main :: proc() {
 	init_app()
 	defer deinit_app()
 
+	ui.init()
+	defer ui.deinit()
+
 	project: Project
 	init_project(&project, 8, 8)
 	open_project(&project)
-	defer close_project()
-
-	ui.init()
-	defer ui.deinit()
 	
 	{
 		layer: Layer
@@ -89,19 +88,6 @@ main :: proc() {
 		gui()
 
 		// update
-		app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 0.3) 
-		if ui.is_being_interacted() == false {
-			update_zoom(&app.project.zoom)
-		}
-		
-		canvas_rec := center_rec(
-			{ 0, 0, f32(app.project.width) * 10 * app.lerped_zoom, f32(app.project.height) * 10 *  app.lerped_zoom },
-			{ 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())})
-
-		if ui.is_being_interacted() == false {
-			update_tools(canvas_rec)
-		}
-		
 		if rl.IsKeyPressed(.SPACE) {
 			layer: Layer
 			init_layer(&layer)
@@ -135,9 +121,6 @@ main :: proc() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.DARKGRAY)
 
-		draw_canvas(canvas_rec)
-		draw_grid(canvas_rec)
-
 		ui.draw()
 		
 		preview_rec := Rec { 50, 50, 200, 200 }
@@ -157,12 +140,30 @@ gui :: proc() {
 	menu_bar_area := Rec { 0, 0, f32(rl.GetScreenWidth()), 50 }
 	menu_bar(menu_bar_area)
 
-	screen_area := Rec { 0, menu_bar_area.height, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())}
-
-	left_panel_area := Rec { screen_area.x, screen_area.y, 400, 1000 }
-	ui.panel(ui.gen_id_auto(), left_panel_area)
+	screen_area := Rec { 0, menu_bar_area.height, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) - menu_bar_area.height}
+	w := screen_area.width / 3
 	
-	right_panel_area := Rec { screen_area.width - 300, screen_area.y, 300, screen_area.height }
+	middle_panel_area := Rec { screen_area.x + w, screen_area.y, w, screen_area.height }
+	app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 0.4) 
+
+	canvas_rec := center_rec(
+		{ 0, 0, f32(app.project.width) * 10 * app.lerped_zoom, f32(app.project.height) * 10 *  app.lerped_zoom },
+		middle_panel_area)
+	
+	if ui.is_being_interacted() == false {
+		update_zoom(&app.project.zoom)
+		update_tools(canvas_rec)
+	}
+	
+	draw_canvas(canvas_rec)
+	draw_grid(canvas_rec)
+	
+	left_panel_area := Rec { screen_area.x, screen_area.y, w, screen_area.height }
+	ui.panel(ui.gen_id_auto(), left_panel_area)
+
+
+	
+	right_panel_area := Rec { screen_area.x + w * 2, screen_area.y, w, screen_area.height }
 	color_panel(right_panel_area)
 	
 	// popups
@@ -218,6 +219,7 @@ init_app :: proc() {
 }
 
 deinit_app :: proc() {
+	close_project()
 }
 
 init_project :: proc(project: ^Project, width, height: i32) {
@@ -239,7 +241,7 @@ deinit_project :: proc(project: ^Project) {
 open_project :: proc(project: ^Project) {
 	app.project = project^
 	
-	app.lerped_zoom = 1
+	// app.lerped_zoom = 1
 	app.image_changed = true
 	bg_image := rl.GenImageChecked(project.width, project.height, 1, 1, rl.GRAY, rl.WHITE)
 	defer rl.UnloadImage(bg_image)
