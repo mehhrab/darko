@@ -17,6 +17,7 @@ Ctx :: struct {
 	draw_commands: [dynamic]Draw_Command,
 	notif_text: string,
 	notif_time: f32,	
+	
 	// HACK: we can only have on popup
 	
 	opened_popup: string,
@@ -47,6 +48,7 @@ Popup :: struct {
 Draw_Command :: union {
 	Draw_Rect,
 	Draw_Text,
+	Draw_Texture,
 }
 
 Draw_Rect :: struct {
@@ -57,6 +59,11 @@ Draw_Rect :: struct {
 Draw_Text :: struct {
 	text: string,
 	rec: Rec,
+}
+
+Draw_Texture :: struct {
+	 texture: rl.Texture,
+	 rec: Rec,
 }
 
 ctx: Ctx
@@ -155,6 +162,7 @@ draw :: proc() {
 			rl.DrawTextEx(ctx.font, text, { notif_x + padding, notif_y + padding }, ctx.font_size, 0, rl.WHITE)
 		}
 	}	
+
 	clear(&ctx.draw_commands)
 	clear(&ctx.popup.draw_commands)
 	free_all(context.temp_allocator)
@@ -172,6 +180,11 @@ draw_command :: proc(command: ^Draw_Command) {
 			x -= text_size.x / 2
 			y -= text_size.y / 2
 			rl.DrawTextEx(ctx.font, text, {x, y}, ctx.font_size, 0, rl.WHITE)
+		}
+		case Draw_Texture: {
+			src := Rec { 0, 0, f32(kind.texture.width), f32(kind.texture.height) }
+			dest := kind.rec
+			rl.DrawTexturePro(kind.texture, src, dest, { 0, 0 }, 0, rl.WHITE)
 		}
 	}
 }
