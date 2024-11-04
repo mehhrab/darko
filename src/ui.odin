@@ -124,9 +124,7 @@ ui_gen_id_auto :: proc(loc := #caller_location) -> UI_ID {
 }
 
 ui_draw :: proc() {
-	for &command in ui_ctx.draw_commands {
-		ui_draw_command(&command)
-	}
+	ui_process_commands(&ui_ctx.draw_commands)
 
 	if ui_ctx.opened_popup != "" {
 		screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
@@ -135,9 +133,7 @@ ui_draw :: proc() {
 			opacity = 100
 		}
 		rl.DrawRectangleRec(screen_rec, { 0, 0, 0, u8((opacity / 255) * 255) })
-		for &command in ui_ctx.popup.draw_commands {
-			ui_draw_command(&command)
-		}
+		ui_process_commands(&ui_ctx.popup.draw_commands)
 	}
 	
 	if ui_ctx.notif_text != "" {
@@ -177,29 +173,32 @@ ui_draw :: proc() {
 	free_all(context.temp_allocator)
 }
 
-ui_draw_command :: proc(command: ^UI_Draw_Command) {
-	switch kind in command^ {
-		case UI_Draw_Rect: {
-			rl.DrawRectangleRec(kind.rec, kind.color)
-		}
-		case UI_Draw_Text: {
-			text := strings.clone_to_cstring(kind.text, context.temp_allocator)
-			x, y := rec_get_center_point(kind.rec)
-			text_size := rl.MeasureTextEx(ui_ctx.font, text, ui_ctx.font_size, 0)
-			x -= text_size.x / 2
-			y -= text_size.y / 2
-			rl.DrawTextEx(ui_ctx.font, text, {x, y}, ui_ctx.font_size, 0, rl.WHITE)
-		}
-		case UI_Draw_Canvas: {
-			draw_canvas(kind.rec)
-		}
-		case UI_Draw_Grid: {
-			draw_grid(kind.rec)
-		}
-		case UI_Draw_Preview: {
-			rl.DrawRectangleRec(kind.rec, rl.DARKBLUE)
-			x, y := rec_get_center_point(kind.rec)
-			draw_sprite_stack(&app.project.layers, x, y, 10)
+ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
+	for command in commands
+	{
+		switch kind in command {
+			case UI_Draw_Rect: {
+				rl.DrawRectangleRec(kind.rec, kind.color)
+			}
+			case UI_Draw_Text: {
+				text := strings.clone_to_cstring(kind.text, context.temp_allocator)
+				x, y := rec_get_center_point(kind.rec)
+				text_size := rl.MeasureTextEx(ui_ctx.font, text, ui_ctx.font_size, 0)
+				x -= text_size.x / 2
+				y -= text_size.y / 2
+				rl.DrawTextEx(ui_ctx.font, text, {x, y}, ui_ctx.font_size, 0, rl.WHITE)
+			}
+			case UI_Draw_Canvas: {
+				draw_canvas(kind.rec)
+			}
+			case UI_Draw_Grid: {
+				draw_grid(kind.rec)
+			}
+			case UI_Draw_Preview: {
+				rl.DrawRectangleRec(kind.rec, rl.DARKBLUE)
+				x, y := rec_get_center_point(kind.rec)
+				draw_sprite_stack(&app.project.layers, x, y, 10)
+			}
 		}
 	}
 }
