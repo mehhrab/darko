@@ -59,8 +59,8 @@ UI_Draw_Text :: struct {
 }
 
 ui_Draw_Texture :: struct {
-	 texture: rl.Texture,
-	 rec: Rec,
+	texture: rl.Texture,
+	rec: Rec,
 }
 
 ui_ctx: UI_Ctx
@@ -205,7 +205,6 @@ ui_begin_popup :: proc(name: string, rec: Rec) -> (is_open: bool) {
 	ui_ctx.current_popup = name
 	ui_ctx.popup.rec = rec
 	 
-	// if ctx.opened_popup == name
 	return name == ui_ctx.opened_popup
 }
 

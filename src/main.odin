@@ -155,8 +155,6 @@ gui :: proc() {
 	
 	left_panel_area := Rec { screen_area.x, screen_area.y, w, screen_area.height }
 	ui_panel(ui_gen_id_auto(), left_panel_area)
-
-
 	
 	right_panel_area := Rec { screen_area.x + w * 2, screen_area.y, w, screen_area.height }
 	color_panel(right_panel_area)
