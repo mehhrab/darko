@@ -1,16 +1,11 @@
-package main
+package darko
 
 import "core:fmt"
 import rl "vendor:raylib"
 import sa "core:container/small_array"
 import "core:mem"
-import "rec"
-import "ui"
 
 LOCK_FPS :: #config(LOCK_FPS, true)
-
-// for ease of use
-Rec :: rec.Rec
 
 App :: struct {
 	width: i32, height: i32,
@@ -70,8 +65,8 @@ main :: proc() {
 	init_app()
 	defer deinit_app()
 
-	ui.init()
-	defer ui.deinit()
+	ui_init()
+	defer ui_deinit()
 
 	project: Project
 	init_project(&project, 8, 8)
@@ -121,11 +116,11 @@ main :: proc() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.DARKGRAY)
 
-		ui.draw()
+		ui_draw()
 		
 		preview_rec := Rec { 50, 50, 200, 200 }
 		rl.DrawRectangleRec(preview_rec, rl.DARKBLUE)
-		x, y := rec.get_center_of_rec(preview_rec)
+		x, y := rec_get_center_point(preview_rec)
 		draw_sprite_stack(&app.project.layers, x, y, 10)
 		
 		rl.DrawFPS(10, 10)
@@ -135,7 +130,7 @@ main :: proc() {
 }
 
 gui :: proc() {
-	ui.begin()
+	ui_begin()
 
 	menu_bar_area := Rec { 0, 0, f32(rl.GetScreenWidth()), 50 }
 	menu_bar(menu_bar_area)
@@ -146,11 +141,11 @@ gui :: proc() {
 	middle_panel_area := Rec { screen_area.x + w, screen_area.y, w, screen_area.height }
 	app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 0.4) 
 
-	canvas_rec := center_rec(
+	canvas_rec := rec_center_in_area(
 		{ 0, 0, f32(app.project.width) * 10 * app.lerped_zoom, f32(app.project.height) * 10 *  app.lerped_zoom },
 		middle_panel_area)
 	
-	if ui.is_being_interacted() == false {
+	if ui_is_being_interacted() == false {
 		update_zoom(&app.project.zoom)
 		update_tools(canvas_rec)
 	}
@@ -159,7 +154,7 @@ gui :: proc() {
 	draw_grid(canvas_rec)
 	
 	left_panel_area := Rec { screen_area.x, screen_area.y, w, screen_area.height }
-	ui.panel(ui.gen_id_auto(), left_panel_area)
+	ui_panel(ui_gen_id_auto(), left_panel_area)
 
 
 	
@@ -167,11 +162,11 @@ gui :: proc() {
 	color_panel(right_panel_area)
 	
 	// popups
-	popup_rec := center_rec({ 0, 0, 400, 300 }, screen_area)
-	if ui.begin_popup("new", popup_rec) {
-		ui.slider_i32(ui.gen_id_auto(), &app.width, 2, 30, { popup_rec.x + 10, popup_rec.y + 10, 300, 40 })
-		ui.slider_i32(ui.gen_id_auto(), &app.height, 2, 30, { popup_rec.x + 10, popup_rec.y + 50, 300, 40 })
-		if ui.button(ui.gen_id_auto(), "new", { popup_rec.x + 10, popup_rec.y + 100, 100, 40 }) {
+	popup_rec := rec_center_in_area({ 0, 0, 400, 300 }, screen_area)
+	if ui_begin_popup("new", popup_rec) {
+		ui_slider_i32(ui_gen_id_auto(), &app.width, 2, 30, { popup_rec.x + 10, popup_rec.y + 10, 300, 40 })
+		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, { popup_rec.x + 10, popup_rec.y + 50, 300, 40 })
+		if ui_button(ui_gen_id_auto(), "new", { popup_rec.x + 10, popup_rec.y + 100, 100, 40 }) {
 			close_project()
 			project: Project
 			init_project(&project, app.width, app.height)
@@ -181,35 +176,35 @@ gui :: proc() {
 			init_layer(&layer)
 			add_layer(&layer, 0)
 
-			ui.close_current_popup()
-			ui.show_notif("project is created")
+			ui_close_current_popup()
+			ui_show_notif("project is created")
 		}	
 	}
-	ui.end_popup()
-	ui.end()
+	ui_end_popup()
+	ui_end()
 }
 
 menu_bar :: proc(area: Rec) {
-	ui.panel(ui.gen_id_auto(), area)
-	if ui.button(ui.gen_id_auto(), "file", { area.x, area.y, 60, area.height }) {
-		ui.open_popup("new")
+	ui_panel(ui_gen_id_auto(), area)
+	if ui_button(ui_gen_id_auto(), "file", { area.x, area.y, 60, area.height }) {
+		ui_open_popup("new")
 	}
 }
 
 color_panel :: proc(area: Rec) {
-	ui.panel(ui.gen_id_auto(), area)
+	ui_panel(ui_gen_id_auto(), area)
 	
-	area := rec.pad(area, 10)
+	area := rec_pad(area, 10)
 
 	@(static)
 	hsv_color := [3]f32 { 0, 0, 0 }
 
 	slider_rec := Rec { area.x, area.y, area.width, 40 }
-	ui.slider_f32(ui.gen_id_auto(), &hsv_color[0], 0, 360, slider_rec)
+	ui_slider_f32(ui_gen_id_auto(), &hsv_color[0], 0, 360, slider_rec)
 	slider_rec.y += 50
-	ui.slider_f32(ui.gen_id_auto(), &hsv_color[1], 0, 1, slider_rec)
+	ui_slider_f32(ui_gen_id_auto(), &hsv_color[1], 0, 1, slider_rec)
 	slider_rec.y += 50
-	ui.slider_f32(ui.gen_id_auto(), &hsv_color[2], 0, 1, slider_rec)
+	ui_slider_f32(ui_gen_id_auto(), &hsv_color[2], 0, 1, slider_rec)
 
 	app.project.current_color = rl.ColorFromHSV(hsv_color[0], hsv_color[1], hsv_color[2])
 }
@@ -321,7 +316,7 @@ draw_sprite_stack :: proc(layers: ^[dynamic]Layer, x, y: f32, scale: f32) {
 
 update_tools :: proc(area: Rec) {
 	// pencil
-	if ui.is_mouse_in_rec(area) {
+	if ui_is_mouse_in_rec(area) {
 		if rl.IsMouseButtonDown(.LEFT) {
 			begin_undo()
 			x, y := get_mouse_pos_in_canvas(area)
@@ -333,7 +328,7 @@ update_tools :: proc(area: Rec) {
 		end_undo()
 	}
 	// eraser
-	if ui.is_mouse_in_rec(area) {
+	if ui_is_mouse_in_rec(area) {
 		if rl.IsMouseButtonDown(.RIGHT) {
 			begin_undo()
 			x, y := get_mouse_pos_in_canvas(area)
@@ -345,7 +340,7 @@ update_tools :: proc(area: Rec) {
 		end_undo()
 	}
 	// fill
-	if ui.is_mouse_in_rec(area) {
+	if ui_is_mouse_in_rec(area) {
 		if rl.IsMouseButtonPressed(.MIDDLE) {
 			x, y := get_mouse_pos_in_canvas(area)
 			
@@ -444,11 +439,4 @@ end_undo :: proc() {
 		rl.UnloadImage(temp_undo_image)
 		app.temp_undo_image = nil
 	}
-}
-
-// NOTE: rec x and y is not used
-center_rec :: proc(rec: Rec, area: Rec) -> (centered_rec: Rec) {
-	x := area.x + area.width / 2 - rec.width / 2
-	y := area.y + area.height / 2 - rec.height / 2
-	return { x, y, rec.width, rec.height }
 }
