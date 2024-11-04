@@ -46,6 +46,7 @@ UI_Draw_Command :: union {
 	UI_Draw_Rect,
 	UI_Draw_Text,
 	UI_Draw_Canvas,
+	UI_Draw_Grid,
 }
 
 UI_Draw_Rect :: struct {
@@ -61,6 +62,11 @@ UI_Draw_Text :: struct {
 // darko specific commands
 
 UI_Draw_Canvas :: struct {
+	rec: Rec,
+}
+
+// TODO: add more options
+UI_Draw_Grid :: struct {
 	rec: Rec,
 }
 
@@ -181,6 +187,9 @@ ui_draw_command :: proc(command: ^UI_Draw_Command) {
 		}
 		case UI_Draw_Canvas: {
 			draw_canvas(kind.rec)
+		}
+		case UI_Draw_Grid: {
+			draw_grid(kind.rec)
 		}
 	}
 }
