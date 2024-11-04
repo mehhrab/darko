@@ -150,8 +150,9 @@ gui :: proc() {
 		update_tools(canvas_rec)
 	}
 	
-	draw_canvas(canvas_rec)
-	draw_grid(canvas_rec)
+	ui_push_command(UI_Draw_Canvas {
+		rec = canvas_rec
+	})
 	
 	left_panel_area := Rec { screen_area.x, screen_area.y, w, screen_area.height }
 	ui_panel(ui_gen_id_auto(), left_panel_area)

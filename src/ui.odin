@@ -45,7 +45,7 @@ UI_Popup :: struct {
 UI_Draw_Command :: union {
 	UI_Draw_Rect,
 	UI_Draw_Text,
-	ui_Draw_Texture,
+	UI_Draw_Canvas,
 }
 
 UI_Draw_Rect :: struct {
@@ -58,8 +58,9 @@ UI_Draw_Text :: struct {
 	rec: Rec,
 }
 
-ui_Draw_Texture :: struct {
-	texture: rl.Texture,
+// darko specific commands
+
+UI_Draw_Canvas :: struct {
 	rec: Rec,
 }
 
@@ -178,10 +179,8 @@ ui_draw_command :: proc(command: ^UI_Draw_Command) {
 			y -= text_size.y / 2
 			rl.DrawTextEx(ui_ctx.font, text, {x, y}, ui_ctx.font_size, 0, rl.WHITE)
 		}
-		case ui_Draw_Texture: {
-			src := Rec { 0, 0, f32(kind.texture.width), f32(kind.texture.height) }
-			dest := kind.rec
-			rl.DrawTexturePro(kind.texture, src, dest, { 0, 0 }, 0, rl.WHITE)
+		case UI_Draw_Canvas: {
+			draw_canvas(kind.rec)
 		}
 	}
 }
