@@ -47,6 +47,7 @@ UI_Draw_Command :: union {
 	UI_Draw_Text,
 	UI_Draw_Canvas,
 	UI_Draw_Grid,
+	UI_Draw_Preview,
 }
 
 UI_Draw_Rect :: struct {
@@ -67,6 +68,10 @@ UI_Draw_Canvas :: struct {
 
 // TODO: add more options
 UI_Draw_Grid :: struct {
+	rec: Rec,
+}
+
+UI_Draw_Preview :: struct {
 	rec: Rec,
 }
 
@@ -190,6 +195,11 @@ ui_draw_command :: proc(command: ^UI_Draw_Command) {
 		}
 		case UI_Draw_Grid: {
 			draw_grid(kind.rec)
+		}
+		case UI_Draw_Preview: {
+			rl.DrawRectangleRec(kind.rec, rl.DARKBLUE)
+			x, y := rec_get_center_point(kind.rec)
+			draw_sprite_stack(&app.project.layers, x, y, 10)
 		}
 	}
 }

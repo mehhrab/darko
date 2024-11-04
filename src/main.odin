@@ -118,11 +118,6 @@ main :: proc() {
 
 		ui_draw()
 		
-		preview_rec := Rec { 50, 50, 200, 200 }
-		rl.DrawRectangleRec(preview_rec, rl.DARKBLUE)
-		x, y := rec_get_center_point(preview_rec)
-		draw_sprite_stack(&app.project.layers, x, y, 10)
-		
 		rl.DrawFPS(10, 10)
 		rl.EndDrawing()
 	}
@@ -159,6 +154,10 @@ gui :: proc() {
 		
 	left_panel_area := Rec { screen_area.x, screen_area.y, w, screen_area.height }
 	ui_panel(ui_gen_id_auto(), left_panel_area)
+	preview_rec := Rec { left_panel_area.x + 10, left_panel_area.y + 10, 200, 200 }
+	ui_push_command(UI_Draw_Preview {
+		rec = preview_rec,
+	})
 	
 	right_panel_area := Rec { screen_area.x + w * 2, screen_area.y, w, screen_area.height }
 	color_panel(right_panel_area)
