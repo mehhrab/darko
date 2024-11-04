@@ -237,7 +237,7 @@ deinit_project :: proc(project: ^Project) {
 open_project :: proc(project: ^Project) {
 	app.project = project^
 	
-	// app.lerped_zoom = 1
+	app.lerped_zoom = 1
 	app.image_changed = true
 	bg_image := rl.GenImageChecked(project.width, project.height, 1, 1, rl.GRAY, rl.WHITE)
 	defer rl.UnloadImage(bg_image)
