@@ -62,11 +62,11 @@ main :: proc() {
 		rl.SetTargetFPS(60)
 	}
 
+	ui_init_ctx()
+	defer ui_deinit_ctx()
+	
 	init_app()
 	defer deinit_app()
-
-	ui_init()
-	defer ui_deinit()
 
 	project: Project
 	init_project(&project, 8, 8)
