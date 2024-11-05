@@ -77,7 +77,7 @@ UI_Draw_Preview :: struct {
 
 ui_ctx: UI_Ctx
 
-ui_init :: proc() {
+ui_init_ctx :: proc() {
 	ui_ctx.draw_commands = make([dynamic]UI_Draw_Command)
 
 	ui_ctx.font = rl.LoadFontEx("../assets/HackNerdFont-Bold.ttf", 32, nil, 0)
@@ -90,7 +90,7 @@ ui_init :: proc() {
 	ui_ctx.accent_color = rl.PURPLE
 }
 
-ui_deinit :: proc() {
+ui_deinit_ctx :: proc() {
 	rl.UnloadFont(ui_ctx.font)
 	delete(ui_ctx.draw_commands)
 	delete(ui_ctx.popup.draw_commands)
