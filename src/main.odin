@@ -219,7 +219,6 @@ deinit_app :: proc() {
 }
 
 init_project :: proc(project: ^Project, width, height: i32) {
-	app.undos = make([dynamic]rl.Image)
 	project.zoom = 1
 	project.width = width
 	project.height = height
@@ -236,7 +235,8 @@ deinit_project :: proc(project: ^Project) {
 
 open_project :: proc(project: ^Project) {
 	app.project = project^
-	
+
+	app.undos = make([dynamic]rl.Image)	
 	app.lerped_zoom = 1
 	app.image_changed = true
 	bg_image := rl.GenImageChecked(project.width, project.height, 1, 1, rl.GRAY, rl.WHITE)
