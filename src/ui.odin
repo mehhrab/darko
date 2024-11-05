@@ -22,7 +22,7 @@ UI_Ctx :: struct {
 	popup: UI_Popup,
 	popup_time: f32,
 
-	// style
+	// style:
 
 	font: rl.Font,
 	font_size: f32,
@@ -60,7 +60,7 @@ UI_Draw_Text :: struct {
 	rec: Rec,
 }
 
-// darko specific commands
+// darko specific commands:
 
 UI_Draw_Canvas :: struct {
 	rec: Rec,
@@ -173,6 +173,7 @@ ui_draw :: proc() {
 	free_all(context.temp_allocator)
 }
 
+// TODO: should be handled in app
 ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 	for command in commands
 	{
