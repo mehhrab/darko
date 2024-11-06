@@ -252,8 +252,10 @@ ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: 
 	ui_ctx.current_popup = name
 	ui_ctx.popup.rec =  { rec.x, rec.y - ui_ctx.header_height, rec.width, rec.height + ui_ctx.header_height }
 	ui_ctx.popup.show_header = true
-	if ui_button(id, "X", { rec.x, rec.y - ui_ctx.header_height, ui_ctx.header_height, ui_ctx.header_height }) {
-		ui_close_current_popup()
+	if name == ui_ctx.opened_popup {
+		if ui_button(id, "X", { rec.x, rec.y - ui_ctx.header_height, ui_ctx.header_height, ui_ctx.header_height }) {
+			ui_close_current_popup()
+		}
 	}
 	return name == ui_ctx.opened_popup, { rec.x, rec.y, rec.width, rec.height + ui_ctx.header_height }
 }
