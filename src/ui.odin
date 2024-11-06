@@ -41,6 +41,7 @@ UI_Popup :: struct {
 	name: string,
 	rec: Rec,
 	draw_commands: [dynamic]UI_Draw_Command,
+	show_header: bool,
 }
 
 UI_Draw_Command :: union {
@@ -230,14 +231,22 @@ ui_close_current_popup :: proc() {
 	ui_ctx.active_widget = 0
 	ui_ctx.opened_popup = ""
 	ui_ctx.popup.rec = {}
+	ui_ctx.popup.show_header = false
 }
 
 // NOTE: name is also used as the id
-ui_begin_popup :: proc(name: string, rec: Rec) -> (is_open: bool) {
+ui_begin_popup :: proc(name: string, rec: Rec) -> (open: bool) {
 	ui_ctx.current_popup = name
 	ui_ctx.popup.rec = rec
 	 
 	return name == ui_ctx.opened_popup
+}
+
+ui_begin_popup_with_header :: proc(name: string, rec: Rec) -> (open: bool, client_rec: Rec) {
+	ui_ctx.current_popup = name
+	ui_ctx.popup.rec =  { rec.x, rec.y - 40, rec.width, rec.height + 40 }
+	ui_ctx.popup.show_header = true
+	return name == ui_ctx.opened_popup, { rec.x, rec.y, rec.width, rec.height + 40 }
 }
 
 ui_end_popup :: proc() {
@@ -245,6 +254,17 @@ ui_end_popup :: proc() {
 		color = ui_ctx.panel_color,
 		rec = ui_ctx.popup.rec,
 	})
+	if ui_ctx.popup.show_header {
+		inject_at(&ui_ctx.popup.draw_commands, 1, UI_Draw_Rect {
+			color = ui_ctx.accent_color,
+			rec = { ui_ctx.popup.rec.x, ui_ctx.popup.rec.y, ui_ctx.popup.rec.width, 40 },
+		})
+		inject_at(&ui_ctx.popup.draw_commands, 2, UI_Draw_Text {
+			color = ui_ctx.border_color,
+			rec = { ui_ctx.popup.rec.x, ui_ctx.popup.rec.y, ui_ctx.popup.rec.width, 40 },
+			text = ui_ctx.opened_popup
+		})
+	}
 	ui_ctx.current_popup = ""
 }
 
@@ -337,6 +357,11 @@ ui_slider_f32 :: proc(id: UI_ID, value: ^f32, min, max: f32, rec: Rec, format: s
 		rec = rec,
 		color =  { 24, 25, 38, 255 },
 	})
+	// ui_push_command(UI_Draw_Rect_Outline {
+	// 	rec = rec,
+	// 	color =  ui_ctx.border_color,
+	// 	thickness = 1,
+	// })
 	progress_width := (last_value - min) * (progress_rec.width) / (max - min)
 	progress_rec.width = progress_width
 	ui_push_command(UI_Draw_Rect {
