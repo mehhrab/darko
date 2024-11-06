@@ -69,6 +69,7 @@ UI_Draw_Rect_Outline :: struct {
 
 UI_Draw_Text :: struct {
 	text: string,
+	size: f32,
 	rec: Rec,
 	color: rl.Color,
 }
@@ -208,7 +209,7 @@ ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 				text_size := rl.MeasureTextEx(ui_ctx.font, text, ui_ctx.font_size, 0)
 				x -= text_size.x / 2
 				y -= text_size.y / 2
-				rl.DrawTextEx(ui_ctx.font, text, {x, y}, ui_ctx.font_size, 0, kind.color)
+				rl.DrawTextEx(ui_ctx.font, text, {x, y}, kind.size, 0, kind.color)
 			}
 			case UI_Draw_Canvas: {
 				draw_canvas(kind.rec)
@@ -273,7 +274,8 @@ ui_end_popup :: proc() {
 		inject_at(&ui_ctx.popup.draw_commands, 2, UI_Draw_Text {
 			color = ui_ctx.border_color,
 			rec = { ui_ctx.popup.rec.x, ui_ctx.popup.rec.y, ui_ctx.popup.rec.width, ui_ctx.header_height },
-			text = ui_ctx.opened_popup
+			text = ui_ctx.opened_popup,
+			size = ui_ctx.font_size,
 		})
 	}
 	ui_ctx.current_popup = ""
@@ -344,6 +346,7 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec) -> (clicked: bool) {
 	ui_push_command(UI_Draw_Text {
 		rec = rec,
 		text = text,
+		size = ui_ctx.font_size,
 		color = ui_ctx.text_color,
 	})
 	return clicked
@@ -384,11 +387,13 @@ ui_slider_f32 :: proc(id: UI_ID, value: ^f32, min, max: f32, rec: Rec, format: s
 	ui_push_command(UI_Draw_Text {
 		rec = { rec.x + 2, rec.y + 2, rec.width, rec.height },
 		text = text,
+		size = ui_ctx.font_size,
 		color = ui_ctx.border_color,
 	})
 	ui_push_command(UI_Draw_Text {
 		rec = rec,
 		text = text,
+		size = ui_ctx.font_size,
 		color = ui_ctx.text_color,
 	})
 }
