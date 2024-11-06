@@ -145,9 +145,9 @@ ui_draw :: proc() {
 
 	if ui_ctx.opened_popup != "" {
 		screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
-		opacity := ui_ctx.popup_time * 150 * 5
-		if opacity >= 150 {
-			opacity = 150
+		opacity := ui_ctx.popup_time * 200 * 5
+		if opacity >= 200 {
+			opacity = 200
 		}
 		rl.DrawRectangleRec(screen_rec, { 0, 0, 0, u8((opacity / 255) * 255) })
 		ui_process_commands(&ui_ctx.popup.draw_commands)
@@ -248,10 +248,13 @@ ui_begin_popup :: proc(name: string, rec: Rec) -> (open: bool) {
 	return name == ui_ctx.opened_popup
 }
 
-ui_begin_popup_with_header :: proc(name: string, rec: Rec) -> (open: bool, client_rec: Rec) {
+ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: bool, client_rec: Rec) {
 	ui_ctx.current_popup = name
 	ui_ctx.popup.rec =  { rec.x, rec.y - ui_ctx.header_height, rec.width, rec.height + ui_ctx.header_height }
 	ui_ctx.popup.show_header = true
+	if ui_button(id, "X", { rec.x, rec.y - ui_ctx.header_height, ui_ctx.header_height, ui_ctx.header_height }) {
+		ui_close_current_popup()
+	}
 	return name == ui_ctx.opened_popup, { rec.x, rec.y, rec.width, rec.height + ui_ctx.header_height }
 }
 
@@ -376,6 +379,11 @@ ui_slider_f32 :: proc(id: UI_ID, value: ^f32, min, max: f32, rec: Rec, format: s
 	})
 	
 	text := fmt.aprintf(format, last_value, allocator = context.temp_allocator)
+	ui_push_command(UI_Draw_Text {
+		rec = { rec.x + 2, rec.y + 2, rec.width, rec.height },
+		text = text,
+		color = ui_ctx.border_color,
+	})
 	ui_push_command(UI_Draw_Text {
 		rec = rec,
 		text = text,

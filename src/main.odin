@@ -125,6 +125,9 @@ main :: proc() {
 }
 
 gui :: proc() {
+	if rl.IsKeyPressed(.B) {
+		ui_open_popup("Open file")
+	}
 	ui_begin()
 
 	menu_bar_area := Rec { 0, 0, f32(rl.GetScreenWidth()), 40 }
@@ -169,7 +172,7 @@ gui :: proc() {
 	
 	// popups
 	popup_rec := rec_center_in_area({ 0, 0, 400, 150 }, screen_area)
-	if open, rec := ui_begin_popup_with_header("New file", popup_rec); open {
+	if open, rec := ui_begin_popup_with_header("New file", ui_gen_id_auto(), popup_rec); open {
 		ui_slider_i32(ui_gen_id_auto(), &app.width, 2, 30, { rec.x + 10, rec.y + 10, rec.width - 20, 40 })
 		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, { rec.x + 10, rec.y + 50, rec.width - 20, 40 })
 		if ui_button(ui_gen_id_auto(), "new", { rec.x + 10, rec.y + 100, rec.width - 20, 40 }) {
@@ -183,6 +186,13 @@ gui :: proc() {
 			add_layer(&layer, 0)
 
 			ui_close_current_popup()
+			ui_show_notif("project is created")
+		}	
+	}
+	if open, rec := ui_begin_popup_with_header("Open file", ui_gen_id_auto(), popup_rec); open {
+		ui_slider_i32(ui_gen_id_auto(), &app.width, 2, 30, { rec.x + 10, rec.y + 10, rec.width - 20, 40 })
+		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, { rec.x + 10, rec.y + 50, rec.width - 20, 40 })
+		if ui_button(ui_gen_id_auto(), "yah", { rec.x + 10, rec.y + 100, rec.width - 20, 40 }) {
 			ui_show_notif("project is created")
 		}	
 	}
