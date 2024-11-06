@@ -310,8 +310,9 @@ ui_slider_f32 :: proc(id: UI_ID, value: ^f32, min, max: f32, rec: Rec, format: s
 	last_value := value^
 	ui_update_widget(id, rec)
 
+	progress_rec := rec_pad(rec, 2)
 	if ui_ctx.active_widget == id && rl.IsMouseButtonDown(.LEFT) {
-		last_value = min + (rl.GetMousePosition().x - rec.x) * (max - min) / rec.width
+		last_value = min + (rl.GetMousePosition().x - progress_rec.x) * (max - min) / progress_rec.width
 		if step != 0 {
 			last_value = (math.round(last_value / step)) * step
 		}
@@ -322,11 +323,13 @@ ui_slider_f32 :: proc(id: UI_ID, value: ^f32, min, max: f32, rec: Rec, format: s
 
 	ui_push_command(UI_Draw_Rect {
 		rec = rec,
-		color = ui_ctx.widget_color,
+		color =  { 24, 25, 38, 255 },
 	})
+	progress_width := (last_value - min) * (progress_rec.width) / (max - min)
+	progress_rec.width = progress_width
 	ui_push_command(UI_Draw_Rect {
-		rec = { rec.x, rec.y, (last_value - min) * (rec.width) / (max - min), rec.height },
-		color = ui_ctx.accent_color,	
+		rec = progress_rec,
+		color = ui_ctx.widget_color,	
 	})
 	
 	text := fmt.aprintf(format, last_value, allocator = context.temp_allocator)
