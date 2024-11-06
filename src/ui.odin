@@ -45,6 +45,7 @@ UI_Popup :: struct {
 
 UI_Draw_Command :: union {
 	UI_Draw_Rect,
+	UI_Draw_Rect_Outline,
 	UI_Draw_Text,
 	UI_Draw_Canvas,
 	UI_Draw_Grid,
@@ -54,6 +55,12 @@ UI_Draw_Command :: union {
 UI_Draw_Rect :: struct {
 	rec: Rec,
 	color: rl.Color,
+}
+
+UI_Draw_Rect_Outline :: struct {
+	rec: Rec,
+	color: rl.Color,
+	thickness: f32,
 }
 
 UI_Draw_Text :: struct {
@@ -184,6 +191,9 @@ ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 		switch kind in command {
 			case UI_Draw_Rect: {
 				rl.DrawRectangleRec(kind.rec, kind.color)
+			}
+			case UI_Draw_Rect_Outline: {
+				rl.DrawRectangleLinesEx(kind.rec, kind.thickness, kind.color)
 			}
 			case UI_Draw_Text: {
 				text := strings.clone_to_cstring(kind.text, context.temp_allocator)
