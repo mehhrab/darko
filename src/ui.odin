@@ -27,6 +27,7 @@ UI_Ctx :: struct {
 	font: rl.Font,
 	font_size: f32,
 	roundness: f32,
+	text_color: rl.Color,
 	panel_color: rl.Color,
 	widget_color: rl.Color,
 	widget_hover_color: rl.Color,
@@ -83,11 +84,12 @@ ui_init_ctx :: proc() {
 	ui_ctx.font = rl.LoadFontEx("../assets/HackNerdFont-Bold.ttf", 32, nil, 0)
 	rl.SetTextureFilter(ui_ctx.font.texture, .BILINEAR)
 	ui_ctx.font_size = 20
-	ui_ctx.widget_color = { 40, 40, 40, 255 }
-	ui_ctx.widget_hover_color = { 60, 60, 60, 255 }
-	ui_ctx.widget_active_color = { 30, 30, 30, 255 }
-	ui_ctx.panel_color = { 10, 10, 10, 100 }
-	ui_ctx.accent_color = rl.PURPLE
+	ui_ctx.text_color = { 198, 208, 245, 255 }
+	ui_ctx.widget_color = { 65, 69, 89, 255 }
+	ui_ctx.widget_hover_color = { 115, 121, 148, 255 }
+	ui_ctx.widget_active_color = { 131, 139, 167, 255 }
+	ui_ctx.panel_color = { 41, 44, 60, 255 }
+	ui_ctx.accent_color = { 202, 158, 230, 255 }
 }
 
 ui_deinit_ctx :: proc() {
@@ -128,14 +130,15 @@ ui_draw :: proc() {
 
 	if ui_ctx.opened_popup != "" {
 		screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
-		opacity := ui_ctx.popup_time * 100 * 5
-		if opacity >= 100 {
-			opacity = 100
+		opacity := ui_ctx.popup_time * 150 * 5
+		if opacity >= 150 {
+			opacity = 150
 		}
 		rl.DrawRectangleRec(screen_rec, { 0, 0, 0, u8((opacity / 255) * 255) })
 		ui_process_commands(&ui_ctx.popup.draw_commands)
 	}
 	
+	// TODO: clean this up
 	if ui_ctx.notif_text != "" {
 		ww := f32(rl.GetScreenWidth())
 		wh := f32(rl.GetScreenHeight())
@@ -152,19 +155,19 @@ ui_draw :: proc() {
 		if ui_ctx.notif_time < 0.2 {
 			notif_y = wh - offset * (ui_ctx.notif_time / 0.2)
 		}
-		else if ui_ctx.notif_time >= 0.2 && ui_ctx.notif_time < 0.5 {
+		else if ui_ctx.notif_time >= 0.2 && ui_ctx.notif_time < 1 {
 			notif_y = wh - offset
 		} 
-		else if ui_ctx.notif_time >= 0.5 && ui_ctx.notif_time <= 1 {
-			notif_y = wh - offset + offset * (ui_ctx.notif_time - 0.5) / 0.5
+		else if ui_ctx.notif_time >= 1 && ui_ctx.notif_time <= 1.2 {
+			notif_y = wh - offset + offset * (ui_ctx.notif_time - 1) / 0.2
 		}
 		else {
 			ui_ctx.notif_text = ""
 		}
 		if ui_ctx.notif_text != "" {
 			notif_y += padding
-			rl.DrawRectangleRec({ notif_x, notif_y, notif_w, notif_h }, rl.BLACK)
-			rl.DrawTextEx(ui_ctx.font, text, { notif_x + padding, notif_y + padding }, ui_ctx.font_size, 0, rl.WHITE)
+			rl.DrawRectangleRec({ notif_x, notif_y, notif_w, notif_h }, ui_ctx.accent_color)
+			rl.DrawTextEx(ui_ctx.font, text, { notif_x + padding, notif_y + padding }, ui_ctx.font_size, 0, { 35, 38, 52, 255 })
 		}
 	}	
 
@@ -187,7 +190,7 @@ ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 				text_size := rl.MeasureTextEx(ui_ctx.font, text, ui_ctx.font_size, 0)
 				x -= text_size.x / 2
 				y -= text_size.y / 2
-				rl.DrawTextEx(ui_ctx.font, text, {x, y}, ui_ctx.font_size, 0, rl.WHITE)
+				rl.DrawTextEx(ui_ctx.font, text, {x, y}, ui_ctx.font_size, 0, ui_ctx.text_color)
 			}
 			case UI_Draw_Canvas: {
 				draw_canvas(kind.rec)
@@ -196,7 +199,7 @@ ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 				draw_grid(kind.rec)
 			}
 			case UI_Draw_Preview: {
-				rl.DrawRectangleRec(kind.rec, rl.DARKBLUE)
+				rl.DrawRectangleRec(kind.rec, ui_ctx.text_color)
 				x, y := rec_get_center_point(kind.rec)
 				draw_sprite_stack(&app.project.layers, x, y, 10)
 			}
@@ -228,7 +231,7 @@ ui_begin_popup :: proc(name: string, rec: Rec) -> (is_open: bool) {
 
 ui_end_popup :: proc() {
 	inject_at(&ui_ctx.popup.draw_commands, 0, UI_Draw_Rect {
-		color = rl.BLACK,
+		color = ui_ctx.panel_color,
 		rec = ui_ctx.popup.rec,
 	})
 	ui_ctx.current_popup = ""

@@ -114,11 +114,11 @@ main :: proc() {
 
 		// draw
 		rl.BeginDrawing()
-		rl.ClearBackground(rl.DARKGRAY)
+		rl.ClearBackground({ 24, 25, 38, 255 })
 
 		ui_draw()
 		
-		rl.DrawFPS(10, 10)
+		rl.DrawFPS(rl.GetScreenWidth() - 80, 10)
 		rl.EndDrawing()
 	}
 	rl.CloseWindow()
@@ -127,7 +127,7 @@ main :: proc() {
 gui :: proc() {
 	ui_begin()
 
-	menu_bar_area := Rec { 0, 0, f32(rl.GetScreenWidth()), 50 }
+	menu_bar_area := Rec { 0, 0, f32(rl.GetScreenWidth()), 40 }
 	menu_bar(menu_bar_area)
 
 	screen_area := Rec { 0, menu_bar_area.height, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) - menu_bar_area.height}
@@ -163,11 +163,11 @@ gui :: proc() {
 	color_panel(right_panel_area)
 	
 	// popups
-	popup_rec := rec_center_in_area({ 0, 0, 400, 300 }, screen_area)
+	popup_rec := rec_center_in_area({ 0, 0, 400, 150 }, screen_area)
 	if ui_begin_popup("new", popup_rec) {
-		ui_slider_i32(ui_gen_id_auto(), &app.width, 2, 30, { popup_rec.x + 10, popup_rec.y + 10, 300, 40 })
-		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, { popup_rec.x + 10, popup_rec.y + 50, 300, 40 })
-		if ui_button(ui_gen_id_auto(), "new", { popup_rec.x + 10, popup_rec.y + 100, 100, 40 }) {
+		ui_slider_i32(ui_gen_id_auto(), &app.width, 2, 30, { popup_rec.x + 10, popup_rec.y + 10, popup_rec.width - 20, 40 })
+		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, { popup_rec.x + 10, popup_rec.y + 50, popup_rec.width - 20, 40 })
+		if ui_button(ui_gen_id_auto(), "new", { popup_rec.x + 10, popup_rec.y + 100, popup_rec.width - 20, 40 }) {
 			close_project()
 			project: Project
 			init_project(&project, app.width, app.height)
@@ -186,7 +186,11 @@ gui :: proc() {
 }
 
 menu_bar :: proc(area: Rec) {
+	prev_panel_color := ui_ctx.panel_color
+	ui_ctx.panel_color = ui_ctx.widget_color 
 	ui_panel(ui_gen_id_auto(), area)
+	ui_ctx.panel_color = prev_panel_color
+
 	if ui_button(ui_gen_id_auto(), "file", { area.x, area.y, 60, area.height }) {
 		ui_open_popup("new")
 	}
@@ -239,7 +243,13 @@ open_project :: proc(project: ^Project) {
 	app.undos = make([dynamic]rl.Image)	
 	app.lerped_zoom = 1
 	app.image_changed = true
-	bg_image := rl.GenImageChecked(project.width, project.height, 1, 1, rl.GRAY, rl.WHITE)
+	bg_image := rl.GenImageChecked(
+		project.width, 
+		project.height,
+		1, 
+		1, 
+		{ 198, 208, 245, 255 }, 
+		{ 131, 139, 167, 255 })
 	defer rl.UnloadImage(bg_image)
 	app.bg_texture = rl.LoadTextureFromImage(bg_image)
 }
