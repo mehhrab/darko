@@ -151,6 +151,11 @@ gui :: proc() {
 	ui_push_command(UI_Draw_Grid {
 		rec = canvas_rec
 	})
+	ui_push_command(UI_Draw_Rect_Outline {
+		rec = middle_panel_area,
+		color = ui_ctx.border_color,
+		thickness = 2
+	})
 		
 	left_panel_area := Rec { screen_area.x, screen_area.y, w, screen_area.height }
 	ui_panel(ui_gen_id_auto(), left_panel_area)
@@ -164,10 +169,10 @@ gui :: proc() {
 	
 	// popups
 	popup_rec := rec_center_in_area({ 0, 0, 400, 150 }, screen_area)
-	if ui_begin_popup("new", popup_rec) {
-		ui_slider_i32(ui_gen_id_auto(), &app.width, 2, 30, { popup_rec.x + 10, popup_rec.y + 10, popup_rec.width - 20, 40 })
-		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, { popup_rec.x + 10, popup_rec.y + 50, popup_rec.width - 20, 40 })
-		if ui_button(ui_gen_id_auto(), "new", { popup_rec.x + 10, popup_rec.y + 100, popup_rec.width - 20, 40 }) {
+	if open, rec := ui_begin_popup_with_header("New file", popup_rec); open {
+		ui_slider_i32(ui_gen_id_auto(), &app.width, 2, 30, { rec.x + 10, rec.y + 10, rec.width - 20, 40 })
+		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, { rec.x + 10, rec.y + 50, rec.width - 20, 40 })
+		if ui_button(ui_gen_id_auto(), "new", { rec.x + 10, rec.y + 100, rec.width - 20, 40 }) {
 			close_project()
 			project: Project
 			init_project(&project, app.width, app.height)
@@ -191,8 +196,8 @@ menu_bar :: proc(area: Rec) {
 	ui_panel(ui_gen_id_auto(), area)
 	ui_ctx.panel_color = prev_panel_color
 
-	if ui_button(ui_gen_id_auto(), "file", { area.x, area.y, 60, area.height }) {
-		ui_open_popup("new")
+	if ui_button(ui_gen_id_auto(), "File", { area.x, area.y, 60, area.height }) {
+		ui_open_popup("New file")
 	}
 }
 

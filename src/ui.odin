@@ -27,12 +27,15 @@ UI_Ctx :: struct {
 	font: rl.Font,
 	font_size: f32,
 	roundness: f32,
+	header_height: f32,
+
 	text_color: rl.Color,
 	panel_color: rl.Color,
 	widget_color: rl.Color,
+	accent_color: rl.Color,
+	border_color: rl.Color,
 	widget_hover_color: rl.Color,
 	widget_active_color: rl.Color,
-	accent_color: rl.Color,
 }
 
 UI_ID :: u32
@@ -93,12 +96,15 @@ ui_init_ctx :: proc() {
 	ui_ctx.font = rl.LoadFontEx("../assets/HackNerdFont-Bold.ttf", 32, nil, 0)
 	rl.SetTextureFilter(ui_ctx.font.texture, .BILINEAR)
 	ui_ctx.font_size = 20
+	ui_ctx.header_height = 30
+
 	ui_ctx.text_color = { 198, 208, 245, 255 }
+	ui_ctx.panel_color = { 41, 44, 60, 255 }
 	ui_ctx.widget_color = { 65, 69, 89, 255 }
+	ui_ctx.accent_color = { 202, 158, 230, 255 }
+	ui_ctx.border_color = { 10, 15, 10, 255 }
 	ui_ctx.widget_hover_color = { 115, 121, 148, 255 }
 	ui_ctx.widget_active_color = { 131, 139, 167, 255 }
-	ui_ctx.panel_color = { 41, 44, 60, 255 }
-	ui_ctx.accent_color = { 202, 158, 230, 255 }
 }
 
 ui_deinit_ctx :: proc() {
@@ -244,9 +250,9 @@ ui_begin_popup :: proc(name: string, rec: Rec) -> (open: bool) {
 
 ui_begin_popup_with_header :: proc(name: string, rec: Rec) -> (open: bool, client_rec: Rec) {
 	ui_ctx.current_popup = name
-	ui_ctx.popup.rec =  { rec.x, rec.y - 40, rec.width, rec.height + 40 }
+	ui_ctx.popup.rec =  { rec.x, rec.y - ui_ctx.header_height, rec.width, rec.height + ui_ctx.header_height }
 	ui_ctx.popup.show_header = true
-	return name == ui_ctx.opened_popup, { rec.x, rec.y, rec.width, rec.height + 40 }
+	return name == ui_ctx.opened_popup, { rec.x, rec.y, rec.width, rec.height + ui_ctx.header_height }
 }
 
 ui_end_popup :: proc() {
@@ -257,11 +263,11 @@ ui_end_popup :: proc() {
 	if ui_ctx.popup.show_header {
 		inject_at(&ui_ctx.popup.draw_commands, 1, UI_Draw_Rect {
 			color = ui_ctx.accent_color,
-			rec = { ui_ctx.popup.rec.x, ui_ctx.popup.rec.y, ui_ctx.popup.rec.width, 40 },
+			rec = { ui_ctx.popup.rec.x, ui_ctx.popup.rec.y, ui_ctx.popup.rec.width, ui_ctx.header_height },
 		})
 		inject_at(&ui_ctx.popup.draw_commands, 2, UI_Draw_Text {
 			color = ui_ctx.border_color,
-			rec = { ui_ctx.popup.rec.x, ui_ctx.popup.rec.y, ui_ctx.popup.rec.width, 40 },
+			rec = { ui_ctx.popup.rec.x, ui_ctx.popup.rec.y, ui_ctx.popup.rec.width, ui_ctx.header_height },
 			text = ui_ctx.opened_popup
 		})
 	}
