@@ -78,11 +78,13 @@ UI_Draw_Text :: struct {
 
 UI_Draw_Canvas :: struct {
 	rec: Rec,
+	panel_rec: Rec,
 }
 
 // TODO: add more options
 UI_Draw_Grid :: struct {
 	rec: Rec,
+	panel_rec: Rec,
 }
 
 UI_Draw_Preview :: struct {
@@ -212,15 +214,29 @@ ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 				rl.DrawTextEx(ui_ctx.font, text, {x, y}, kind.size, 0, kind.color)
 			}
 			case UI_Draw_Canvas: {
+				rl.BeginScissorMode(
+					i32(kind.panel_rec.x), 
+					i32(kind.panel_rec.y), 
+					i32(kind.panel_rec.width), 
+					i32(kind.panel_rec.height))
 				draw_canvas(kind.rec)
+				rl.EndScissorMode()
 			}
 			case UI_Draw_Grid: {
+				rl.BeginScissorMode(
+					i32(kind.panel_rec.x), 
+					i32(kind.panel_rec.y), 
+					i32(kind.panel_rec.width), 
+					i32(kind.panel_rec.height))
 				draw_grid(kind.rec)
+				rl.EndScissorMode()
 			}
 			case UI_Draw_Preview: {
+				rl.BeginScissorMode(i32(kind.rec.x), i32(kind.rec.y), i32(kind.rec.width), i32(kind.rec.height))
 				rl.DrawRectangleRec(kind.rec, ui_ctx.text_color)
 				x, y := rec_get_center_point(kind.rec)
 				draw_sprite_stack(&app.project.layers, x, y, 10)
+				rl.EndScissorMode()
 			}
 		}
 	}

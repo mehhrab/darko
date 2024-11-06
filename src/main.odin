@@ -149,10 +149,12 @@ gui :: proc() {
 	}
 	
 	ui_push_command(UI_Draw_Canvas {
-		rec = canvas_rec
+		rec = canvas_rec,
+		panel_rec = middle_panel_area,
 	})
 	ui_push_command(UI_Draw_Grid {
-		rec = canvas_rec
+		rec = canvas_rec,
+		panel_rec = middle_panel_area,
 	})
 	ui_push_command(UI_Draw_Rect_Outline {
 		rec = middle_panel_area,
