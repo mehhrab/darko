@@ -59,6 +59,7 @@ UI_Draw_Rect :: struct {
 UI_Draw_Text :: struct {
 	text: string,
 	rec: Rec,
+	color: rl.Color,
 }
 
 // darko specific commands:
@@ -190,7 +191,7 @@ ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 				text_size := rl.MeasureTextEx(ui_ctx.font, text, ui_ctx.font_size, 0)
 				x -= text_size.x / 2
 				y -= text_size.y / 2
-				rl.DrawTextEx(ui_ctx.font, text, {x, y}, ui_ctx.font_size, 0, ui_ctx.text_color)
+				rl.DrawTextEx(ui_ctx.font, text, {x, y}, ui_ctx.font_size, 0, kind.color)
 			}
 			case UI_Draw_Canvas: {
 				draw_canvas(kind.rec)
@@ -302,6 +303,7 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec) -> (clicked: bool) {
 	ui_push_command(UI_Draw_Text {
 		rec = rec,
 		text = text,
+		color = ui_ctx.text_color,
 	})
 	return clicked
 }
@@ -336,6 +338,7 @@ ui_slider_f32 :: proc(id: UI_ID, value: ^f32, min, max: f32, rec: Rec, format: s
 	ui_push_command(UI_Draw_Text {
 		rec = rec,
 		text = text,
+		color = ui_ctx.text_color,
 	})
 }
 
