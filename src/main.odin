@@ -130,13 +130,17 @@ gui :: proc() {
 	}
 	ui_begin()
 
-	menu_bar_area := Rec { 0, 0, f32(rl.GetScreenWidth()), 40 }
+	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
+	menu_bar_area := rec_cut_from_top(&screen_rec, 40)
 	menu_bar(menu_bar_area)
 
-	screen_area := Rec { 0, menu_bar_area.height, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) - menu_bar_area.height}
-	w := screen_area.width / 3
-	
-	middle_panel_area := Rec { screen_area.x + w, screen_area.y, w, screen_area.height }
+	screen_area := screen_rec
+	panel_width := screen_area.width / 3
+
+	left_panel_area := rec_cut_from_left(&screen_area, panel_width)
+	middle_panel_area := rec_cut_from_left(&screen_area, panel_width)
+	right_panel_area := rec_cut_from_left(&screen_area, panel_width)
+
 	app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 0.4) 
 
 	canvas_rec := rec_center_in_area(
@@ -162,22 +166,23 @@ gui :: proc() {
 		thickness = 2
 	})
 		
-	left_panel_area := Rec { screen_area.x, screen_area.y, w, screen_area.height }
 	ui_panel(ui_gen_id_auto(), left_panel_area)
 	preview_rec := Rec { left_panel_area.x + 10, left_panel_area.y + 10, 200, 200 }
 	ui_push_command(UI_Draw_Preview {
 		rec = preview_rec,
 	})
 	
-	right_panel_area := Rec { screen_area.x + w * 2, screen_area.y, w, screen_area.height }
 	color_panel(right_panel_area)
 	
 	// popups
-	popup_rec := rec_center_in_area({ 0, 0, 400, 150 }, screen_area)
+	popup_rec := rec_center_in_area({ 0, 0, 400, 160 }, screen_rec)
 	if open, rec := ui_begin_popup_with_header("New file", ui_gen_id_auto(), popup_rec); open {
-		ui_slider_i32(ui_gen_id_auto(), &app.width, 2, 30, { rec.x + 10, rec.y + 10, rec.width - 20, 40 })
-		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, { rec.x + 10, rec.y + 50, rec.width - 20, 40 })
-		if ui_button(ui_gen_id_auto(), "new", { rec.x + 10, rec.y + 100, rec.width - 20, 40 }) {
+		area := rec_pad(rec, 10)
+		ui_slider_i32(ui_gen_id_auto(), &app.width, 2, 30, rec_cut_from_top(&area, 40))
+		rec_delete_from_top(&area, 10)
+		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, rec_cut_from_top(&area, 40))
+		rec_delete_from_top(&area, 10)
+		if ui_button(ui_gen_id_auto(), "new", area) {
 			close_project()
 			project: Project
 			init_project(&project, app.width, app.height)
@@ -221,12 +226,11 @@ color_panel :: proc(area: Rec) {
 	@(static)
 	hsv_color := [3]f32 { 0, 0, 0 }
 
-	slider_rec := Rec { area.x, area.y, area.width, 40 }
-	ui_slider_f32(ui_gen_id_auto(), &hsv_color[0], 0, 360, slider_rec)
-	slider_rec.y += 50
-	ui_slider_f32(ui_gen_id_auto(), &hsv_color[1], 0, 1, slider_rec)
-	slider_rec.y += 50
-	ui_slider_f32(ui_gen_id_auto(), &hsv_color[2], 0, 1, slider_rec)
+	ui_slider_f32(ui_gen_id_auto(), &hsv_color[0], 0, 360, rec_cut_from_top(&area, 40))
+	rec_delete_from_top(&area, 10)
+	ui_slider_f32(ui_gen_id_auto(), &hsv_color[1], 0, 1, rec_cut_from_top(&area, 40))
+	rec_delete_from_top(&area, 10)
+	ui_slider_f32(ui_gen_id_auto(), &hsv_color[2], 0, 1, rec_cut_from_top(&area, 40))
 
 	app.project.current_color = rl.ColorFromHSV(hsv_color[0], hsv_color[1], hsv_color[2])
 }

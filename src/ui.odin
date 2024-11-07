@@ -91,6 +91,22 @@ UI_Draw_Preview :: struct {
 	rec: Rec,
 }
 
+UI_Axis :: enum {
+	Horizontal,
+	Vertical,
+}
+
+UI_Box_Layout :: struct {
+	direction: UI_Axis,
+	taken: f32,
+	spacing: f32,
+	rec: Rec,
+} 
+
+UI_Grid_Layout :: struct {
+
+}
+
 ui_ctx: UI_Ctx
 
 ui_init_ctx :: proc() {
@@ -267,14 +283,18 @@ ui_begin_popup :: proc(name: string, rec: Rec) -> (open: bool) {
 
 ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: bool, client_rec: Rec) {
 	ui_ctx.current_popup = name
-	ui_ctx.popup.rec =  { rec.x, rec.y - ui_ctx.header_height, rec.width, rec.height + ui_ctx.header_height }
 	ui_ctx.popup.show_header = true
+
+	area := rec
+	header_area := rec_extend_from_top(&area, ui_ctx.header_height) 
+	ui_ctx.popup.rec = area
+
 	if name == ui_ctx.opened_popup {
-		if ui_button(id, "X", { rec.x, rec.y - ui_ctx.header_height, ui_ctx.header_height, ui_ctx.header_height }) {
+		if ui_button(id, "X", { header_area.x, header_area.y, ui_ctx.header_height, ui_ctx.header_height }) {
 			ui_close_current_popup()
 		}
 	}
-	return name == ui_ctx.opened_popup, { rec.x, rec.y, rec.width, rec.height + ui_ctx.header_height }
+	return name == ui_ctx.opened_popup, { rec.x, rec.y, rec.width, rec.height }
 }
 
 ui_end_popup :: proc() {
