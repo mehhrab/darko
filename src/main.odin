@@ -141,7 +141,7 @@ gui :: proc() {
 	middle_panel_area := rec_cut_from_left(&screen_area, panel_width)
 	right_panel_area := rec_cut_from_left(&screen_area, panel_width)
 
-	app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 0.4) 
+	app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 20 * rl.GetFrameTime()) 
 
 	canvas_rec := rec_center_in_area(
 		{ 0, 0, f32(app.project.width) * 10 * app.lerped_zoom, f32(app.project.height) * 10 *  app.lerped_zoom },
