@@ -47,6 +47,12 @@ UI_Popup :: struct {
 	show_header: bool,
 }
 
+UI_Menu_Item :: struct {
+	id: UI_ID,
+	text: string,
+	shortcut: string,
+}
+
 UI_Draw_Command :: union {
 	UI_Draw_Rect,
 	UI_Draw_Rect_Outline,
@@ -138,7 +144,7 @@ ui_begin :: proc() {
 		ui_is_mouse_in_rec(ui_ctx.popup.rec) == false &&
 		ui_ctx.active_widget == 0 &&
 		ui_ctx.active_panel == 0 {
-		ui_ctx.opened_popup = ""
+		ui_close_current_popup()
 	}
 	if ui_ctx.opened_popup != "" {
 		ui_ctx.popup_time += rl.GetFrameTime()
@@ -276,20 +282,22 @@ ui_close_current_popup :: proc() {
 // NOTE: name is also used as the id
 ui_begin_popup :: proc(name: string, rec: Rec) -> (open: bool) {
 	ui_ctx.current_popup = name
-	ui_ctx.popup.rec = rec
+
+	if name == ui_ctx.opened_popup {
+		ui_ctx.popup.rec = rec
+	}
 	 
 	return name == ui_ctx.opened_popup
 }
 
 ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: bool, client_rec: Rec) {
 	ui_ctx.current_popup = name
-	ui_ctx.popup.show_header = true
-
-	area := rec
-	header_area := rec_extend_from_top(&area, ui_ctx.header_height) 
-	ui_ctx.popup.rec = area
 
 	if name == ui_ctx.opened_popup {
+		ui_ctx.popup.show_header = true
+		area := rec
+		header_area := rec_extend_from_top(&area, ui_ctx.header_height) 
+		ui_ctx.popup.rec = area
 		if ui_button(id, "X", { header_area.x, header_area.y, ui_ctx.header_height, ui_ctx.header_height }) {
 			ui_close_current_popup()
 		}
@@ -297,17 +305,28 @@ ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: 
 	return name == ui_ctx.opened_popup, { rec.x, rec.y, rec.width, rec.height }
 }
 
+// TODO: i don't remember why draw commands are pushed here
 ui_end_popup :: proc() {
+	shadow_rec := Rec {
+		ui_ctx.popup.rec.x + 10,
+		ui_ctx.popup.rec.y + 10,
+		ui_ctx.popup.rec.width,
+		ui_ctx.popup.rec.height,
+	}
 	inject_at(&ui_ctx.popup.draw_commands, 0, UI_Draw_Rect {
+		color = rl.BLACK,
+		rec = shadow_rec,
+	})
+	inject_at(&ui_ctx.popup.draw_commands, 1, UI_Draw_Rect {
 		color = ui_ctx.panel_color,
 		rec = ui_ctx.popup.rec,
 	})
 	if ui_ctx.popup.show_header {
-		inject_at(&ui_ctx.popup.draw_commands, 1, UI_Draw_Rect {
+		inject_at(&ui_ctx.popup.draw_commands, 2, UI_Draw_Rect {
 			color = ui_ctx.accent_color,
 			rec = { ui_ctx.popup.rec.x, ui_ctx.popup.rec.y, ui_ctx.popup.rec.width, ui_ctx.header_height },
 		})
-		inject_at(&ui_ctx.popup.draw_commands, 2, UI_Draw_Text {
+		inject_at(&ui_ctx.popup.draw_commands, 3, UI_Draw_Text {
 			color = ui_ctx.border_color,
 			rec = { ui_ctx.popup.rec.x, ui_ctx.popup.rec.y, ui_ctx.popup.rec.width, ui_ctx.header_height },
 			text = ui_ctx.opened_popup,
@@ -386,6 +405,47 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec) -> (clicked: bool) {
 		color = ui_ctx.text_color,
 	})
 	return clicked
+}
+
+ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_width: f32, rec: Rec) -> (clicked_item: UI_Menu_Item) {	
+	clicked_item = {}
+	ui_update_widget(id, rec)
+	if ui_ctx.hovered_widget == id && rl.IsMouseButtonReleased(.LEFT){
+		ui_open_popup(text)	
+	}
+
+	padding := f32(10)
+	item_height := f32(30)
+	if ui_begin_popup(text, { rec.x + 10, rec.y + rec.height + padding, item_width, item_height * f32(len(items^)) }) {
+		ui_ctx.popup_time = 0
+		menu_item_y := rec.y + rec.height + padding
+		for item, i in items^ {
+			if ui_button(item.id, item.text, { rec.x + padding, menu_item_y, item_width, item_height }) {
+				clicked_item = item
+			}
+			menu_item_y += item_height
+		}
+	}
+	ui_end_popup()
+
+	color := ui_ctx.widget_color
+	if ui_ctx.active_widget == id {
+		color = ui_ctx.widget_active_color
+	}
+	else if ui_ctx.hovered_widget == id {
+		color = ui_ctx.widget_hover_color
+	}
+	ui_push_command(UI_Draw_Rect {
+		rec = rec,
+		color = color
+	})
+	ui_push_command(UI_Draw_Text {
+		rec = rec,
+		text = text,
+		size = ui_ctx.font_size,
+		color = ui_ctx.text_color,
+	})
+	return clicked_item
 }
 
 ui_slider_f32 :: proc(id: UI_ID, value: ^f32, min, max: f32, rec: Rec, format: string = "%.2f", step: f32 = 0) {

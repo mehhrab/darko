@@ -196,6 +196,7 @@ gui :: proc() {
 			ui_show_notif("project is created")
 		}	
 	}
+	ui_end_popup()
 	if open, rec := ui_begin_popup_with_header("Open file", ui_gen_id_auto(), popup_rec); open {
 		ui_slider_i32(ui_gen_id_auto(), &app.width, 2, 30, { rec.x + 10, rec.y + 10, rec.width - 20, 40 })
 		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, { rec.x + 10, rec.y + 50, rec.width - 20, 40 })
@@ -213,8 +214,30 @@ menu_bar :: proc(area: Rec) {
 	ui_panel(ui_gen_id_auto(), area)
 	ui_ctx.panel_color = prev_panel_color
 
-	if ui_button(ui_gen_id_auto(), "File", { area.x, area.y, 60, area.height }) {
+	menu_items := [?]UI_Menu_Item {
+		UI_Menu_Item { 
+			ui_gen_id_auto(),
+			"new file",
+			"",
+		},
+		UI_Menu_Item { 
+			ui_gen_id_auto(),
+			"open file",
+			"",
+		},
+		UI_Menu_Item { 
+			ui_gen_id_auto(),
+			"close file",
+			"",
+		},
+	}
+	menu_items_slice := menu_items[:]
+	clicked_item := ui_menu_button(ui_gen_id_auto(), "File", &menu_items_slice, 300, { area.x, area.y, 60, area.height })
+	if clicked_item.text == "new file" {
 		ui_open_popup("New file")
+	}
+	else if clicked_item.text == "close file" {
+		rl.CloseWindow()
 	}
 }
 
