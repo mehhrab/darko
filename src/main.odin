@@ -56,8 +56,9 @@ main :: proc() {
 		}
 	}
 
-	rl.SetConfigFlags({rl.ConfigFlags.WINDOW_RESIZABLE})
-	rl.InitWindow(1200, 700, "hello")
+	rl.SetConfigFlags({ rl.ConfigFlags.WINDOW_RESIZABLE })
+	rl.InitWindow(1200, 700, "darko")
+	rl.SetWindowState({ rl.ConfigFlag.WINDOW_MAXIMIZED })
 	when LOCK_FPS {
 		rl.SetTargetFPS(60)
 	}
