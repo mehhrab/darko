@@ -441,7 +441,7 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec) -> (clicked: bool) {
 		color = color
 	})
 	ui_push_command(UI_Draw_Text {
-		rec = rec,
+		rec = rec_pad(rec, 10),
 		text = text,
 		size = ui_ctx.font_size,
 		color = ui_ctx.text_color,
@@ -516,11 +516,7 @@ ui_slider_f32 :: proc(id: UI_ID, value: ^f32, min, max: f32, rec: Rec, format: s
 		rec = rec,
 		color =  { 24, 25, 38, 255 },
 	})
-	// ui_push_command(UI_Draw_Rect_Outline {
-	// 	rec = rec,
-	// 	color =  ui_ctx.border_color,
-	// 	thickness = 1,
-	// })
+
 	progress_width := (last_value - min) * (progress_rec.width) / (max - min)
 	progress_rec.width = progress_width
 	ui_push_command(UI_Draw_Rect {
@@ -530,14 +526,14 @@ ui_slider_f32 :: proc(id: UI_ID, value: ^f32, min, max: f32, rec: Rec, format: s
 	
 	text := fmt.aprintf(format, last_value, allocator = context.temp_allocator)
 	ui_push_command(UI_Draw_Text {
-		rec = { rec.x + 2, rec.y + 2, rec.width, rec.height },
+		rec = rec_pad({ rec.x + 2, rec.y + 2, rec.width, rec.height }, 10),
 		text = text,
 		size = ui_ctx.font_size,
 		color = ui_ctx.border_color,
 		align = ui_ctx.text_align,
 	})
 	ui_push_command(UI_Draw_Text {
-		rec = rec,
+		rec = rec_pad(rec, 10),
 		text = text,
 		size = ui_ctx.font_size,
 		color = ui_ctx.text_color,
