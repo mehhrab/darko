@@ -28,6 +28,7 @@ UI_Ctx :: struct {
 	font_size: f32,
 	roundness: f32,
 	header_height: f32,
+	text_align: UI_Align,
 
 	text_color: rl.Color,
 	panel_color: rl.Color,
@@ -39,6 +40,23 @@ UI_Ctx :: struct {
 }
 
 UI_ID :: u32
+
+UI_Align :: struct {
+	horizontal: UI_Align_Horizontal,
+	vertical: UI_Align_Vertical,
+}
+
+UI_Align_Horizontal :: enum {
+	Left,
+	Center,
+	Right,
+}
+
+UI_Align_Vertical :: enum {
+	Top,
+	Center,
+	Bottom,
+}
 
 UI_Popup :: struct {
 	name: string,
@@ -78,6 +96,7 @@ UI_Draw_Text :: struct {
 	size: f32,
 	rec: Rec,
 	color: rl.Color,
+	align: UI_Align,
 }
 
 // darko specific commands:
@@ -122,6 +141,7 @@ ui_init_ctx :: proc() {
 	rl.SetTextureFilter(ui_ctx.font.texture, .BILINEAR)
 	ui_ctx.font_size = 20
 	ui_ctx.header_height = 30
+	ui_ctx.text_align = { .Center, .Center }
 
 	ui_ctx.text_color = { 198, 208, 245, 255 }
 	ui_ctx.panel_color = { 41, 44, 60, 255 }
@@ -228,11 +248,32 @@ ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 				rl.DrawRectangleLinesEx(kind.rec, kind.thickness, kind.color)
 			}
 			case UI_Draw_Text: {
+				x := f32(0)
+				y := f32(0)
+
 				text := strings.clone_to_cstring(kind.text, context.temp_allocator)
-				x, y := rec_get_center_point(kind.rec)
 				text_size := rl.MeasureTextEx(ui_ctx.font, text, ui_ctx.font_size, 0)
-				x -= text_size.x / 2
-				y -= text_size.y / 2
+				
+				if kind.align.horizontal == .Left {
+					x = kind.rec.x
+				}
+				else if kind.align.horizontal == .Center {
+					x = kind.rec.x + kind.rec.width / 2 - text_size.x / 2
+				}
+				else if kind.align.horizontal == .Right {
+					x = kind.rec.x + kind.rec.width - text_size.x
+				}
+
+				if kind.align.vertical == .Top {
+					y = kind.rec.y
+				}
+				else if kind.align.vertical == .Center {
+					y = kind.rec.y + kind.rec.height / 2 - text_size.y / 2
+				}
+				else if kind.align.vertical == .Bottom {
+					y = kind.rec.y + kind.rec.height - text_size.y
+				}
+
 				rl.DrawTextEx(ui_ctx.font, text, {x, y}, kind.size, 0, kind.color)
 			}
 			case UI_Draw_Canvas: {
@@ -330,6 +371,7 @@ ui_end_popup :: proc() {
 			color = ui_ctx.border_color,
 			rec = { ui_ctx.popup.rec.x, ui_ctx.popup.rec.y, ui_ctx.popup.rec.width, ui_ctx.header_height },
 			text = ui_ctx.opened_popup,
+			align = ui_ctx.text_align,
 			size = ui_ctx.font_size,
 		})
 	}
@@ -403,6 +445,7 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec) -> (clicked: bool) {
 		text = text,
 		size = ui_ctx.font_size,
 		color = ui_ctx.text_color,
+		align = ui_ctx.text_align,
 	})
 	return clicked
 }
@@ -417,14 +460,19 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 	padding := f32(10)
 	item_height := f32(30)
 	if ui_begin_popup(text, { rec.x + 10, rec.y + rec.height + padding, item_width, item_height * f32(len(items^)) }) {
+		// HACK: add an option for disabling popup backaground
 		ui_ctx.popup_time = 0
+
 		menu_item_y := rec.y + rec.height + padding
+		prev_text_align := ui_ctx.text_align
+		ui_ctx.text_align = { .Left, .Center }
 		for item, i in items^ {
 			if ui_button(item.id, item.text, { rec.x + padding, menu_item_y, item_width, item_height }) {
 				clicked_item = item
 			}
 			menu_item_y += item_height
 		}
+		ui_ctx.text_align = prev_text_align
 	}
 	ui_end_popup()
 
@@ -444,6 +492,7 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 		text = text,
 		size = ui_ctx.font_size,
 		color = ui_ctx.text_color,
+		align = ui_ctx.text_align,	
 	})
 	return clicked_item
 }
@@ -485,12 +534,14 @@ ui_slider_f32 :: proc(id: UI_ID, value: ^f32, min, max: f32, rec: Rec, format: s
 		text = text,
 		size = ui_ctx.font_size,
 		color = ui_ctx.border_color,
+		align = ui_ctx.text_align,
 	})
 	ui_push_command(UI_Draw_Text {
 		rec = rec,
 		text = text,
 		size = ui_ctx.font_size,
 		color = ui_ctx.text_color,
+		align = ui_ctx.text_align,	
 	})
 }
 
