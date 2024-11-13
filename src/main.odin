@@ -250,6 +250,17 @@ color_panel :: proc(area: Rec) {
 	ui_panel(ui_gen_id_auto(), area)
 	
 	area := rec_pad(area, 10)
+	preview_area := rec_cut_from_top(&area, 200)
+	ui_push_command(UI_Draw_Rect {
+		color = app.project.current_color,
+		rec = preview_area,
+	})
+	ui_push_command(UI_Draw_Rect_Outline {
+		color = ui_ctx.border_color,
+		rec = preview_area,
+		thickness = 2,
+	})
+	rec_delete_from_top(&area, 10)
 
 	@(static)
 	hsv_color := [3]f32 { 0, 0, 0 }
