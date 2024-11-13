@@ -250,13 +250,17 @@ color_panel :: proc(area: Rec) {
 	@(static)
 	hsv_color := [3]f32 { 0, 0, 0 }
 
-	ui_slider_f32(ui_gen_id_auto(), &hsv_color[0], 0, 360, rec_cut_from_top(&area, 40))
+	changed1 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[0], 0, 360, rec_cut_from_top(&area, 40))
 	rec_delete_from_top(&area, 10)
-	ui_slider_f32(ui_gen_id_auto(), &hsv_color[1], 0, 1, rec_cut_from_top(&area, 40))
-	rec_delete_from_top(&area, 10)
-	ui_slider_f32(ui_gen_id_auto(), &hsv_color[2], 0, 1, rec_cut_from_top(&area, 40))
 
-	app.project.current_color = rl.ColorFromHSV(hsv_color[0], hsv_color[1], hsv_color[2])
+	changed2 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[1], 0, 1, rec_cut_from_top(&area, 40))
+	rec_delete_from_top(&area, 10)
+	
+	changed3 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[2], 0, 1, rec_cut_from_top(&area, 40))
+
+	if changed1 || changed2 || changed3  {
+		app.project.current_color = rl.ColorFromHSV(hsv_color[0], hsv_color[1], hsv_color[2])
+	}
 }
 
 init_app :: proc() {
