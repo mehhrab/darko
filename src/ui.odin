@@ -497,7 +497,17 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 	return clicked_item
 }
 
-ui_slider_f32 :: proc(id: UI_ID, value: ^f32, min, max: f32, rec: Rec, format: string = "%.2f", step: f32 = 0) {
+ui_slider_f32 :: proc(
+	id: UI_ID,
+	value: ^f32,
+	min, max: f32,
+	rec: Rec,
+	format: string = "%.2f",
+	step: f32 = 0,
+) -> (
+	value_changed: bool,
+) {
+	value_changed = false
 	last_value := value^
 	ui_update_widget(id, rec)
 
@@ -507,6 +517,7 @@ ui_slider_f32 :: proc(id: UI_ID, value: ^f32, min, max: f32, rec: Rec, format: s
 		if step != 0 {
 			last_value = (math.round(last_value / step)) * step
 		}
+		value_changed = true
 	}
 	
 	last_value = math.clamp(last_value, min, max)
@@ -539,12 +550,23 @@ ui_slider_f32 :: proc(id: UI_ID, value: ^f32, min, max: f32, rec: Rec, format: s
 		color = ui_ctx.text_color,
 		align = ui_ctx.text_align,	
 	})
+	return value_changed
 }
 
-ui_slider_i32 :: proc(id: UI_ID, value: ^i32, min, max: i32, rec: Rec, step: i32 = 1) {
+ui_slider_i32 :: proc
+(
+	id: UI_ID,
+	value: ^i32,
+	min, max: i32,
+	rec: Rec,
+	step: i32 = 1
+) -> (
+	value_changed: bool,
+) {
 	value_f32 := math.round(f32(value^))
-	ui_slider_f32(id, &value_f32, f32(min), f32(max), rec, "%.0f", f32(step))
+	value_changed = ui_slider_f32(id, &value_f32, f32(min), f32(max), rec, "%.0f", f32(step))
 	value^ = i32(value_f32)
+	return value_changed
 }
 
 ui_push_command :: proc(command: UI_Draw_Command) {
