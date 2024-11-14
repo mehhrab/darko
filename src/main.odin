@@ -170,7 +170,32 @@ gui :: proc() {
 		color = ui_ctx.border_color,
 		thickness = 2
 	})
-		
+	if ui_is_mouse_in_rec(middle_panel_area) && ui_is_being_interacted() == false {
+		rl.HideCursor()
+		mpos := rl.GetMousePosition()
+		// pen
+		icon := "\uf8ea"
+		if rl.IsMouseButtonDown(.RIGHT) {
+			// eraser
+			icon = "\uf6fd"
+		}
+		cursor_size := f32(40)
+		ui_push_command(UI_Draw_Text {
+			rec = { mpos.x + 1, mpos.y - cursor_size + 5 + 1, 100, 100 },
+			color = rl.BLACK,
+			text = icon,
+			size = cursor_size,
+		})
+		ui_push_command(UI_Draw_Text {
+			rec = { mpos.x, mpos.y - cursor_size + 5, 100, 100 },
+			color = rl.WHITE,
+			text = icon,
+			size = cursor_size,
+		})
+	}
+	else {
+		rl.ShowCursor()
+	}
 	ui_panel(ui_gen_id_auto(), left_panel_area)
 	preview_rec := Rec { left_panel_area.x + 10, left_panel_area.y + 10, 200, 200 }
 	ui_push_command(UI_Draw_Preview {
@@ -187,7 +212,7 @@ gui :: proc() {
 		rec_delete_from_top(&area, 10)
 		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, rec_cut_from_top(&area, 40))
 		rec_delete_from_top(&area, 10)
-		if ui_button(ui_gen_id_auto(), "new", area) {
+		if ui_button(ui_gen_id_auto(), "create", area) {
 			close_project()
 			project: Project
 			init_project(&project, app.width, app.height)
@@ -198,7 +223,7 @@ gui :: proc() {
 			add_layer(&layer, 0)
 
 			ui_close_current_popup()
-			ui_show_notif("project is created")
+			ui_show_notif("\uf62b Project is created")
 		}	
 	}
 	ui_end_popup()
