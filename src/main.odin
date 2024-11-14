@@ -126,9 +126,6 @@ main :: proc() {
 }
 
 gui :: proc() {
-	if rl.IsKeyPressed(.B) {
-		ui_open_popup("Open file")
-	}
 	ui_begin()
 
 	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
@@ -224,14 +221,6 @@ gui :: proc() {
 
 			ui_close_current_popup()
 			ui_show_notif("\uf62b Project is created")
-		}	
-	}
-	ui_end_popup()
-	if open, rec := ui_begin_popup_with_header("Open file", ui_gen_id_auto(), popup_rec); open {
-		ui_slider_i32(ui_gen_id_auto(), &app.width, 2, 30, { rec.x + 10, rec.y + 10, rec.width - 20, 40 })
-		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, { rec.x + 10, rec.y + 50, rec.width - 20, 40 })
-		if ui_button(ui_gen_id_auto(), "yah", { rec.x + 10, rec.y + 100, rec.width - 20, 40 }) {
-			ui_show_notif("project is created")
 		}	
 	}
 	ui_end_popup()
