@@ -135,9 +135,8 @@ gui :: proc() {
 	screen_area := screen_rec
 	panel_width := screen_area.width / 3
 
-	left_panel_area := rec_cut_from_left(&screen_area, panel_width)
-	middle_panel_area := rec_cut_from_left(&screen_area, panel_width)
-	right_panel_area := rec_cut_from_left(&screen_area, panel_width)
+	right_panel_area := rec_cut_from_right(&screen_area, panel_width)
+	middle_panel_area := screen_area
 
 	app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 20 * rl.GetFrameTime())
 	// work around for lerp never (taking too long) reaching it's desteniton 
@@ -193,13 +192,17 @@ gui :: proc() {
 	else {
 		rl.ShowCursor()
 	}
-	ui_panel(ui_gen_id_auto(), left_panel_area)
-	preview_rec := Rec { left_panel_area.x + 10, left_panel_area.y + 10, 200, 200 }
+	
+	ui_panel(ui_gen_id_auto(), right_panel_area)
+	right_panel_area = rec_pad(right_panel_area, 10)
+	color_panel(&right_panel_area)
+
+	rec_delete_from_top(&right_panel_area, 10)
+
+	preview_rec := right_panel_area
 	ui_push_command(UI_Draw_Preview {
 		rec = preview_rec,
 	})
-	
-	color_panel(right_panel_area)
 	
 	// popups
 	popup_rec := rec_center_in_area({ 0, 0, 400, 160 }, screen_rec)
@@ -260,11 +263,8 @@ menu_bar :: proc(area: Rec) {
 	}
 }
 
-color_panel :: proc(area: Rec) {
-	ui_panel(ui_gen_id_auto(), area)
-	
-	area := rec_pad(area, 10)
-	preview_area := rec_cut_from_top(&area, 200)
+color_panel :: proc(area: ^Rec) {	
+	preview_area := rec_cut_from_top(area, 200)
 	ui_push_command(UI_Draw_Rect {
 		color = app.project.current_color,
 		rec = preview_area,
@@ -274,18 +274,18 @@ color_panel :: proc(area: Rec) {
 		rec = preview_area,
 		thickness = 2,
 	})
-	rec_delete_from_top(&area, 10)
+	rec_delete_from_top(area, 10)
 
 	@(static)
 	hsv_color := [3]f32 { 0, 0, 0 }
 
-	changed1 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[0], 0, 360, rec_cut_from_top(&area, 40))
-	rec_delete_from_top(&area, 10)
+	changed1 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[0], 0, 360, rec_cut_from_top(area, 40))
+	rec_delete_from_top(area, 10)
 
-	changed2 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[1], 0, 1, rec_cut_from_top(&area, 40))
-	rec_delete_from_top(&area, 10)
+	changed2 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[1], 0, 1, rec_cut_from_top(area, 40))
+	rec_delete_from_top(area, 10)
 	
-	changed3 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[2], 0, 1, rec_cut_from_top(&area, 40))
+	changed3 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[2], 0, 1, rec_cut_from_top(area, 40))
 
 	if changed1 || changed2 || changed3  {
 		app.project.current_color = rl.ColorFromHSV(hsv_color[0], hsv_color[1], hsv_color[2])
