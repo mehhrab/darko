@@ -304,6 +304,7 @@ ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 				x, y := rec_get_center_point(kind.rec)
 				draw_sprite_stack(&app.project.layers, x, y, 10)
 				rl.EndScissorMode()
+				rl.DrawRectangleLinesEx(kind.rec, 2, ui_ctx.border_color)
 			}
 		}
 	}
