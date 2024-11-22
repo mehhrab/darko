@@ -503,6 +503,7 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 
 ui_slider_f32 :: proc(
 	id: UI_ID,
+	label: string,
 	value: ^f32,
 	min, max: f32,
 	rec: Rec,
@@ -539,20 +540,27 @@ ui_slider_f32 :: proc(
 		color = ui_ctx.widget_color,	
 	})
 	
+	ui_push_command(UI_Draw_Text {
+		rec = rec_pad(rec, 10),
+		text = label,
+		size = ui_ctx.font_size,
+		color = ui_ctx.text_color,
+		align = { .Left, .Center },	
+	})
 	text := fmt.aprintf(format, last_value, allocator = context.temp_allocator)
 	ui_push_command(UI_Draw_Text {
 		rec = rec_pad({ rec.x + 2, rec.y + 2, rec.width, rec.height }, 10),
 		text = text,
 		size = ui_ctx.font_size,
 		color = ui_ctx.border_color,
-		align = ui_ctx.text_align,
+		align = { .Right, .Center },
 	})
 	ui_push_command(UI_Draw_Text {
 		rec = rec_pad(rec, 10),
 		text = text,
 		size = ui_ctx.font_size,
 		color = ui_ctx.text_color,
-		align = ui_ctx.text_align,	
+		align = { .Right, .Center },	
 	})
 	return value_changed
 }
@@ -560,6 +568,7 @@ ui_slider_f32 :: proc(
 ui_slider_i32 :: proc
 (
 	id: UI_ID,
+	label: string,
 	value: ^i32,
 	min, max: i32,
 	rec: Rec,
@@ -568,7 +577,7 @@ ui_slider_i32 :: proc
 	value_changed: bool,
 ) {
 	value_f32 := math.round(f32(value^))
-	value_changed = ui_slider_f32(id, &value_f32, f32(min), f32(max), rec, "%.0f", f32(step))
+	value_changed = ui_slider_f32(id, label, &value_f32, f32(min), f32(max), rec, "%.0f", f32(step))
 	value^ = i32(value_f32)
 	return value_changed
 }

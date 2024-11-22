@@ -220,9 +220,9 @@ gui :: proc() {
 	popup_rec := rec_center_in_area({ 0, 0, 400, 150 }, screen_rec)
 	if open, rec := ui_begin_popup_with_header("New file", ui_gen_id_auto(), popup_rec); open {
 		area := rec_pad(rec, 16)
-		ui_slider_i32(ui_gen_id_auto(), &app.width, 2, 30, rec_cut_from_top(&area, ui_ctx.default_widget_height))
+		ui_slider_i32(ui_gen_id_auto(), "Width", &app.width, 2, 30, rec_cut_from_top(&area, ui_ctx.default_widget_height))
 		rec_delete_from_top(&area, 8)
-		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, rec_cut_from_top(&area, ui_ctx.default_widget_height))
+		ui_slider_i32(ui_gen_id_auto(), "Height", &app.height, 2, 30, rec_cut_from_top(&area, ui_ctx.default_widget_height))
 		rec_delete_from_top(&area, 8)
 		if ui_button(ui_gen_id_auto(), "create", area) {
 			close_project()
@@ -291,13 +291,13 @@ color_panel :: proc(area: ^Rec) {
 	@(static)
 	hsv_color := [3]f32 { 0, 0, 0 }
 
-	changed1 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[0], 0, 360, rec_cut_from_top(area, ui_ctx.default_widget_height))
+	changed1 := ui_slider_f32(ui_gen_id_auto(), "Hue", &hsv_color[0], 0, 360, rec_cut_from_top(area, ui_ctx.default_widget_height))
 	rec_delete_from_top(area, 8)
 
-	changed2 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[1], 0, 1, rec_cut_from_top(area, ui_ctx.default_widget_height))
+	changed2 := ui_slider_f32(ui_gen_id_auto(), "Saturation", &hsv_color[1], 0, 1, rec_cut_from_top(area, ui_ctx.default_widget_height))
 	rec_delete_from_top(area, 8)
 	
-	changed3 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[2], 0, 1, rec_cut_from_top(area, ui_ctx.default_widget_height))
+	changed3 := ui_slider_f32(ui_gen_id_auto(), "Value", &hsv_color[2], 0, 1, rec_cut_from_top(area, ui_ctx.default_widget_height))
 
 	if changed1 || changed2 || changed3  {
 		app.project.current_color = rl.ColorFromHSV(hsv_color[0], hsv_color[1], hsv_color[2])
