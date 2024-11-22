@@ -387,12 +387,12 @@ ui_show_notif :: proc(text: string) {
 	ui_ctx.notif_time = 0
 }
 
-ui_update_widget :: proc(id: UI_ID, rec: Rec) {
+ui_update_widget :: proc(id: UI_ID, rec: Rec, blocking := true) {
 	if ui_ctx.opened_popup != ui_ctx.current_popup && ui_ctx.opened_popup != "" {
 		return
 	}
 	hovered := ui_is_mouse_in_rec(rec)
-	if hovered && (ui_ctx.active_widget == 0 || ui_ctx.active_widget == id) {
+	if hovered && (blocking == false || (ui_ctx.active_widget == 0 || ui_ctx.active_widget == id)) {
 		ui_ctx.hovered_widget = id
 		if rl.IsMouseButtonPressed(.LEFT) {
 			ui_ctx.active_widget = id
@@ -427,9 +427,9 @@ ui_panel :: proc(id: UI_ID, rec: Rec) {
 	})
 }
 
-ui_button :: proc(id: UI_ID, text: string, rec: Rec) -> (clicked: bool) {	
+ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true) -> (clicked: bool) {	
 	clicked = false
-	ui_update_widget(id, rec)
+	ui_update_widget(id, rec, blocking)
 	if ui_ctx.hovered_widget == id && rl.IsMouseButtonReleased(.LEFT){
 		clicked = true
 	}
