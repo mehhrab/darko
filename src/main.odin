@@ -9,13 +9,15 @@ import "core:math"
 LOCK_FPS :: #config(LOCK_FPS, true)
 
 App :: struct {
-	width: i32, height: i32,
 	project: Project,
-	temp_undo_image: Maybe(rl.Image),
-	undos: [dynamic]rl.Image,
+	width: i32, height: i32,
+	lerped_zoom: f32,
 	image_changed: bool,
 	bg_texture: rl.Texture,
-	lerped_zoom: f32,
+	undos: [dynamic]rl.Image,
+	temp_undo_image: Maybe(rl.Image),
+	sprite_stack_zoom: f32,
+	sprite_stack_rotation: f32,
 }
 
 Project :: struct {
@@ -58,7 +60,7 @@ main :: proc() {
 	}
 
 	rl.SetConfigFlags({rl.ConfigFlags.WINDOW_RESIZABLE})
-	rl.InitWindow(1200, 700, "hello")
+	rl.InitWindow(1200, 700, "Darko")
 	when LOCK_FPS {
 		rl.SetTargetFPS(60)
 	}
@@ -115,11 +117,11 @@ main :: proc() {
 
 		// draw
 		rl.BeginDrawing()
-		rl.ClearBackground({ 24, 25, 38, 255 })
+		rl.ClearBackground(ui_ctx.border_color)
 
 		ui_draw()
 		
-		rl.DrawFPS(rl.GetScreenWidth() - 80, 10)
+		// rl.DrawFPS(rl.GetScreenWidth() - 80, 10)
 		rl.EndDrawing()
 	}
 	rl.CloseWindow()
@@ -129,7 +131,7 @@ gui :: proc() {
 	ui_begin()
 
 	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
-	menu_bar_area := rec_cut_from_top(&screen_rec, 40)
+	menu_bar_area := rec_cut_from_top(&screen_rec, ui_ctx.default_widget_height)
 	menu_bar(menu_bar_area)
 
 	screen_area := screen_rec
@@ -149,7 +151,7 @@ gui :: proc() {
 		middle_panel_area)
 	
 	if ui_is_being_interacted() == false {
-		update_zoom(&app.project.zoom)
+		update_zoom(&app.project.zoom, 0.3, 0.1, 100)
 		update_tools(canvas_rec)
 	}
 	
@@ -164,7 +166,7 @@ gui :: proc() {
 	ui_push_command(UI_Draw_Rect_Outline {
 		rec = middle_panel_area,
 		color = ui_ctx.border_color,
-		thickness = 2
+		thickness = 1
 	})
 	if ui_is_mouse_in_rec(middle_panel_area) && ui_is_being_interacted() == false {
 		rl.HideCursor()
@@ -194,24 +196,34 @@ gui :: proc() {
 	}
 	
 	ui_panel(ui_gen_id_auto(), right_panel_area)
-	right_panel_area = rec_pad(right_panel_area, 10)
+	right_panel_area = rec_pad(right_panel_area, 16)
 	color_panel(&right_panel_area)
 
-	rec_delete_from_top(&right_panel_area, 10)
+	rec_delete_from_top(&right_panel_area, 16)
 
 	preview_rec := right_panel_area
+	prveiew_widget_id := ui_gen_id_auto()
+	ui_update_widget(prveiew_widget_id, preview_rec)
+	if ui_ctx.hovered_widget == prveiew_widget_id {
+		update_zoom(&app.sprite_stack_zoom, 2, 1, 100)
+	}
+	if ui_ctx.active_widget == prveiew_widget_id {
+		app.sprite_stack_rotation -= rl.GetMouseDelta().x 
+	}
 	ui_push_command(UI_Draw_Preview {
 		rec = preview_rec,
+		rotation = app.sprite_stack_rotation,
+		zoom = app.sprite_stack_zoom,
 	})
 	
 	// popups
-	popup_rec := rec_center_in_area({ 0, 0, 400, 160 }, screen_rec)
+	popup_rec := rec_center_in_area({ 0, 0, 400, 150 }, screen_rec)
 	if open, rec := ui_begin_popup_with_header("New file", ui_gen_id_auto(), popup_rec); open {
-		area := rec_pad(rec, 10)
-		ui_slider_i32(ui_gen_id_auto(), &app.width, 2, 30, rec_cut_from_top(&area, 40))
-		rec_delete_from_top(&area, 10)
-		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, rec_cut_from_top(&area, 40))
-		rec_delete_from_top(&area, 10)
+		area := rec_pad(rec, 16)
+		ui_slider_i32(ui_gen_id_auto(), &app.width, 2, 30, rec_cut_from_top(&area, ui_ctx.default_widget_height))
+		rec_delete_from_top(&area, 8)
+		ui_slider_i32(ui_gen_id_auto(), &app.height, 2, 30, rec_cut_from_top(&area, ui_ctx.default_widget_height))
+		rec_delete_from_top(&area, 8)
 		if ui_button(ui_gen_id_auto(), "create", area) {
 			close_project()
 			project: Project
@@ -264,7 +276,7 @@ menu_bar :: proc(area: Rec) {
 }
 
 color_panel :: proc(area: ^Rec) {	
-	preview_area := rec_cut_from_top(area, 200)
+	preview_area := rec_cut_from_top(area, ui_ctx.default_widget_height * 2)
 	ui_push_command(UI_Draw_Rect {
 		color = app.project.current_color,
 		rec = preview_area,
@@ -272,20 +284,20 @@ color_panel :: proc(area: ^Rec) {
 	ui_push_command(UI_Draw_Rect_Outline {
 		color = ui_ctx.border_color,
 		rec = preview_area,
-		thickness = 2,
+		thickness = 1,
 	})
-	rec_delete_from_top(area, 10)
+	rec_delete_from_top(area, 8)
 
 	@(static)
 	hsv_color := [3]f32 { 0, 0, 0 }
 
-	changed1 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[0], 0, 360, rec_cut_from_top(area, 40))
-	rec_delete_from_top(area, 10)
+	changed1 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[0], 0, 360, rec_cut_from_top(area, ui_ctx.default_widget_height))
+	rec_delete_from_top(area, 8)
 
-	changed2 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[1], 0, 1, rec_cut_from_top(area, 40))
-	rec_delete_from_top(area, 10)
+	changed2 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[1], 0, 1, rec_cut_from_top(area, ui_ctx.default_widget_height))
+	rec_delete_from_top(area, 8)
 	
-	changed3 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[2], 0, 1, rec_cut_from_top(area, 40))
+	changed3 := ui_slider_f32(ui_gen_id_auto(), &hsv_color[2], 0, 1, rec_cut_from_top(area, ui_ctx.default_widget_height))
 
 	if changed1 || changed2 || changed3  {
 		app.project.current_color = rl.ColorFromHSV(hsv_color[0], hsv_color[1], hsv_color[2])
@@ -330,6 +342,8 @@ open_project :: proc(project: ^Project) {
 		{ 131, 139, 167, 255 })
 	defer rl.UnloadImage(bg_image)
 	app.bg_texture = rl.LoadTextureFromImage(bg_image)
+	app.sprite_stack_rotation = 0
+	app.sprite_stack_zoom = 10
 }
 
 close_project :: proc() {
@@ -372,31 +386,21 @@ get_current_layer :: proc() -> (layer: ^Layer) {
 	return &app.project.layers[app.project.current_layer]
 }
 
-update_zoom :: proc(current_zoom: ^f32) {
-	zoom := current_zoom^ + rl.GetMouseWheelMove() * 0.3
-	if zoom < 0.1 {
-		zoom = 0.1
-	}
+update_zoom :: proc(current_zoom: ^f32, strength: f32, min: f32, max: f32) {
+	zoom := current_zoom^ + rl.GetMouseWheelMove() * strength
+	zoom = math.clamp(zoom, min, max)
 	current_zoom^ = zoom
 }
 
 // TODO: add parameter to set the origin, current it's centered horizontaly and verticaly
-draw_sprite_stack :: proc(layers: ^[dynamic]Layer, x, y: f32, scale: f32) {
-	spacing := f32(10)
+draw_sprite_stack :: proc(layers: ^[dynamic]Layer, x, y: f32, scale: f32, rotation: f32) {
+	spacing := f32(1) * scale
 	yy := y + f32(len(layers^) - 1) * spacing / 2
-	@(static)
-	rotation := f32(0)
-	rotation += 5 * rl.GetFrameTime()
 	for layer in layers {
 		layer_width := f32(layer.image.width)
 		layer_height := f32(layer.image.height)
 		source_rec := Rec { 0, 0, layer_width, layer_height }
-		dest_rec := Rec {
-			x,
-			yy,
-			layer_width * scale,
-			layer_height * scale
-		}
+		dest_rec := Rec { x, yy, layer_width * scale, layer_height * scale }
 		origin := rl.Vector2 { layer_width * scale / 2, layer_height * scale / 2 }
 		rl.DrawTexturePro(layer.texture, source_rec, dest_rec, origin, rotation, rl.WHITE)
 		yy -= spacing

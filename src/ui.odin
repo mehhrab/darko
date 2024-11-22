@@ -5,6 +5,7 @@ import "core:slice"
 import "core:strings"
 import "core:fmt"
 import "core:math"
+import "core:c"
 
 UI_Ctx :: struct {
 	hovered_widget: UI_ID,
@@ -29,12 +30,13 @@ UI_Ctx :: struct {
 	roundness: f32,
 	header_height: f32,
 	text_align: UI_Align,
+	default_widget_height: f32,
 
 	text_color: rl.Color,
 	panel_color: rl.Color,
-	widget_color: rl.Color,
 	accent_color: rl.Color,
 	border_color: rl.Color,
+	widget_color: rl.Color,
 	widget_hover_color: rl.Color,
 	widget_active_color: rl.Color,
 }
@@ -106,7 +108,6 @@ UI_Draw_Canvas :: struct {
 	panel_rec: Rec,
 }
 
-// TODO: add more options
 UI_Draw_Grid :: struct {
 	rec: Rec,
 	panel_rec: Rec,
@@ -114,6 +115,8 @@ UI_Draw_Grid :: struct {
 
 UI_Draw_Preview :: struct {
 	rec: Rec,
+	zoom: f32,
+	rotation: f32,
 }
 
 UI_Axis :: enum {
@@ -143,17 +146,18 @@ ui_init_ctx :: proc() {
 	ui_ctx.font = rl.LoadFontEx("../assets/Hack Bold Nerd Font Complete.ttf", 64, code_points, count)
 	rl.SetTextureFilter(ui_ctx.font.texture, .BILINEAR)
 	
-	ui_ctx.font_size = 20
+	ui_ctx.font_size = 17
 	ui_ctx.header_height = 30
 	ui_ctx.text_align = { .Center, .Center }
+	ui_ctx.default_widget_height = 32
 
-	ui_ctx.text_color = { 198, 208, 245, 255 }
-	ui_ctx.panel_color = { 41, 44, 60, 255 }
-	ui_ctx.widget_color = { 65, 69, 89, 255 }
-	ui_ctx.accent_color = { 202, 158, 230, 255 }
-	ui_ctx.border_color = { 10, 15, 10, 255 }
-	ui_ctx.widget_hover_color = { 115, 121, 148, 255 }
-	ui_ctx.widget_active_color = { 131, 139, 167, 255 }
+	ui_ctx.text_color = { 200, 209, 218, 255 }
+	ui_ctx.panel_color = { 33, 40, 48, 255 }
+	ui_ctx.accent_color = { 176, 131, 240, 255 }
+	ui_ctx.border_color = { 20, 23, 28, 255 }
+	ui_ctx.widget_color = { 61, 68, 77, 255 }
+	ui_ctx.widget_hover_color = { 101, 108, 118, 255 }
+	ui_ctx.widget_active_color = { 101, 108, 118, 255 }
 }
 
 ui_deinit_ctx :: proc() {
@@ -300,11 +304,12 @@ ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 			}
 			case UI_Draw_Preview: {
 				rl.BeginScissorMode(i32(kind.rec.x), i32(kind.rec.y), i32(kind.rec.width), i32(kind.rec.height))
-				rl.DrawRectangleRec(kind.rec, ui_ctx.text_color)
+				rl.DrawRectangleRec(kind.rec, ui_ctx.widget_hover_color)
 				x, y := rec_get_center_point(kind.rec)
-				draw_sprite_stack(&app.project.layers, x, y, 10)
+				draw_sprite_stack(&app.project.layers, x, y, kind.zoom, kind.rotation)
+				rl.DrawTextEx(ui_ctx.font, "preview", { kind.rec.x + 10, kind.rec.y + 10 }, ui_ctx.font_size, 0, { 255, 255, 255, 150 })
 				rl.EndScissorMode()
-				rl.DrawRectangleLinesEx(kind.rec, 2, ui_ctx.border_color)
+				rl.DrawRectangleLinesEx(kind.rec, 1, ui_ctx.border_color)
 			}
 		}
 	}
@@ -353,15 +358,9 @@ ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: 
 
 // TODO: i don't remember why draw commands are pushed here
 ui_end_popup :: proc() {
-	shadow_rec := Rec {
-		ui_ctx.popup.rec.x + 10,
-		ui_ctx.popup.rec.y + 10,
-		ui_ctx.popup.rec.width,
-		ui_ctx.popup.rec.height,
-	}
 	inject_at(&ui_ctx.popup.draw_commands, 0, UI_Draw_Rect {
-		color = rl.BLACK,
-		rec = shadow_rec,
+		color = ui_ctx.border_color,
+		rec = rec_pad(ui_ctx.popup.rec, -1),
 	})
 	inject_at(&ui_ctx.popup.draw_commands, 1, UI_Draw_Rect {
 		color = ui_ctx.panel_color,
@@ -463,7 +462,7 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 	}
 
 	padding := f32(10)
-	item_height := f32(30)
+	item_height := f32(ui_ctx.default_widget_height)
 	if ui_begin_popup(text, { rec.x + 10, rec.y + rec.height + padding, item_width, item_height * f32(len(items^)) }) {
 		// HACK: add an option for disabling popup backaground
 		ui_ctx.popup_time = 0
@@ -516,7 +515,7 @@ ui_slider_f32 :: proc(
 	last_value := value^
 	ui_update_widget(id, rec)
 
-	progress_rec := rec_pad(rec, 2)
+	progress_rec := rec_pad(rec, 1)
 	if ui_ctx.active_widget == id && rl.IsMouseButtonDown(.LEFT) {
 		last_value = min + (rl.GetMousePosition().x - progress_rec.x) * (max - min) / progress_rec.width
 		if step != 0 {
@@ -530,7 +529,7 @@ ui_slider_f32 :: proc(
 
 	ui_push_command(UI_Draw_Rect {
 		rec = rec,
-		color =  { 24, 25, 38, 255 },
+		color = ui_ctx.border_color,
 	})
 
 	progress_width := (last_value - min) * (progress_rec.width) / (max - min)
