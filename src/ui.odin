@@ -140,13 +140,13 @@ ui_ctx: UI_Ctx
 ui_init_ctx :: proc() {
 	ui_ctx.draw_commands = make([dynamic]UI_Draw_Command)
 	
-	chars := cstring(" abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.\uf8ea\uf6fd\uf62b")
+	chars := cstring(" abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.\uf8ea\uf6fd\uf62b\uf992")
 	count := i32(len(chars))
 	code_points := rl.LoadCodepoints(chars, &count)
 	ui_ctx.font = rl.LoadFontEx("../assets/Hack Bold Nerd Font Complete.ttf", 64, code_points, count)
 	rl.SetTextureFilter(ui_ctx.font.texture, .BILINEAR)
 	
-	ui_ctx.font_size = 17
+	ui_ctx.font_size = 18
 	ui_ctx.header_height = 30
 	ui_ctx.text_align = { .Center, .Center }
 	ui_ctx.default_widget_height = 32

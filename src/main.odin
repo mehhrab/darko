@@ -201,9 +201,9 @@ gui :: proc() {
 
 	rec_delete_from_top(&right_panel_area, 16)
 
-	preview_rec := right_panel_area
+	preview_area := right_panel_area
 	prveiew_widget_id := ui_gen_id_auto()
-	ui_update_widget(prveiew_widget_id, preview_rec)
+	ui_update_widget(prveiew_widget_id, preview_area)
 	if ui_ctx.hovered_widget == prveiew_widget_id {
 		update_zoom(&app.sprite_stack_zoom, 2, 1, 100)
 	}
@@ -211,34 +211,29 @@ gui :: proc() {
 		app.sprite_stack_rotation -= rl.GetMouseDelta().x 
 	}
 	ui_push_command(UI_Draw_Preview {
-		rec = preview_rec,
+		rec = preview_area,
 		rotation = app.sprite_stack_rotation,
 		zoom = app.sprite_stack_zoom,
 	})
-	
-	// popups
-	popup_rec := rec_center_in_area({ 0, 0, 400, 150 }, screen_rec)
-	if open, rec := ui_begin_popup_with_header("New file", ui_gen_id_auto(), popup_rec); open {
-		area := rec_pad(rec, 16)
-		ui_slider_i32(ui_gen_id_auto(), "Width", &app.width, 2, 30, rec_cut_from_top(&area, ui_ctx.default_widget_height))
-		rec_delete_from_top(&area, 8)
-		ui_slider_i32(ui_gen_id_auto(), "Height", &app.height, 2, 30, rec_cut_from_top(&area, ui_ctx.default_widget_height))
-		rec_delete_from_top(&area, 8)
-		if ui_button(ui_gen_id_auto(), "create", area) {
-			close_project()
-			project: Project
-			init_project(&project, app.width, app.height)
-			open_project(&project)
-
-			layer: Layer
-			init_layer(&layer)
-			add_layer(&layer, 0)
-
-			ui_close_current_popup()
-			ui_show_notif("\uf62b Project is created")
-		}	
+	settings_rec := Rec {
+		preview_area.x + preview_area.width - ui_ctx.default_widget_height - 8,
+		preview_area.y + 8,
+		ui_ctx.default_widget_height,
+		ui_ctx.default_widget_height,
 	}
-	ui_end_popup()
+	prev_font_size := ui_ctx.font_size
+	ui_ctx.font_size = 20
+	prev_widget_color := ui_ctx.widget_color
+	ui_ctx.widget_color = rl.BLANK
+	if ui_button(ui_gen_id_auto(), "\uf992", settings_rec, false) {
+		ui_open_popup("Preview settings")
+	}
+	ui_ctx.font_size = prev_font_size
+	ui_ctx.widget_color = prev_widget_color
+	
+	preview_settings_popup()
+	new_file_popup()
+	
 	ui_end()
 }
 
@@ -304,6 +299,41 @@ color_panel :: proc(area: ^Rec) {
 	}
 }
 
+new_file_popup :: proc() {
+	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
+
+	popup_rec := rec_center_in_area({ 0, 0, 400, 150 }, screen_rec)
+	if open, rec := ui_begin_popup_with_header("New file", ui_gen_id_auto(), popup_rec); open {
+		area := rec_pad(rec, 16)
+		ui_slider_i32(ui_gen_id_auto(), "Width", &app.width, 2, 30, rec_cut_from_top(&area, ui_ctx.default_widget_height))
+		rec_delete_from_top(&area, 8)
+		ui_slider_i32(ui_gen_id_auto(), "Height", &app.height, 2, 30, rec_cut_from_top(&area, ui_ctx.default_widget_height))
+		rec_delete_from_top(&area, 8)
+		if ui_button(ui_gen_id_auto(), "create", area) {
+			close_project()
+			project: Project
+			init_project(&project, app.width, app.height)
+			open_project(&project)
+
+			layer: Layer
+			init_layer(&layer)
+			add_layer(&layer, 0)
+
+			ui_close_current_popup()
+			ui_show_notif("\uf62b Project is created")
+		}	
+	}
+	ui_end_popup()
+}
+
+preview_settings_popup :: proc() {
+	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
+	popup_area := rec_center_in_area({ 0, 0, 300, 200 }, screen_rec)
+	if open, rec := ui_begin_popup_with_header("Preview settings", ui_gen_id_auto(), popup_area); open {
+
+	}
+	ui_end_popup()
+}
 init_app :: proc() {
 	
 }
