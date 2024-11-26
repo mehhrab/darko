@@ -74,12 +74,6 @@ main :: proc() {
 	project: Project
 	init_project(&project, 8, 8)
 	open_project(&project)
-	
-	{
-		layer: Layer
-		init_layer(&layer)
-		add_layer(&layer, 0)
-	}
 
 	for rl.WindowShouldClose() == false {
 		// ui
@@ -88,12 +82,12 @@ main :: proc() {
 		// update
 		if rl.IsKeyPressed(.SPACE) {
 			layer: Layer
-			init_layer(&layer)
+			init_layer(&layer, app.project.width, app.project.height)
 			add_layer_above_current(&layer)
 		}
 		if rl.IsKeyPressed(.S) {
 			layer: Layer
-			init_layer(&layer)
+			init_layer(&layer, app.project.width, app.project.height)
 			add_layer_on_top(&layer)
 		}
 		if rl.IsKeyPressed(.UP) {
@@ -311,14 +305,10 @@ new_file_popup :: proc() {
 		rec_delete_from_top(&area, 8)
 		if ui_button(ui_gen_id_auto(), "create", area) {
 			close_project()
+
 			project: Project
 			init_project(&project, app.width, app.height)
 			open_project(&project)
-
-			layer: Layer
-			init_layer(&layer)
-			add_layer(&layer, 0)
-
 			ui_close_current_popup()
 			ui_show_notif("\uf62b Project is created")
 		}	
@@ -334,6 +324,7 @@ preview_settings_popup :: proc() {
 	}
 	ui_end_popup()
 }
+
 init_app :: proc() {
 	
 }
@@ -348,6 +339,12 @@ init_project :: proc(project: ^Project, width, height: i32) {
 	project.height = height
 	project.layers = make([dynamic]Layer)
 	project.current_color = { 10, 10, 10, 255 }
+	
+	{
+		layer: Layer
+		init_layer(&layer, width, height)
+		append(&project.layers, layer)
+	}
 }
 
 deinit_project :: proc(project: ^Project) {
@@ -380,8 +377,8 @@ close_project :: proc() {
 	rl.UnloadTexture(app.bg_texture)
 }
 
-init_layer :: proc(layer: ^Layer) {
-	image := rl.GenImageColor(app.project.width, app.project.height, rl.BLANK)
+init_layer :: proc(layer: ^Layer, width, height: i32) {
+	image := rl.GenImageColor(width, height, rl.BLANK)
 	texture := rl.LoadTextureFromImage(image)
 	layer.image = image
 	layer.texture = texture
@@ -411,7 +408,8 @@ add_layer_above_current :: proc(layer: ^Layer) {
 	app.project.current_layer += 1
 }
 
-get_current_layer :: proc() -> (layer: ^Layer) {
+get_current_layer :: proc(loc := #caller_location) -> (layer: ^Layer) {
+	// fmt.printfln("{}", loc.line)
 	return &app.project.layers[app.project.current_layer]
 }
 
