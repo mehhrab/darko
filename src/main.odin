@@ -14,8 +14,9 @@ App :: struct {
 	lerped_zoom: f32,
 	image_changed: bool,
 	bg_texture: rl.Texture,
-	sprite_stack_zoom: f32,
-	sprite_stack_rotation: f32,
+	preview_zoom: f32,
+	preview_rotation: f32,
+	auto_rotate_preview: bool,
 	temp_undo_image: Maybe(rl.Image),
 }
 
@@ -199,15 +200,18 @@ gui :: proc() {
 	prveiew_widget_id := ui_gen_id_auto()
 	ui_update_widget(prveiew_widget_id, preview_area)
 	if ui_ctx.hovered_widget == prveiew_widget_id {
-		update_zoom(&app.sprite_stack_zoom, 2, 1, 100)
+		update_zoom(&app.preview_zoom, 2, 1, 100)
 	}
 	if ui_ctx.active_widget == prveiew_widget_id {
-		app.sprite_stack_rotation -= rl.GetMouseDelta().x 
+		app.preview_rotation -= rl.GetMouseDelta().x 
+	}
+	else if app.auto_rotate_preview {
+		app.preview_rotation -= 10 * rl.GetFrameTime()
 	}
 	ui_push_command(UI_Draw_Preview {
 		rec = preview_area,
-		rotation = app.sprite_stack_rotation,
-		zoom = app.sprite_stack_zoom,
+		rotation = app.preview_rotation,
+		zoom = app.preview_zoom,
 	})
 	settings_rec := Rec {
 		preview_area.x + preview_area.width - ui_ctx.default_widget_height - 8,
@@ -320,7 +324,9 @@ preview_settings_popup :: proc() {
 	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
 	popup_area := rec_center_in_area({ 0, 0, 300, 200 }, screen_rec)
 	if open, rec := ui_begin_popup_with_header("Preview settings", ui_gen_id_auto(), popup_area); open {
-
+		area := rec_pad(rec, 16)
+		auto_rotate_rec := rec_cut_from_top(&area, ui_ctx.default_widget_height)
+		ui_check_box(ui_gen_id_auto(),"Auto rotate", &app.auto_rotate_preview, auto_rotate_rec)
 	}
 	ui_end_popup()
 }
@@ -368,8 +374,8 @@ open_project :: proc(project: ^Project) {
 		{ 131, 139, 167, 255 })
 	defer rl.UnloadImage(bg_image)
 	app.bg_texture = rl.LoadTextureFromImage(bg_image)
-	app.sprite_stack_rotation = 0
-	app.sprite_stack_zoom = 10
+	app.preview_rotation = 0
+	app.preview_zoom = 10
 }
 
 close_project :: proc() {
