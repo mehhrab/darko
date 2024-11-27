@@ -501,6 +501,36 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 	return clicked_item
 }
 
+ui_check_box :: proc(id: UI_ID, label: string, checked: ^bool, rec: Rec) {
+	check_box_rec := Rec {
+		rec.x + rec.width - ui_ctx.default_widget_height,
+		rec.y,
+		ui_ctx.default_widget_height,
+		rec.height,
+	}
+	ui_update_widget(id, check_box_rec)
+	if ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT) {
+		checked^ = !checked^ 
+	}
+	ui_push_command(UI_Draw_Rect {
+		rec = check_box_rec,
+		color = ui_ctx.border_color,
+	})
+	if checked^ {		
+		ui_push_command(UI_Draw_Rect {
+			rec = rec_pad(check_box_rec, 8),
+			color = ui_ctx.accent_color,
+		})
+	}
+	ui_push_command(UI_Draw_Text {
+		rec = rec,
+		align = { .Left, .Center },
+		color = ui_ctx.text_color,
+		size = ui_ctx.font_size,
+		text = label,
+	})
+}
+
 ui_slider_f32 :: proc(
 	id: UI_ID,
 	label: string,
