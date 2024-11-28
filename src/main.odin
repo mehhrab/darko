@@ -14,8 +14,9 @@ App :: struct {
 	lerped_zoom: f32,
 	image_changed: bool,
 	bg_texture: rl.Texture,
-	preview_zoom: f32,
+	preview_zoom: f32,	
 	preview_rotation: f32,
+	preview_rotation_speed: f32,
 	auto_rotate_preview: bool,
 	temp_undo_image: Maybe(rl.Image),
 }
@@ -206,7 +207,7 @@ gui :: proc() {
 		app.preview_rotation -= rl.GetMouseDelta().x 
 	}
 	else if app.auto_rotate_preview {
-		app.preview_rotation -= 10 * rl.GetFrameTime()
+		app.preview_rotation -= app.preview_rotation_speed * rl.GetFrameTime()
 	}
 	ui_push_command(UI_Draw_Preview {
 		rec = preview_area,
@@ -327,6 +328,8 @@ preview_settings_popup :: proc() {
 		area := rec_pad(rec, 16)
 		auto_rotate_rec := rec_cut_from_top(&area, ui_ctx.default_widget_height)
 		ui_check_box(ui_gen_id_auto(),"Auto rotate", &app.auto_rotate_preview, auto_rotate_rec)
+		rec_delete_from_top(&area, 8)
+		ui_slider_f32(ui_gen_id_auto(), "Rotation speed", &app.preview_rotation_speed, 5, 30, rec_cut_from_top(&area, ui_ctx.default_widget_height))
 	}
 	ui_end_popup()
 }
