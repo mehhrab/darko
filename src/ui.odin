@@ -349,7 +349,7 @@ ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: 
 		area := rec
 		header_area := rec_extend_from_top(&area, ui_ctx.header_height) 
 		ui_ctx.popup.rec = area
-		if ui_button(id, "X", { header_area.x, header_area.y, ui_ctx.header_height, ui_ctx.header_height }) {
+		if ui_button(id, "X", rec_take_from_right(&header_area, header_area.height)) {
 			ui_close_current_popup()
 		}
 	}
