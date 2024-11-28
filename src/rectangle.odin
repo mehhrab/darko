@@ -1,11 +1,6 @@
 package darko
 import rl "vendor:raylib"
 
-// Rec :: struct {
-// 	x, y: f32,
-// 	width, height: f32,
-// }
-
 Rec :: rl.Rectangle
 
 rec_pad :: proc(rec: Rec, padding: f32) -> (res: Rec) {
@@ -38,6 +33,15 @@ rec_extend_from_top :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
 	rec.y -= amount
 	rec.height += amount
 	return res
+}
+
+rec_take_from_right :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
+	return {
+		rec.x + rec.width - amount,
+		rec.y,
+		amount,
+		rec.height,
+	}
 }
 
 rec_delete_from_top :: proc(rec: ^Rec, amount: f32) {
