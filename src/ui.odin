@@ -141,9 +141,10 @@ ui_init_ctx :: proc() {
 	ui_ctx.draw_commands = make([dynamic]UI_Draw_Command)
 	
 	chars := cstring(" abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.\uf8ea\uf6fd\uf62b\uf992")
-	count := i32(len(chars))
-	code_points := rl.LoadCodepoints(chars, &count)
-	ui_ctx.font = rl.LoadFontEx("../assets/Hack Bold Nerd Font Complete.ttf", 64, code_points, count)
+	code_point_count := i32(len(chars))
+	code_points := rl.LoadCodepoints(chars, &code_point_count)
+	font_data := #load("../assets/Hack Bold Nerd Font Complete.ttf")
+	ui_ctx.font = rl.LoadFontFromMemory(".ttf", raw_data(font_data), i32(len(font_data)), 64, code_points, code_point_count)
 	rl.SetTextureFilter(ui_ctx.font.texture, .BILINEAR)
 	
 	ui_ctx.font_size = 18
