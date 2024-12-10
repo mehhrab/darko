@@ -62,9 +62,9 @@ UI_Align_Vertical :: enum {
 
 UI_Popup :: struct {
 	name: string,
+	show_header: bool,
 	rec: Rec,
 	draw_commands: [dynamic]UI_Draw_Command,
-	show_header: bool,
 }
 
 UI_Menu_Item :: struct {
@@ -175,10 +175,10 @@ ui_begin :: proc() {
 		ui_close_current_popup()
 	}
 	if ui_ctx.opened_popup != "" {
-		ui_ctx.popup_time += rl.GetFrameTime()
+		ui_ctx.popup_time += 0.01
 	}
 	if ui_ctx.notif_text != "" {
-		ui_ctx.notif_time += rl.GetFrameTime()
+		ui_ctx.notif_time += 0.01
 	}
 }
 

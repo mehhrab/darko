@@ -2,9 +2,13 @@ package darko
 
 import "core:fmt"
 import rl "vendor:raylib"
-import sa "core:container/small_array"
 import "core:mem"
 import "core:math"
+import "core:encoding/json"
+import "core:strings"
+import "core:c"
+import "core:os/os2"
+import ntf "../lib/nativefiledialog-odin"
 
 LOCK_FPS :: #config(LOCK_FPS, true)
 
@@ -22,11 +26,12 @@ App :: struct {
 }
 
 Project :: struct {
+	name: string,
 	zoom: f32,
 	current_color: rl.Color,
 	width, height: i32,
 	current_layer: int,
-	layers: [dynamic]Layer,
+	layers: [dynamic]Layer `json:"-"`,
 }
 
 Layer :: struct {
@@ -66,6 +71,9 @@ main :: proc() {
 	when LOCK_FPS {
 		rl.SetTargetFPS(60)
 	}
+
+	ntf.Init()
+	defer ntf.Quit()
 
 	ui_init_ctx()
 	defer ui_deinit_ctx()
@@ -245,27 +253,67 @@ menu_bar :: proc(area: Rec) {
 	menu_items := [?]UI_Menu_Item {
 		UI_Menu_Item { 
 			ui_gen_id_auto(),
-			"new file",
+			"new project",
 			"",
 		},
 		UI_Menu_Item { 
 			ui_gen_id_auto(),
-			"open file",
+			"open project",
 			"",
 		},
 		UI_Menu_Item { 
 			ui_gen_id_auto(),
-			"close file",
+			"save project",
 			"",
 		},
 	}
 	menu_items_slice := menu_items[:]
 	clicked_item := ui_menu_button(ui_gen_id_auto(), "File", &menu_items_slice, 300, { area.x, area.y, 60, area.height })
-	if clicked_item.text == "new file" {
+	if clicked_item.text == "new project" {
 		ui_open_popup("New file")
 	}
-	else if clicked_item.text == "close file" {
-		rl.CloseWindow()
+	if clicked_item.text == "open project" {
+		defer ui_close_current_popup()
+
+		path: cstring
+		defer ntf.FreePathU8(path)
+		args: ntf.Open_Dialog_Args
+		res := ntf.PickFolderU8(&path, "")
+		if res != .Okay {
+			return
+		}
+
+		project: Project
+		project_path := string(path)		
+		loaded := load_project(&project, project_path)
+		if loaded == false {
+			ui_show_notif("Failed to open project")
+			return
+		}
+		close_project()		
+		open_project(&project)
+		app.image_changed = true
+		ui_show_notif("Project is opened")
+	}
+	if clicked_item.text == "save project" {
+		defer ui_close_current_popup()
+
+		path: cstring
+		defer ntf.FreePathU8(path)
+		args: ntf.Open_Dialog_Args
+		res := ntf.PickFolderU8(&path, "")
+		if res != .Okay {
+			return
+		}
+
+		project_path := string(path)
+		app.project.name = project_path[strings.last_index(project_path, "\\") + 1:]
+		saved := save_project(&app.project, project_path)
+		if saved == false {
+			ui_show_notif("Could not save project")
+			return
+		}
+		ui_show_notif("Project is saved")
 	}
 }
 
@@ -343,6 +391,7 @@ deinit_app :: proc() {
 }
 
 init_project :: proc(project: ^Project, width, height: i32) {
+	project.name = "untitled"
 	project.zoom = 1
 	project.width = width
 	project.height = height
@@ -356,6 +405,74 @@ init_project :: proc(project: ^Project, width, height: i32) {
 	}
 }
 
+// TODO: return an error value instead of a bool
+load_project :: proc(project: ^Project, dir: string) -> (ok: bool) {
+	// check if project.json and at least one layer exists
+	json_exists := os2.exists(fmt.tprintf("{}{}", dir, "\\project.json"))
+	layer0_exists := os2.exists(fmt.tprintf("{}{}", dir, "\\layer0.png"))
+	if (json_exists || layer0_exists) == false {
+		return false
+	}
+
+	// load project.json
+	size: i32
+	data := rl.LoadFileData(fmt.ctprintf("{}{}", dir, "\\project.json"), &size)
+	defer rl.UnloadFileData(data)
+	text := strings.string_from_null_terminated_ptr(data, int(size))
+	unmarshal_err := json.unmarshal(transmute([]u8)text, project, allocator = context.temp_allocator)
+	if unmarshal_err != nil {
+		return false
+	}
+
+	// load layers
+	files, read_dir_err := os2.read_all_directory_by_path(dir, context.allocator)
+	defer os2.file_info_slice_delete(files, context.allocator)
+	if read_dir_err != os2.ERROR_NONE {
+		return false
+	}
+	for file in files {
+		if strings.has_suffix(file.fullpath, ".png") {
+			layer: Layer
+			layer.image = rl.LoadImage(fmt.ctprint(file.fullpath))
+			layer.texture = rl.LoadTextureFromImage(layer.image)
+			layer.undos = make([dynamic]rl.Image)
+			append(&project.layers, layer)
+		}
+	}
+
+	return true
+}
+
+// TODO: return an error value instead of a bool
+save_project :: proc(project: ^Project, dir: string) -> (ok: bool) {
+	// clear the directory
+	remove_err := os2.remove_all(dir)
+	if remove_err != os2.ERROR_NONE {
+		return false
+	}
+	make_dir_err := os2.make_directory(dir)
+	if make_dir_err != os2.ERROR_NONE {
+		return false
+	}
+
+	// save project.json
+	text, marshal_err := json.marshal(app.project, { pretty = true }, context.temp_allocator)
+	if marshal_err != nil {
+		return false
+	}
+	saved := rl.SaveFileText(fmt.ctprintf("{}\\project.json", dir), raw_data(text))
+	if saved == false {
+		return false
+	}
+
+	// save layers
+	for layer, i in app.project.layers {
+		rl.ExportImage(layer.image, fmt.ctprintf("{}\\layer{}.png", dir, i))
+	}
+	
+	return true
+}
+
 deinit_project :: proc(project: ^Project) {
 	for &layer in project.layers {
 		deinit_layer(&layer)
@@ -365,6 +482,8 @@ deinit_project :: proc(project: ^Project) {
 
 open_project :: proc(project: ^Project) {
 	app.project = project^
+	
+	rl.SetWindowTitle(fmt.ctprintf("darko - {}", project.name))
 
 	app.lerped_zoom = 1
 	app.image_changed = true
