@@ -205,38 +205,7 @@ gui :: proc() {
 
 	rec_delete_from_top(&right_panel_area, 16)
 
-	preview_area := right_panel_area
-	prveiew_widget_id := ui_gen_id_auto()
-	ui_update_widget(prveiew_widget_id, preview_area)
-	if ui_ctx.hovered_widget == prveiew_widget_id {
-		update_zoom(&app.preview_zoom, 2, 1, 100)
-	}
-	if ui_ctx.active_widget == prveiew_widget_id {
-		app.preview_rotation -= rl.GetMouseDelta().x 
-	}
-	else if app.auto_rotate_preview {
-		app.preview_rotation -= app.preview_rotation_speed * rl.GetFrameTime()
-	}
-	ui_push_command(UI_Draw_Preview {
-		rec = preview_area,
-		rotation = app.preview_rotation,
-		zoom = app.preview_zoom,
-	})
-	settings_rec := Rec {
-		preview_area.x + preview_area.width - ui_ctx.default_widget_height - 8,
-		preview_area.y + 8,
-		ui_ctx.default_widget_height,
-		ui_ctx.default_widget_height,
-	}
-	prev_font_size := ui_ctx.font_size
-	ui_ctx.font_size = 20
-	prev_widget_color := ui_ctx.widget_color
-	ui_ctx.widget_color = rl.BLANK
-	if ui_button(ui_gen_id_auto(), "\uf992", settings_rec, false) {
-		ui_open_popup("Preview settings")
-	}
-	ui_ctx.font_size = prev_font_size
-	ui_ctx.widget_color = prev_widget_color
+	preview(right_panel_area)
 	
 	preview_settings_popup()
 	new_file_popup()
@@ -344,6 +313,41 @@ color_panel :: proc(area: ^Rec) {
 	if changed1 || changed2 || changed3  {
 		app.project.current_color = rl.ColorFromHSV(hsv_color[0], hsv_color[1], hsv_color[2])
 	}
+}
+
+preview :: proc(rec: Rec) {
+	area := rec
+	id := ui_gen_id_auto()
+	ui_update_widget(id, area)
+	if ui_ctx.hovered_widget == id {
+		update_zoom(&app.preview_zoom, 2, 1, 100)
+	}
+	if ui_ctx.active_widget == id {
+		app.preview_rotation -= rl.GetMouseDelta().x 
+	}
+	else if app.auto_rotate_preview {
+		app.preview_rotation -= app.preview_rotation_speed * rl.GetFrameTime()
+	}
+	ui_push_command(UI_Draw_Preview {
+		rec = area,
+		rotation = app.preview_rotation,
+		zoom = app.preview_zoom,
+	})
+	settings_rec := Rec {
+		area.x + area.width - ui_ctx.default_widget_height - 8,
+		area.y + 8,
+		ui_ctx.default_widget_height,
+		ui_ctx.default_widget_height,
+	}
+	prev_font_size := ui_ctx.font_size
+	ui_ctx.font_size = 20
+	prev_widget_color := ui_ctx.widget_color
+	ui_ctx.widget_color = rl.BLANK
+	if ui_button(ui_gen_id_auto(), "\uf992", settings_rec, false) {
+		ui_open_popup("Preview settings")
+	}
+	ui_ctx.font_size = prev_font_size
+	ui_ctx.widget_color = prev_widget_color
 }
 
 new_file_popup :: proc() {
