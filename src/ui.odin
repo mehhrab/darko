@@ -148,9 +148,9 @@ ui_init_ctx :: proc() {
 	rl.SetTextureFilter(ui_ctx.font.texture, .BILINEAR)
 	
 	ui_ctx.font_size = 18
-	ui_ctx.header_height = 30
 	ui_ctx.text_align = { .Center, .Center }
 	ui_ctx.default_widget_height = 32
+	ui_ctx.header_height = ui_ctx.default_widget_height * 1.2
 
 	ui_ctx.text_color = { 200, 209, 218, 255 }
 	ui_ctx.panel_color = { 33, 40, 48, 255 }
@@ -261,7 +261,7 @@ ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 				y := f32(0)
 
 				text := strings.clone_to_cstring(kind.text, context.temp_allocator)
-				text_size := rl.MeasureTextEx(ui_ctx.font, text, ui_ctx.font_size, 0)
+				text_size := rl.MeasureTextEx(ui_ctx.font, text, kind.size, 0)
 				
 				if kind.align.horizontal == .Left {
 					x = kind.rec.x
@@ -308,7 +308,7 @@ ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 				rl.DrawRectangleRec(kind.rec, ui_ctx.widget_hover_color)
 				x, y := rec_get_center_point(kind.rec)
 				draw_sprite_stack(&app.project.layers, x, y, kind.zoom, kind.rotation)
-				rl.DrawTextEx(ui_ctx.font, "Preview", { kind.rec.x + 10, kind.rec.y + 10 }, ui_ctx.font_size * 1.5, 0, { 255, 255, 255, 100 })
+				rl.DrawTextEx(ui_ctx.font, "Preview", { kind.rec.x + 10, kind.rec.y + 10 }, ui_ctx.font_size * 1.2, 0, { 255, 255, 255, 100 })
 				rl.EndScissorMode()
 				rl.DrawRectangleLinesEx(kind.rec, 1, ui_ctx.border_color)
 			}
@@ -350,7 +350,7 @@ ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: 
 		area := rec
 		header_area := rec_extend_from_top(&area, ui_ctx.header_height) 
 		ui_ctx.popup.rec = area
-		if ui_button(id, "X", rec_take_from_right(&header_area, header_area.height)) {
+		if ui_button(id, "X", rec_pad(rec_take_from_right(&header_area, header_area.height), 8)) {
 			ui_close_current_popup()
 		}
 	}
@@ -369,15 +369,15 @@ ui_end_popup :: proc() {
 	})
 	if ui_ctx.popup.show_header {
 		inject_at(&ui_ctx.popup.draw_commands, 2, UI_Draw_Rect {
-			color = ui_ctx.accent_color,
+			color = ui_ctx.border_color,
 			rec = { ui_ctx.popup.rec.x, ui_ctx.popup.rec.y, ui_ctx.popup.rec.width, ui_ctx.header_height },
 		})
 		inject_at(&ui_ctx.popup.draw_commands, 3, UI_Draw_Text {
-			color = ui_ctx.border_color,
+			color = rl.Fade(ui_ctx.text_color, 0.7),
 			rec = { ui_ctx.popup.rec.x, ui_ctx.popup.rec.y, ui_ctx.popup.rec.width, ui_ctx.header_height },
 			text = ui_ctx.opened_popup,
-			align = ui_ctx.text_align,
-			size = ui_ctx.font_size,
+			align = { .Center, .Center },
+			size = ui_ctx.font_size * 1.2,
 		})
 	}
 	ui_ctx.current_popup = ""
