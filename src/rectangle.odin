@@ -12,6 +12,15 @@ rec_pad :: proc(rec: Rec, padding: f32) -> (res: Rec) {
 	return rec
 }
 
+rec_pad_ex :: proc(rec: Rec, left, top, right, bottom: f32) -> (res: Rec) {
+	rec := rec
+	rec.x += left
+	rec.y += top
+	rec.width -= right * 2
+	rec.height -= bottom * 2
+	return rec
+}
+
 rec_get_center_point :: proc(rec: Rec) -> (x, y: f32) {
 	return rec.x + rec.width / 2, rec.y + rec.height / 2
 }

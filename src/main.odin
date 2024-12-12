@@ -293,7 +293,7 @@ menu_bar :: proc(area: Rec) {
 
 layer_props :: proc(rec: Rec) {
 	ui_panel(ui_gen_id_auto(), rec)
-	props_area := rec_pad(rec, 8)
+	props_area := rec_pad_ex(rec, 8, 8, 0, 8)
 	
 	current_layer := app.project.current_layer + 1
 	layer_count := len(app.project.layers)
