@@ -143,10 +143,10 @@ ui_init_ctx :: proc() {
 	// chars := cstring(" abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/\\.\uf8ea\uf6fd\uf62b\uf992")
 	// code_point_count := i32(len(chars))
 	// code_points := rl.LoadCodepoints(chars, &code_point_count)
- 
+
 	font_data := #load("../assets/Roboto Mono Bold Nerd Font Complete.ttf")
 	// TODO: only load the codepoints/glyphs we need, not the whole thing
-	ui_ctx.font = rl.LoadFontFromMemory(".ttf", raw_data(font_data), i32(len(font_data)), 64, nil, 64155)
+	ui_ctx.font = rl.LoadFontFromMemory(".ttf", raw_data(font_data), i32(len(font_data)), 64, nil, 64565)
 	rl.SetTextureFilter(ui_ctx.font.texture, .BILINEAR)
 	
 	ui_ctx.font_size = 16
@@ -352,7 +352,7 @@ ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: 
 		area := rec
 		header_area := rec_extend_from_top(&area, ui_ctx.header_height) 
 		ui_ctx.popup.rec = area
-		if ui_button(id, "X", rec_pad(rec_take_from_right(&header_area, header_area.height), 8)) {
+		if ui_button(id, "\uf655", rec_pad(rec_take_from_right(&header_area, header_area.height), 8)) {
 			ui_close_current_popup()
 		}
 	}

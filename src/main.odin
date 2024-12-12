@@ -305,7 +305,7 @@ layer_props :: proc(rec: Rec) {
 		text = fmt.tprintf("layer {}/{}", current_layer, layer_count),
 	})
 	
-	if ui_button(ui_gen_id_auto(), "Delete", rec_cut_from_right(&props_area, 100)) {
+	if ui_button(ui_gen_id_auto(), "\uf6bf", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		if len(app.project.layers) <= 1 {
 			ui_show_notif("At least one layer is needed")
 		} 
@@ -317,7 +317,8 @@ layer_props :: proc(rec: Rec) {
 			}
 		}
 	}
-	if ui_button(ui_gen_id_auto(), "Move UP", rec_cut_from_right(&props_area, 100)) {
+	rec_cut_from_left(&props_area, 8)
+	if ui_button(ui_gen_id_auto(), "\ufc35", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		if len(app.project.layers) > 1 && app.project.current_layer < len(app.project.layers) - 1 {
 			layer := app.project.layers[app.project.current_layer]
 			ordered_remove(&app.project.layers, app.project.current_layer)
@@ -325,7 +326,8 @@ layer_props :: proc(rec: Rec) {
 			app.project.current_layer += 1
 		}
 	}
-	if ui_button(ui_gen_id_auto(), "Move Down", rec_cut_from_right(&props_area, 100)) {
+	rec_cut_from_left(&props_area, 8)
+	if ui_button(ui_gen_id_auto(), "\ufc2c", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		if len(app.project.layers) > 1 && app.project.current_layer > 0 {
 			layer := app.project.layers[app.project.current_layer]
 			ordered_remove(&app.project.layers, app.project.current_layer)
@@ -409,7 +411,7 @@ new_file_popup :: proc() {
 		rec_delete_from_top(&area, 8)
 		ui_slider_i32(ui_gen_id_auto(), "Height", &app.height, 2, 30, rec_cut_from_top(&area, ui_ctx.default_widget_height))
 		rec_delete_from_top(&area, 8)
-		if ui_button(ui_gen_id_auto(), "create", area) {
+		if ui_button(ui_gen_id_auto(), "Create", area) {
 			close_project()
 
 			project: Project
