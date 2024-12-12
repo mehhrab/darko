@@ -140,7 +140,7 @@ ui_ctx: UI_Ctx
 ui_init_ctx :: proc() {
 	ui_ctx.draw_commands = make([dynamic]UI_Draw_Command)
 	
-	chars := cstring(" abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.\uf8ea\uf6fd\uf62b\uf992")
+	chars := cstring(" abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/\\.\uf8ea\uf6fd\uf62b\uf992")
 	code_point_count := i32(len(chars))
 	code_points := rl.LoadCodepoints(chars, &code_point_count)
 	font_data := #load("../assets/Hack Bold Nerd Font Complete.ttf")

@@ -131,6 +131,8 @@ main :: proc() {
 	rl.CloseWindow()
 }
 
+// gui code
+
 gui :: proc() {
 	ui_begin()
 
@@ -143,6 +145,9 @@ gui :: proc() {
 
 	right_panel_area := rec_cut_from_right(&screen_area, panel_width)
 	middle_panel_area := screen_area
+	
+	layer_props_area := rec_cut_from_top(&middle_panel_area, ui_ctx.default_widget_height + 8)
+	layer_props(layer_props_area)
 
 	app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 20 * rl.GetFrameTime())
 	// work around for lerp never (taking too long) reaching it's desteniton 
@@ -286,6 +291,21 @@ menu_bar :: proc(area: Rec) {
 	}
 }
 
+layer_props :: proc(rec: Rec) {
+	ui_panel(ui_gen_id_auto(), rec)
+	props_area := rec_pad(rec, 8)
+	
+	current_layer := app.project.current_layer + 1
+	layer_count := len(app.project.layers)
+	ui_push_command(UI_Draw_Text {
+		align = { .Left, .Center },
+		color = ui_ctx.text_color,
+		rec = props_area,
+		size = ui_ctx.font_size,
+		text = fmt.tprintf("layer {}/{}", current_layer, layer_count),
+	})
+}
+
 color_panel :: proc(area: ^Rec) {	
 	preview_area := rec_cut_from_top(area, ui_ctx.default_widget_height * 2)
 	ui_push_command(UI_Draw_Rect {
@@ -385,6 +405,8 @@ preview_settings_popup :: proc() {
 	}
 	ui_end_popup()
 }
+
+// backend code
 
 init_app :: proc() {
 	
