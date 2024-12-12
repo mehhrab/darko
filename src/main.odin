@@ -317,8 +317,22 @@ layer_props :: proc(rec: Rec) {
 			}
 		}
 	}
-	// ui_button(ui_gen_id_auto(), "Move UP", rec_cut_from_right(&props_area, 100))
-	// ui_button(ui_gen_id_auto(), "Move Down", rec_cut_from_right(&props_area, 100))
+	if ui_button(ui_gen_id_auto(), "Move UP", rec_cut_from_right(&props_area, 100)) {
+		if len(app.project.layers) > 1 && app.project.current_layer < len(app.project.layers) - 1 {
+			layer := app.project.layers[app.project.current_layer]
+			ordered_remove(&app.project.layers, app.project.current_layer)
+			inject_at_elem(&app.project.layers, app.project.current_layer + 1, layer)
+			app.project.current_layer += 1
+		}
+	}
+	if ui_button(ui_gen_id_auto(), "Move Down", rec_cut_from_right(&props_area, 100)) {
+		if len(app.project.layers) > 1 && app.project.current_layer > 0 {
+			layer := app.project.layers[app.project.current_layer]
+			ordered_remove(&app.project.layers, app.project.current_layer)
+			inject_at_elem(&app.project.layers, app.project.current_layer - 1, layer)
+			app.project.current_layer -= 1
+		}
+	}
 }
 
 color_panel :: proc(area: ^Rec) {	
