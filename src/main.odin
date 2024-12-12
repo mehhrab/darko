@@ -304,6 +304,21 @@ layer_props :: proc(rec: Rec) {
 		size = ui_ctx.font_size,
 		text = fmt.tprintf("layer {}/{}", current_layer, layer_count),
 	})
+	
+	if ui_button(ui_gen_id_auto(), "Delete", rec_cut_from_right(&props_area, 100)) {
+		if len(app.project.layers) <= 1 {
+			ui_show_notif("At least one layer is needed")
+		} 
+		else {
+			deinit_layer(&app.project.layers[app.project.current_layer])
+			ordered_remove(&app.project.layers, app.project.current_layer)
+			if app.project.current_layer > 0 {
+				app.project.current_layer -= 1
+			}
+		}
+	}
+	// ui_button(ui_gen_id_auto(), "Move UP", rec_cut_from_right(&props_area, 100))
+	// ui_button(ui_gen_id_auto(), "Move Down", rec_cut_from_right(&props_area, 100))
 }
 
 color_panel :: proc(area: ^Rec) {	
