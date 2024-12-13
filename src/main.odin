@@ -296,6 +296,7 @@ layer_props :: proc(rec: Rec) {
 	ui_panel(ui_gen_id_auto(), rec)
 	props_area := rec_pad_ex(rec, 8, 8, 0, 8)
 	
+	// draw current layer index and layer count
 	current_layer := app.project.current_layer + 1
 	layer_count := len(app.project.layers)
 	ui_push_command(UI_Draw_Text {
@@ -305,7 +306,8 @@ layer_props :: proc(rec: Rec) {
 		size = ui_ctx.font_size,
 		text = fmt.tprintf("layer {}/{}", current_layer, layer_count),
 	})
-	
+
+	// delete button
 	if ui_button(ui_gen_id_auto(), "\uf6bf", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		if len(app.project.layers) <= 1 {
 			ui_show_notif("At least one layer is needed")
@@ -318,6 +320,8 @@ layer_props :: proc(rec: Rec) {
 			}
 		}
 	}
+
+	// move up button
 	rec_cut_from_left(&props_area, 8)
 	if ui_button(ui_gen_id_auto(), "\ufc35", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		if len(app.project.layers) > 1 && app.project.current_layer < len(app.project.layers) - 1 {
@@ -327,6 +331,8 @@ layer_props :: proc(rec: Rec) {
 			app.project.current_layer += 1
 		}
 	}
+
+	// move down button
 	rec_cut_from_left(&props_area, 8)
 	if ui_button(ui_gen_id_auto(), "\ufc2c", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		if len(app.project.layers) > 1 && app.project.current_layer > 0 {
@@ -336,6 +342,8 @@ layer_props :: proc(rec: Rec) {
 			app.project.current_layer -= 1
 		}
 	}
+
+	// duplicate button
 	rec_cut_from_left(&props_area, 8)
 	if ui_button(ui_gen_id_auto(), "\uf68e", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		layer: Layer
