@@ -28,6 +28,7 @@ App :: struct {
 Project :: struct {
 	name: string,
 	zoom: f32,
+	spacing: f32,
 	current_color: rl.Color,
 	width, height: i32,
 	current_layer: int,
@@ -381,8 +382,6 @@ preview :: proc(rec: Rec) {
 	}
 	ui_push_command(UI_Draw_Preview {
 		rec = area,
-		rotation = app.preview_rotation,
-		zoom = app.preview_zoom,
 	})
 	settings_rec := Rec {
 		area.x + area.width - ui_ctx.default_widget_height - 8,
@@ -433,6 +432,8 @@ preview_settings_popup :: proc() {
 		ui_check_box(ui_gen_id_auto(),"Auto rotate", &app.auto_rotate_preview, auto_rotate_rec)
 		rec_delete_from_top(&area, 8)
 		ui_slider_f32(ui_gen_id_auto(), "Rotation speed", &app.preview_rotation_speed, 5, 30, rec_cut_from_top(&area, ui_ctx.default_widget_height))
+		rec_delete_from_top(&area, 8)
+		ui_slider_f32(ui_gen_id_auto(), "Spacing", &app.project.spacing, 0.1, 2, rec_cut_from_top(&area, ui_ctx.default_widget_height))
 	}
 	ui_end_popup()
 }
@@ -450,6 +451,7 @@ deinit_app :: proc() {
 init_project :: proc(project: ^Project, width, height: i32) {
 	project.name = "untitled"
 	project.zoom = 1
+	project.spacing = 1
 	project.width = width
 	project.height = height
 	project.layers = make([dynamic]Layer)
@@ -605,8 +607,8 @@ update_zoom :: proc(current_zoom: ^f32, strength: f32, min: f32, max: f32) {
 }
 
 // TODO: add parameter to set the origin, current it's centered horizontaly and verticaly
-draw_sprite_stack :: proc(layers: ^[dynamic]Layer, x, y: f32, scale: f32, rotation: f32) {
-	spacing := f32(1) * scale
+draw_sprite_stack :: proc(layers: ^[dynamic]Layer, x, y: f32, scale: f32, rotation: f32, spacing: f32) {
+	spacing := spacing * scale
 	yy := y + f32(len(layers^) - 1) * spacing / 2
 	for layer in layers {
 		layer_width := f32(layer.image.width)
