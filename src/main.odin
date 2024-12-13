@@ -336,6 +336,14 @@ layer_props :: proc(rec: Rec) {
 			app.project.current_layer -= 1
 		}
 	}
+	rec_cut_from_left(&props_area, 8)
+	if ui_button(ui_gen_id_auto(), "\uf68e", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
+		layer: Layer
+		layer.image = rl.ImageCopy(get_current_layer().image)
+		layer.texture = rl.LoadTextureFromImage(layer.image)
+		layer.undos = make([dynamic]rl.Image)
+		add_layer_above_current(&layer)
+	}
 }
 
 color_panel :: proc(area: ^Rec) {	
