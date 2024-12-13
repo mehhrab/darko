@@ -19,6 +19,7 @@ App :: struct {
 	image_changed: bool,
 	bg_texture: rl.Texture,
 	preview_zoom: f32,	
+	lerped_preview_zoom: f32,
 	preview_rotation: f32,
 	preview_rotation_speed: f32,
 	auto_rotate_preview: bool,
@@ -390,6 +391,11 @@ preview :: proc(rec: Rec) {
 	if ui_ctx.hovered_widget == id {
 		update_zoom(&app.preview_zoom, 2, 1, 100)
 	}
+	app.lerped_preview_zoom = rl.Lerp(app.lerped_preview_zoom, app.preview_zoom, 20 * rl.GetFrameTime())
+	// work around for lerp never (taking too long) reaching it's desteniton 
+	if math.abs(app.preview_zoom - app.lerped_preview_zoom) < 0.01 {
+		app.lerped_preview_zoom = app.preview_zoom
+	}
 	if ui_ctx.active_widget == id {
 		app.preview_rotation -= rl.GetMouseDelta().x 
 	}
@@ -561,6 +567,7 @@ open_project :: proc(project: ^Project) {
 	rl.SetWindowTitle(fmt.ctprintf("darko - {}", project.name))
 
 	app.lerped_zoom = 1
+	app.lerped_preview_zoom = 1
 	app.image_changed = true
 	bg_image := rl.GenImageChecked(
 		project.width, 

@@ -307,7 +307,7 @@ ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 				rl.BeginScissorMode(i32(kind.rec.x), i32(kind.rec.y), i32(kind.rec.width), i32(kind.rec.height))
 				rl.DrawRectangleRec(kind.rec, ui_ctx.widget_hover_color)
 				x, y := rec_get_center_point(kind.rec)
-				draw_sprite_stack(&app.project.layers, x, y, app.preview_zoom, app.preview_rotation, app.project.spacing)
+				draw_sprite_stack(&app.project.layers, x, y, app.lerped_preview_zoom, app.preview_rotation, app.project.spacing)
 				rl.DrawTextEx(ui_ctx.font, "Preview", { kind.rec.x + 10, kind.rec.y + 10 }, ui_ctx.font_size * 1.2, 0, { 255, 255, 255, 100 })
 				rl.EndScissorMode()
 				rl.DrawRectangleLinesEx(kind.rec, 1, ui_ctx.border_color)
