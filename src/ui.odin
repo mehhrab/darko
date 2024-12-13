@@ -199,11 +199,11 @@ ui_draw :: proc() {
 
 	if ui_ctx.opened_popup != "" {
 		screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
-		opacity := ui_ctx.popup_time * 200 * 5
-		if opacity >= 200 {
-			opacity = 200
+		opacity := ui_ctx.popup_time * 40 * 5
+		if opacity >= 40 {
+			opacity = 40
 		}
-		rl.DrawRectangleRec(screen_rec, { 0, 0, 0, u8((opacity / 255) * 255) })
+		rl.DrawRectangleRec(screen_rec, { 255, 255, 255, u8((opacity / 255) * 255) })
 		ui_process_commands(&ui_ctx.popup.draw_commands)
 	}
 	
