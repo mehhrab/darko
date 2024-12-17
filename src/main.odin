@@ -39,7 +39,11 @@ Project :: struct {
 Layer :: struct {
 	image: rl.Image,
 	texture: rl.Texture,
-	undos: [dynamic]rl.Image,
+	undos: [dynamic]Undo,
+}
+
+Undo :: struct {
+	image: rl.Image,
 }
 
 app: App
@@ -350,7 +354,7 @@ layer_props :: proc(rec: Rec) {
 		layer: Layer
 		layer.image = rl.ImageCopy(get_current_layer().image)
 		layer.texture = rl.LoadTextureFromImage(layer.image)
-		layer.undos = make([dynamic]rl.Image)
+		layer.undos = make([dynamic]Undo)
 		add_layer_above_current(&layer)
 	}
 }
@@ -516,7 +520,7 @@ load_project :: proc(project: ^Project, dir: string) -> (ok: bool) {
 			layer: Layer
 			layer.image = rl.LoadImage(fmt.ctprint(file.fullpath))
 			layer.texture = rl.LoadTextureFromImage(layer.image)
-			layer.undos = make([dynamic]rl.Image)
+			layer.undos = make([dynamic]Undo)
 			append(&project.layers, layer)
 		}
 	}
@@ -592,14 +596,14 @@ init_layer :: proc(layer: ^Layer, width, height: i32) {
 	texture := rl.LoadTextureFromImage(image)
 	layer.image = image
 	layer.texture = texture
-	layer.undos = make([dynamic]rl.Image)	
+	layer.undos = make([dynamic]Undo)	
 }
 
 deinit_layer :: proc(layer: ^Layer) {
 	rl.UnloadTexture(layer.texture)
 	rl.UnloadImage(layer.image)
-	for image in layer.undos {
-		rl.UnloadImage(image)
+	for undo in layer.undos {
+		rl.UnloadImage(undo.image)
 	}
 	delete(layer.undos)
 }
@@ -673,7 +677,10 @@ update_tools :: proc(area: Rec) {
 	if ui_is_mouse_in_rec(area) {
 		if rl.IsMouseButtonPressed(.MIDDLE) {
 			x, y := get_mouse_pos_in_canvas(area)
-			append(&get_current_layer().undos, rl.ImageCopy(get_current_layer().image))
+			undo := Undo {
+				image = rl.ImageCopy(get_current_layer().image)
+			}
+			append(&get_current_layer().undos, undo)
 			fill(&get_current_layer().image, x, y, app.project.current_color)
 			app.image_changed = true
 		}
@@ -682,9 +689,9 @@ update_tools :: proc(area: Rec) {
 	if rl.IsKeyPressed(.Z) {
 		undos := &get_current_layer().undos
 		if len(undos) > 0 {
-			image := rl.ImageCopy(undos[len(undos) - 1])
+			image := rl.ImageCopy(undos[len(undos) - 1].image)
 			get_current_layer().image = image
-			rl.UnloadImage(undos[len(undos) - 1])
+			rl.UnloadImage(undos[len(undos) - 1].image)
 			pop(undos)
 			app.image_changed = true
 		}	
@@ -765,7 +772,10 @@ end_undo :: proc() {
 	temp_undo_image, exists := app.temp_undo_image.?
 	if exists {
 		image := rl.ImageCopy(temp_undo_image)
-		append(&get_current_layer().undos, image)
+		undo := Undo {
+			image = image,
+		}
+		append(&get_current_layer().undos, undo)
 		rl.UnloadImage(temp_undo_image)
 		app.temp_undo_image = nil
 	}
