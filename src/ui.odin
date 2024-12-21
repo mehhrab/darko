@@ -16,12 +16,10 @@ UI_Ctx :: struct {
 	notif_text: string,
 	notif_time: f32,	
 	
-	// HACK: we can only have on popup
-	
-	opened_popup: string,
+	// current popup scope
 	current_popup: string,
-	popup: UI_Popup,
-	popup_time: f32,
+	// HACK: we can only have one active popup
+	open_popup: UI_Popup,
 
 	// style:
 
@@ -63,6 +61,7 @@ UI_Align_Vertical :: enum {
 UI_Popup :: struct {
 	name: string,
 	show_header: bool,
+	open_time: f32,
 	rec: Rec,
 	draw_commands: [dynamic]UI_Draw_Command,
 }
@@ -164,19 +163,19 @@ ui_init_ctx :: proc() {
 ui_deinit_ctx :: proc() {
 	rl.UnloadFont(ui_ctx.font)
 	delete(ui_ctx.draw_commands)
-	delete(ui_ctx.popup.draw_commands)
+	delete(ui_ctx.open_popup.draw_commands)
 }
 
 ui_begin :: proc() {
-	if ui_ctx.opened_popup != "" &&
+	if ui_ctx.open_popup.name != "" &&
 		rl.IsMouseButtonReleased(.LEFT) &&
-		ui_is_mouse_in_rec(ui_ctx.popup.rec) == false &&
+		ui_is_mouse_in_rec(ui_ctx.open_popup.rec) == false &&
 		ui_ctx.active_widget == 0 &&
 		ui_ctx.active_panel == 0 {
 		ui_close_current_popup()
 	}
-	if ui_ctx.opened_popup != "" {
-		ui_ctx.popup_time += 0.01
+	if ui_ctx.open_popup.name != "" {
+		ui_ctx.open_popup.open_time += 0.01
 	}
 	if ui_ctx.notif_text != "" {
 		ui_ctx.notif_time += 0.01
@@ -197,14 +196,14 @@ ui_gen_id_auto :: proc(loc := #caller_location) -> UI_ID {
 ui_draw :: proc() {
 	ui_process_commands(&ui_ctx.draw_commands)
 
-	if ui_ctx.opened_popup != "" {
+	if ui_ctx.open_popup.name != "" {
 		screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
-		opacity := ui_ctx.popup_time * 40 * 5
+		opacity := ui_ctx.open_popup.open_time * 40 * 5
 		if opacity >= 40 {
 			opacity = 40
 		}
 		rl.DrawRectangleRec(screen_rec, { 255, 255, 255, u8((opacity / 255) * 255) })
-		ui_process_commands(&ui_ctx.popup.draw_commands)
+		ui_process_commands(&ui_ctx.open_popup.draw_commands)
 	}
 	
 	// TODO: clean this up
@@ -241,7 +240,7 @@ ui_draw :: proc() {
 	}	
 
 	clear(&ui_ctx.draw_commands)
-	clear(&ui_ctx.popup.draw_commands)
+	clear(&ui_ctx.open_popup.draw_commands)
 	free_all(context.temp_allocator)
 }
 
@@ -317,65 +316,65 @@ ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 }
 
 ui_open_popup :: proc(name: string) {
-	ui_ctx.opened_popup = name
+	ui_ctx.open_popup.name = name
+	ui_ctx.open_popup.open_time = 0
 	ui_ctx.hovered_widget = 0
 	ui_ctx.active_widget = 0
-	ui_ctx.popup_time = 0
 }
 
 ui_close_current_popup :: proc() {
 	ui_ctx.hovered_widget = 0
 	ui_ctx.active_widget = 0
-	ui_ctx.opened_popup = ""
-	ui_ctx.popup.rec = {}
-	ui_ctx.popup.show_header = false
+	ui_ctx.open_popup.name = ""
+	ui_ctx.open_popup.rec = {}
+	ui_ctx.open_popup.show_header = false
 }
 
 // NOTE: name is also used as the id
 ui_begin_popup :: proc(name: string, rec: Rec) -> (open: bool) {
 	ui_ctx.current_popup = name
 
-	if name == ui_ctx.opened_popup {
-		ui_ctx.popup.rec = rec
+	if name == ui_ctx.open_popup.name {
+		ui_ctx.open_popup.rec = rec
 	}
 	 
-	return name == ui_ctx.opened_popup
+	return name == ui_ctx.open_popup.name
 }
 
 ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: bool, client_rec: Rec) {
 	ui_ctx.current_popup = name
 
-	if name == ui_ctx.opened_popup {
-		ui_ctx.popup.show_header = true
+	if name == ui_ctx.open_popup.name {
+		ui_ctx.open_popup.show_header = true
 		area := rec
 		header_area := rec_extend_from_top(&area, ui_ctx.header_height) 
-		ui_ctx.popup.rec = area
+		ui_ctx.open_popup.rec = area
 		if ui_button(id, "\uf655", rec_pad(rec_take_from_right(&header_area, header_area.height), 8)) {
 			ui_close_current_popup()
 		}
 	}
-	return name == ui_ctx.opened_popup, { rec.x, rec.y, rec.width, rec.height }
+	return name == ui_ctx.open_popup.name, { rec.x, rec.y, rec.width, rec.height }
 }
 
 // TODO: i don't remember why draw commands are pushed here
 ui_end_popup :: proc() {
-	inject_at(&ui_ctx.popup.draw_commands, 0, UI_Draw_Rect {
+	inject_at(&ui_ctx.open_popup.draw_commands, 0, UI_Draw_Rect {
 		color = ui_ctx.border_color,
-		rec = rec_pad(ui_ctx.popup.rec, -1),
+		rec = rec_pad(ui_ctx.open_popup.rec, -1),
 	})
-	inject_at(&ui_ctx.popup.draw_commands, 1, UI_Draw_Rect {
+	inject_at(&ui_ctx.open_popup.draw_commands, 1, UI_Draw_Rect {
 		color = ui_ctx.panel_color,
-		rec = ui_ctx.popup.rec,
+		rec = ui_ctx.open_popup.rec,
 	})
-	if ui_ctx.popup.show_header {
-		inject_at(&ui_ctx.popup.draw_commands, 2, UI_Draw_Rect {
+	if ui_ctx.open_popup.show_header {
+		inject_at(&ui_ctx.open_popup.draw_commands, 2, UI_Draw_Rect {
 			color = ui_ctx.border_color,
-			rec = { ui_ctx.popup.rec.x, ui_ctx.popup.rec.y, ui_ctx.popup.rec.width, ui_ctx.header_height },
+			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, ui_ctx.header_height },
 		})
-		inject_at(&ui_ctx.popup.draw_commands, 3, UI_Draw_Text {
+		inject_at(&ui_ctx.open_popup.draw_commands, 3, UI_Draw_Text {
 			color = rl.Fade(ui_ctx.text_color, 0.7),
-			rec = { ui_ctx.popup.rec.x, ui_ctx.popup.rec.y, ui_ctx.popup.rec.width, ui_ctx.header_height },
-			text = ui_ctx.opened_popup,
+			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, ui_ctx.header_height },
+			text = ui_ctx.open_popup.name,
 			align = { .Center, .Center },
 			size = ui_ctx.font_size * 1.2,
 		})
@@ -389,7 +388,7 @@ ui_show_notif :: proc(text: string) {
 }
 
 ui_update_widget :: proc(id: UI_ID, rec: Rec, blocking := true) {
-	if ui_ctx.opened_popup != ui_ctx.current_popup && ui_ctx.opened_popup != "" {
+	if ui_ctx.open_popup.name != ui_ctx.current_popup && ui_ctx.open_popup.name != "" {
 		return
 	}
 	hovered := ui_is_mouse_in_rec(rec)
@@ -405,7 +404,7 @@ ui_update_widget :: proc(id: UI_ID, rec: Rec, blocking := true) {
 }
 
 ui_update_panel :: proc(id: UI_ID, rec: Rec) {
-	if ui_ctx.opened_popup != ui_ctx.current_popup && ui_ctx.opened_popup != "" {
+	if ui_ctx.open_popup.name != ui_ctx.current_popup && ui_ctx.open_popup.name != "" {
 		return
 	}
 	hovered := ui_is_mouse_in_rec(rec)
@@ -466,7 +465,7 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 	item_height := f32(ui_ctx.default_widget_height)
 	if ui_begin_popup(text, { rec.x + 10, rec.y + rec.height + padding, item_width, item_height * f32(len(items^)) }) {
 		// HACK: add an option for disabling popup backaground
-		ui_ctx.popup_time = 0
+		ui_ctx.open_popup.open_time = 0
 
 		menu_item_y := rec.y + rec.height + padding
 		prev_text_align := ui_ctx.text_align
@@ -615,7 +614,7 @@ ui_slider_i32 :: proc
 
 ui_push_command :: proc(command: UI_Draw_Command) {
 	if ui_ctx.current_popup != "" {
-		append(&ui_ctx.popup.draw_commands, command)
+		append(&ui_ctx.open_popup.draw_commands, command)
 	}
 	else {
 		append(&ui_ctx.draw_commands, command)
@@ -627,7 +626,7 @@ ui_is_being_interacted :: proc() -> (res: bool) {
 	ui_ctx.active_widget != 0 ||
 	ui_ctx.hovered_panel != 0 ||
 	ui_ctx.active_panel != 0 ||
-	(ui_ctx.opened_popup != "")
+	(ui_ctx.open_popup.name != "")
 }
 
 ui_is_mouse_in_rec :: proc(rec: Rec) -> (is_inside: bool) {
