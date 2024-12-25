@@ -711,13 +711,11 @@ update_tools :: proc(area: Rec) {
 	// fill
 	if ui_is_mouse_in_rec(area) {
 		if rl.IsMouseButtonPressed(.MIDDLE) {
+			begin_image_change()
 			x, y := get_mouse_pos_in_canvas(area)
-			undo := Undo {
-				image = rl.ImageCopy(get_current_layer().image)
-			}
-			append(&get_current_layer().undos, undo)
 			fill(&get_current_layer().image, x, y, app.project.current_color)
 			app.image_changed = true
+			end_image_change()
 		}
 	}
 	// undo
