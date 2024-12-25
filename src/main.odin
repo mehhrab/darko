@@ -50,6 +50,7 @@ Undo :: struct {
 
 Action :: union {
 	Action_Image_Change,
+	Action_Delete_Layer,
 }
 
 Action_Image_Change :: struct {
@@ -57,12 +58,26 @@ Action_Image_Change :: struct {
 	layer_index: int,
 }
 
+Action_Delete_Layer :: struct {
+	image: rl.Image,
+	layer_index: int,
+}
+
 action_preform :: proc(action: Action) {
-	switch type in action {
+	switch &kind in action {
 		case Action_Image_Change: {
 
 		}
+		case Action_Delete_Layer: {
+			kind.image = rl.ImageCopy(get_current_layer().image)
+			deinit_layer(&app.project.layers[kind.layer_index])
+			ordered_remove(&app.project.layers, kind.layer_index)
+			if kind.layer_index > 0 {
+				app.project.current_layer -= 1
+			}
+		}
 	}
+	append(&app.undos, action)
 }
 
 action_unpreform :: proc(action: Action) {
@@ -72,6 +87,15 @@ action_unpreform :: proc(action: Action) {
 			fmt.printfln("{}", kind.layer_index)
 			app.project.layers[kind.layer_index].image = image
 			rl.UnloadImage(kind.image)
+			app.image_changed = true
+		}
+		case Action_Delete_Layer: {
+			layer: Layer
+			layer.image = rl.ImageCopy(kind.image)
+			layer.texture = rl.LoadTextureFromImage(layer.image)
+			layer.undos = make([dynamic]Undo)
+			inject_at(&app.project.layers, kind.layer_index, layer)
+			app.project.current_layer = kind.layer_index
 			app.image_changed = true
 		}
 	}
@@ -351,11 +375,10 @@ layer_props :: proc(rec: Rec) {
 			ui_show_notif("At least one layer is needed")
 		} 
 		else {
-			deinit_layer(&app.project.layers[app.project.current_layer])
-			ordered_remove(&app.project.layers, app.project.current_layer)
-			if app.project.current_layer > 0 {
-				app.project.current_layer -= 1
-			}
+			action_preform(Action_Delete_Layer {
+				layer_index = app.project.current_layer,
+			})
+
 		}
 	}
 
@@ -741,7 +764,7 @@ end_image_change :: proc() {
 	action, is_correct_type := temp_undo.(Action_Image_Change)
 	if exists {
 		if is_correct_type {
-			append(&app.undos, action)
+			action_preform(action)
 			app.temp_undo = nil			
 			fmt.printfln("correct type")
 		}
