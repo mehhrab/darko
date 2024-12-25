@@ -657,8 +657,7 @@ add_layer_above_current :: proc(layer: ^Layer) {
 	app.project.current_layer += 1
 }
 
-get_current_layer :: proc(loc := #caller_location) -> (layer: ^Layer) {
-	// fmt.printfln("{}", loc.line)
+get_current_layer :: proc() -> (layer: ^Layer) {
 	return &app.project.layers[app.project.current_layer]
 }
 
