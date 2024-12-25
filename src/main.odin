@@ -24,6 +24,8 @@ App :: struct {
 	preview_rotation_speed: f32,
 	auto_rotate_preview: bool,
 	temp_undo_image: Maybe(rl.Image),
+	temp_undo: Maybe(Action),
+	undos: [dynamic]Action,
 }
 
 Project :: struct {
@@ -44,6 +46,35 @@ Layer :: struct {
 
 Undo :: struct {
 	image: rl.Image,
+}
+
+Action :: union {
+	Action_Image_Change,
+}
+
+Action_Image_Change :: struct {
+	image: rl.Image,
+	layer_index: int,
+}
+
+action_preform :: proc(action: Action) {
+	switch type in action {
+		case Action_Image_Change: {
+
+		}
+	}
+}
+
+action_unpreform :: proc(action: Action) {
+	switch kind in action {
+		case Action_Image_Change: {
+			image := rl.ImageCopy(kind.image)
+			fmt.printfln("{}", kind.layer_index)
+			app.project.layers[kind.layer_index].image = image
+			rl.UnloadImage(kind.image)
+			app.image_changed = true
+		}
+	}
 }
 
 app: App
@@ -119,10 +150,12 @@ main :: proc() {
 			}
 		}
 		if app.image_changed {
-			colors := rl.LoadImageColors(get_current_layer().image)
-			defer rl.UnloadImageColors(colors)
-			rl.UpdateTexture(get_current_layer().texture, colors)
-			app.image_changed = false
+			for layer in app.project.layers {
+				colors := rl.LoadImageColors(layer.image)
+				defer rl.UnloadImageColors(colors)
+				rl.UpdateTexture(layer.texture, colors)
+				app.image_changed = false
+			}
 		}
 
 		// draw
@@ -584,9 +617,11 @@ open_project :: proc(project: ^Project) {
 	app.bg_texture = rl.LoadTextureFromImage(bg_image)
 	app.preview_rotation = 0
 	app.preview_zoom = 10
+	app.undos = make([dynamic]Action)
 }
 
 close_project :: proc() {
+	delete(app.undos)
 	deinit_project(&app.project)
 	rl.UnloadTexture(app.bg_texture)
 }
@@ -652,26 +687,26 @@ update_tools :: proc(area: Rec) {
 	// pencil
 	if ui_is_mouse_in_rec(area) {
 		if rl.IsMouseButtonDown(.LEFT) {
-			begin_undo()
+			begin_image_change()
 			x, y := get_mouse_pos_in_canvas(area)
 			rl.ImageDrawPixel(&get_current_layer().image, x, y, app.project.current_color)
 			app.image_changed = true
 		}	
 	}
 	if rl.IsMouseButtonReleased(.LEFT) {
-		end_undo()
+		end_image_change()
 	}
 	// eraser
 	if ui_is_mouse_in_rec(area) {
 		if rl.IsMouseButtonDown(.RIGHT) {
-			begin_undo()
+			begin_image_change()
 			x, y := get_mouse_pos_in_canvas(area)
 			rl.ImageDrawPixel(&get_current_layer().image, x, y, rl.BLANK)
 			app.image_changed = true
 		}
 	}
 	if rl.IsMouseButtonReleased(.RIGHT) {
-		end_undo()
+		end_image_change()
 	}
 	// fill
 	if ui_is_mouse_in_rec(area) {
@@ -687,14 +722,36 @@ update_tools :: proc(area: Rec) {
 	}
 	// undo
 	if rl.IsKeyPressed(.Z) {
-		undos := &get_current_layer().undos
-		if len(undos) > 0 {
-			image := rl.ImageCopy(undos[len(undos) - 1].image)
-			get_current_layer().image = image
-			rl.UnloadImage(undos[len(undos) - 1].image)
-			pop(undos)
-			app.image_changed = true
+		if len(app.undos) > 0 {
+			action_unpreform(app.undos[len(app.undos) - 1])
+			pop(&app.undos)
 		}	
+	}
+}
+
+begin_image_change :: proc() {
+	_, exists := app.temp_undo.?
+	if exists == false {
+		app.temp_undo = Action_Image_Change {
+			image = rl.ImageCopy(get_current_layer().image),
+			layer_index = app.project.current_layer,
+		} 
+	}
+}
+
+end_image_change :: proc() {
+	temp_undo, exists := app.temp_undo.?
+	action, is_correct_type := temp_undo.(Action_Image_Change)
+	if exists {
+		if is_correct_type {
+			append(&app.undos, action)
+			app.temp_undo = nil			
+			fmt.printfln("correct type")
+		}
+		else
+		{
+			fmt.printfln("not correct type")
+		}
 	}
 }
 
@@ -758,25 +815,5 @@ draw_grid :: proc(rec: Rec) {
 	for y < rec.y + rec.height + 0.1 {
 		rl.DrawLineV({ rec.x, y }, { rec.x + rec.width, y }, rl.BLACK)
 		y += y_step
-	}
-}
-
-begin_undo :: proc() {
-	_, temp_undo_exists := app.temp_undo_image.?
-	if temp_undo_exists == false {
-		app.temp_undo_image = rl.ImageCopy(get_current_layer().image)
-	}
-}
-
-end_undo :: proc() {
-	temp_undo_image, exists := app.temp_undo_image.?
-	if exists {
-		image := rl.ImageCopy(temp_undo_image)
-		undo := Undo {
-			image = image,
-		}
-		append(&get_current_layer().undos, undo)
-		rl.UnloadImage(temp_undo_image)
-		app.temp_undo_image = nil
 	}
 }
