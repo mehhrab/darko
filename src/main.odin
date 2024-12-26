@@ -50,11 +50,17 @@ Undo :: struct {
 
 Action :: union {
 	Action_Image_Change,
+	Action_Create_Layer,
 	Action_Delete_Layer,
 }
 
 Action_Image_Change :: struct {
 	image: rl.Image,
+	layer_index: int,
+}
+
+Action_Create_Layer :: struct {
+	current_layer_index: int,
 	layer_index: int,
 }
 
@@ -67,6 +73,12 @@ action_preform :: proc(action: Action) {
 	switch &kind in action {
 		case Action_Image_Change: {
 
+		}
+		case Action_Create_Layer: {
+			layer: Layer
+			init_layer(&layer, app.project.width, app.project.height)
+			inject_at(&app.project.layers, kind.layer_index, layer)
+			app.project.current_layer = kind.layer_index
 		}
 		case Action_Delete_Layer: {
 			kind.image = rl.ImageCopy(get_current_layer().image)
@@ -88,6 +100,11 @@ action_unpreform :: proc(action: Action) {
 			app.project.layers[kind.layer_index].image = image
 			rl.UnloadImage(kind.image)
 			app.image_changed = true
+		}
+		case Action_Create_Layer: {
+			deinit_layer(&app.project.layers[kind.layer_index])
+			ordered_remove(&app.project.layers, kind.layer_index)
+			app.project.current_layer = kind.current_layer_index
 		}
 		case Action_Delete_Layer: {
 			layer: Layer
@@ -152,14 +169,16 @@ main :: proc() {
 
 		// update
 		if rl.IsKeyPressed(.SPACE) {
-			layer: Layer
-			init_layer(&layer, app.project.width, app.project.height)
-			add_layer_above_current(&layer)
+			action_preform(Action_Create_Layer {
+				current_layer_index = app.project.current_layer,
+				layer_index = app.project.current_layer + 1
+			})
 		}
 		if rl.IsKeyPressed(.S) {
-			layer: Layer
-			init_layer(&layer, app.project.width, app.project.height)
-			add_layer_on_top(&layer)
+			action_preform(Action_Create_Layer {
+				current_layer_index = app.project.current_layer,
+				layer_index = len(app.project.layers)
+			})
 		}
 		if rl.IsKeyPressed(.UP) {
 			app.project.current_layer += 1
@@ -411,7 +430,9 @@ layer_props :: proc(rec: Rec) {
 		layer.image = rl.ImageCopy(get_current_layer().image)
 		layer.texture = rl.LoadTextureFromImage(layer.image)
 		layer.undos = make([dynamic]Undo)
-		add_layer_above_current(&layer)
+		layer_index := app.project.current_layer + 1
+		inject_at_elem(&app.project.layers, layer_index, layer)
+		app.project.current_layer = layer_index
 	}
 }
 
@@ -664,20 +685,6 @@ deinit_layer :: proc(layer: ^Layer) {
 		rl.UnloadImage(undo.image)
 	}
 	delete(layer.undos)
-}
-
-add_layer :: proc(layer: ^Layer, index: int) {
-	inject_at_elem(&app.project.layers, index, layer^)
-}
-
-add_layer_on_top :: proc(layer: ^Layer) {
-	add_layer(layer, len(app.project.layers))
-	app.project.current_layer = len(app.project.layers) - 1
-}
-
-add_layer_above_current :: proc(layer: ^Layer) {
-	add_layer(layer, app.project.current_layer + 1)
-	app.project.current_layer += 1
 }
 
 get_current_layer :: proc() -> (layer: ^Layer) {
