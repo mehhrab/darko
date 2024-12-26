@@ -168,29 +168,41 @@ main :: proc() {
 		gui()
 
 		// update
+
+		// create new layer above the current
 		if rl.IsKeyPressed(.SPACE) {
 			action_preform(Action_Create_Layer {
 				current_layer_index = app.project.current_layer,
 				layer_index = app.project.current_layer + 1
 			})
 		}
+		// create new layer at the top
 		if rl.IsKeyPressed(.S) {
 			action_preform(Action_Create_Layer {
 				current_layer_index = app.project.current_layer,
 				layer_index = len(app.project.layers)
 			})
 		}
+		// move current layer up
 		if rl.IsKeyPressed(.UP) {
 			app.project.current_layer += 1
 			if app.project.current_layer >= len(app.project.layers) {
 				app.project.current_layer = 0
 			}
 		}
+		// move current layer down
 		if rl.IsKeyPressed(.DOWN) {
 			app.project.current_layer -= 1
 			if app.project.current_layer < 0 {
 				app.project.current_layer = len(app.project.layers) - 1
 			}
+		}
+		// undo
+		if rl.IsKeyPressed(.Z) {
+			if len(app.undos) > 0 {
+				action_unpreform(app.undos[len(app.undos) - 1])
+				pop(&app.undos)
+			}	
 		}
 		if app.image_changed {
 			for layer in app.project.layers {
@@ -746,13 +758,6 @@ update_tools :: proc(area: Rec) {
 			app.image_changed = true
 			end_image_change()
 		}
-	}
-	// undo
-	if rl.IsKeyPressed(.Z) {
-		if len(app.undos) > 0 {
-			action_unpreform(app.undos[len(app.undos) - 1])
-			pop(&app.undos)
-		}	
 	}
 }
 
