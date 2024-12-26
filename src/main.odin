@@ -8,6 +8,7 @@ import "core:encoding/json"
 import "core:strings"
 import "core:c"
 import "core:os/os2"
+import "core:slice"
 import ntf "../lib/nativefiledialog-odin"
 
 LOCK_FPS :: #config(LOCK_FPS, true)
@@ -26,6 +27,7 @@ App :: struct {
 	temp_undo_image: Maybe(rl.Image),
 	temp_undo: Maybe(Action),
 	undos: [dynamic]Action,
+	diry_layers: [dynamic]int,
 }
 
 Project :: struct {
@@ -96,10 +98,9 @@ action_unpreform :: proc(action: Action) {
 	switch kind in action {
 		case Action_Image_Change: {
 			image := rl.ImageCopy(kind.image)
-			fmt.printfln("{}", kind.layer_index)
 			app.project.layers[kind.layer_index].image = image
 			rl.UnloadImage(kind.image)
-			app.image_changed = true
+			mark_dirty_layers(app.project.current_layer)
 		}
 		case Action_Create_Layer: {
 			deinit_layer(&app.project.layers[kind.layer_index])
@@ -113,7 +114,7 @@ action_unpreform :: proc(action: Action) {
 			layer.undos = make([dynamic]Undo)
 			inject_at(&app.project.layers, kind.layer_index, layer)
 			app.project.current_layer = kind.layer_index
-			app.image_changed = true
+			mark_dirty_layers(app.project.current_layer)
 		}
 	}
 }
@@ -176,6 +177,7 @@ main :: proc() {
 				layer_index = app.project.current_layer + 1
 			})
 		}
+
 		// create new layer at the top
 		if rl.IsKeyPressed(.S) {
 			action_preform(Action_Create_Layer {
@@ -183,6 +185,7 @@ main :: proc() {
 				layer_index = len(app.project.layers)
 			})
 		}
+
 		// move current layer up
 		if rl.IsKeyPressed(.UP) {
 			app.project.current_layer += 1
@@ -190,6 +193,7 @@ main :: proc() {
 				app.project.current_layer = 0
 			}
 		}
+
 		// move current layer down
 		if rl.IsKeyPressed(.DOWN) {
 			app.project.current_layer -= 1
@@ -197,6 +201,7 @@ main :: proc() {
 				app.project.current_layer = len(app.project.layers) - 1
 			}
 		}
+
 		// undo
 		if rl.IsKeyPressed(.Z) {
 			if len(app.undos) > 0 {
@@ -204,13 +209,17 @@ main :: proc() {
 				pop(&app.undos)
 			}	
 		}
-		if app.image_changed {
-			for layer in app.project.layers {
-				colors := rl.LoadImageColors(layer.image)
-				defer rl.UnloadImageColors(colors)
-				rl.UpdateTexture(layer.texture, colors)
-				app.image_changed = false
+
+		// update the textures for dirty layers
+		if len(app.diry_layers) > 0 {
+			for layer, i in app.project.layers {
+				if slice.contains(app.diry_layers[:], i) {
+					colors := rl.LoadImageColors(layer.image)
+					defer rl.UnloadImageColors(colors)
+					rl.UpdateTexture(layer.texture, colors)
+				}
 			}
+			clear(&app.diry_layers)
 		}
 
 		// draw
@@ -360,7 +369,7 @@ menu_bar :: proc(area: Rec) {
 		}
 		close_project()		
 		open_project(&project)
-		app.image_changed = true
+		mark_dirty_layers(app.project.current_layer)
 		ui_show_notif("Project is opened")
 	}
 	if clicked_item.text == "save project" {
@@ -661,7 +670,6 @@ open_project :: proc(project: ^Project) {
 
 	app.lerped_zoom = 1
 	app.lerped_preview_zoom = 1
-	app.image_changed = true
 	bg_image := rl.GenImageChecked(
 		project.width, 
 		project.height,
@@ -674,10 +682,14 @@ open_project :: proc(project: ^Project) {
 	app.preview_rotation = 0
 	app.preview_zoom = 10
 	app.undos = make([dynamic]Action)
+	app.diry_layers = make([dynamic]int)
+
+	mark_all_layers_dirty()
 }
 
 close_project :: proc() {
 	delete(app.undos)
+	delete(app.diry_layers)
 	deinit_project(&app.project)
 	rl.UnloadTexture(app.bg_texture)
 }
@@ -701,6 +713,16 @@ deinit_layer :: proc(layer: ^Layer) {
 
 get_current_layer :: proc() -> (layer: ^Layer) {
 	return &app.project.layers[app.project.current_layer]
+}
+
+mark_dirty_layers :: proc(indexes: ..int) {
+	append(&app.diry_layers, ..indexes)
+}
+
+mark_all_layers_dirty :: proc() {
+	for i in 0..<len(app.project.layers) {
+		append(&app.diry_layers, i)
+	}
 }
 
 update_zoom :: proc(current_zoom: ^f32, strength: f32, min: f32, max: f32) {
@@ -731,7 +753,7 @@ update_tools :: proc(area: Rec) {
 			begin_image_change()
 			x, y := get_mouse_pos_in_canvas(area)
 			rl.ImageDrawPixel(&get_current_layer().image, x, y, app.project.current_color)
-			app.image_changed = true
+			mark_dirty_layers(app.project.current_layer)
 		}	
 	}
 	if rl.IsMouseButtonReleased(.LEFT) {
@@ -743,7 +765,7 @@ update_tools :: proc(area: Rec) {
 			begin_image_change()
 			x, y := get_mouse_pos_in_canvas(area)
 			rl.ImageDrawPixel(&get_current_layer().image, x, y, rl.BLANK)
-			app.image_changed = true
+			mark_dirty_layers(app.project.current_layer)
 		}
 	}
 	if rl.IsMouseButtonReleased(.RIGHT) {
@@ -755,7 +777,7 @@ update_tools :: proc(area: Rec) {
 			begin_image_change()
 			x, y := get_mouse_pos_in_canvas(area)
 			fill(&get_current_layer().image, x, y, app.project.current_color)
-			app.image_changed = true
+			mark_dirty_layers(app.project.current_layer)
 			end_image_change()
 		}
 	}
