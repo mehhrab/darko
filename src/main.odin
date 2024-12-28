@@ -54,6 +54,7 @@ Action :: union {
 	Action_Image_Change,
 	Action_Create_Layer,
 	Action_Duplicate_Layer,
+	Action_Change_Layer_Index,
 	Action_Delete_Layer,
 }
 
@@ -68,6 +69,11 @@ Action_Create_Layer :: struct {
 }
 
 Action_Duplicate_Layer :: struct {
+	from_index: int,
+	to_index: int,
+}
+
+Action_Change_Layer_Index :: struct {
 	from_index: int,
 	to_index: int,
 }
@@ -93,6 +99,12 @@ action_preform :: proc(action: Action) {
 			layer.image = rl.ImageCopy(app.project.layers[kind.from_index].image)
 			layer.texture = rl.LoadTextureFromImage(layer.image)
 			layer.undos = make([dynamic]Undo)
+			inject_at_elem(&app.project.layers, kind.to_index, layer)
+			app.project.current_layer = kind.to_index
+		}
+		case Action_Change_Layer_Index: {
+			layer := app.project.layers[kind.from_index]
+			ordered_remove(&app.project.layers, kind.from_index)
 			inject_at_elem(&app.project.layers, kind.to_index, layer)
 			app.project.current_layer = kind.to_index
 		}
@@ -124,6 +136,12 @@ action_unpreform :: proc(action: Action) {
 		case Action_Duplicate_Layer: {
 			deinit_layer(&app.project.layers[kind.to_index])
 			ordered_remove(&app.project.layers, kind.to_index)
+			app.project.current_layer = kind.from_index
+		}
+		case Action_Change_Layer_Index: {
+			layer := app.project.layers[kind.to_index]
+			ordered_remove(&app.project.layers, kind.to_index)
+			inject_at_elem(&app.project.layers, kind.from_index, layer)
 			app.project.current_layer = kind.from_index
 		}
 		case Action_Delete_Layer: {
@@ -445,10 +463,10 @@ layer_props :: proc(rec: Rec) {
 	rec_cut_from_left(&props_area, 8)
 	if ui_button(ui_gen_id_auto(), "\ufc35", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		if len(app.project.layers) > 1 && app.project.current_layer < len(app.project.layers) - 1 {
-			layer := app.project.layers[app.project.current_layer]
-			ordered_remove(&app.project.layers, app.project.current_layer)
-			inject_at_elem(&app.project.layers, app.project.current_layer + 1, layer)
-			app.project.current_layer += 1
+			action_preform(Action_Change_Layer_Index {
+				from_index = app.project.current_layer,
+				to_index = app.project.current_layer + 1
+			})
 		}
 	}
 
@@ -456,10 +474,10 @@ layer_props :: proc(rec: Rec) {
 	rec_cut_from_left(&props_area, 8)
 	if ui_button(ui_gen_id_auto(), "\ufc2c", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		if len(app.project.layers) > 1 && app.project.current_layer > 0 {
-			layer := app.project.layers[app.project.current_layer]
-			ordered_remove(&app.project.layers, app.project.current_layer)
-			inject_at_elem(&app.project.layers, app.project.current_layer - 1, layer)
-			app.project.current_layer -= 1
+			action_preform(Action_Change_Layer_Index {
+				from_index = app.project.current_layer,
+				to_index = app.project.current_layer - 1
+			})
 		}
 	}
 
