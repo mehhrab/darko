@@ -53,6 +53,7 @@ Undo :: struct {
 Action :: union {
 	Action_Image_Change,
 	Action_Create_Layer,
+	Action_Duplicate_Layer,
 	Action_Delete_Layer,
 }
 
@@ -64,6 +65,11 @@ Action_Image_Change :: struct {
 Action_Create_Layer :: struct {
 	current_layer_index: int,
 	layer_index: int,
+}
+
+Action_Duplicate_Layer :: struct {
+	from_index: int,
+	to_index: int,
 }
 
 Action_Delete_Layer :: struct {
@@ -81,6 +87,14 @@ action_preform :: proc(action: Action) {
 			init_layer(&layer, app.project.width, app.project.height)
 			inject_at(&app.project.layers, kind.layer_index, layer)
 			app.project.current_layer = kind.layer_index
+		}
+		case Action_Duplicate_Layer: {
+			layer: Layer
+			layer.image = rl.ImageCopy(app.project.layers[kind.from_index].image)
+			layer.texture = rl.LoadTextureFromImage(layer.image)
+			layer.undos = make([dynamic]Undo)
+			inject_at_elem(&app.project.layers, kind.to_index, layer)
+			app.project.current_layer = kind.to_index
 		}
 		case Action_Delete_Layer: {
 			kind.image = rl.ImageCopy(get_current_layer().image)
@@ -106,6 +120,11 @@ action_unpreform :: proc(action: Action) {
 			deinit_layer(&app.project.layers[kind.layer_index])
 			ordered_remove(&app.project.layers, kind.layer_index)
 			app.project.current_layer = kind.current_layer_index
+		}
+		case Action_Duplicate_Layer: {
+			deinit_layer(&app.project.layers[kind.to_index])
+			ordered_remove(&app.project.layers, kind.to_index)
+			app.project.current_layer = kind.from_index
 		}
 		case Action_Delete_Layer: {
 			layer: Layer
@@ -447,13 +466,10 @@ layer_props :: proc(rec: Rec) {
 	// duplicate button
 	rec_cut_from_left(&props_area, 8)
 	if ui_button(ui_gen_id_auto(), "\uf68e", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
-		layer: Layer
-		layer.image = rl.ImageCopy(get_current_layer().image)
-		layer.texture = rl.LoadTextureFromImage(layer.image)
-		layer.undos = make([dynamic]Undo)
-		layer_index := app.project.current_layer + 1
-		inject_at_elem(&app.project.layers, layer_index, layer)
-		app.project.current_layer = layer_index
+		action_preform(Action_Duplicate_Layer {
+			from_index = app.project.current_layer,
+			to_index = app.project.current_layer + 1,
+		})
 	}
 }
 
