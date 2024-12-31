@@ -84,7 +84,7 @@ rec_cut_from_left :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
 
 rec_cut_from_right :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
 	res = {
-		rec.width - amount,
+		rec.x + rec.width - amount,
 		rec.y,
 		amount,
 		rec.height,
