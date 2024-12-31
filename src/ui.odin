@@ -76,6 +76,7 @@ UI_Draw_Command :: union {
 	UI_Draw_Rect,
 	UI_Draw_Rect_Outline,
 	UI_Draw_Text,
+	UI_Draw_Gradient_H,
 	UI_Draw_Canvas,
 	UI_Draw_Grid,
 	UI_Draw_Preview,
@@ -98,6 +99,12 @@ UI_Draw_Text :: struct {
 	rec: Rec,
 	color: rl.Color,
 	align: UI_Align,
+}
+
+UI_Draw_Gradient_H :: struct {
+	left_color: rl.Color,
+	right_color: rl.Color,
+	rec: Rec,
 }
 
 // darko specific commands:
@@ -283,6 +290,13 @@ ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
 				}
 
 				rl.DrawTextEx(ui_ctx.font, text, {x, y}, kind.size, 0, kind.color)
+			}
+			case UI_Draw_Gradient_H: {
+				x := i32(math.ceil_f32(kind.rec.x))
+				y := i32(math.ceil_f32(kind.rec.y))
+				w := i32(math.ceil_f32(kind.rec.width))
+				h := i32(math.ceil_f32(kind.rec.height))
+				rl.DrawRectangleGradientH(x, y, w, h, kind.left_color, kind.right_color)
 			}
 			case UI_Draw_Canvas: {
 				rl.BeginScissorMode(
@@ -531,6 +545,33 @@ ui_check_box :: proc(id: UI_ID, label: string, checked: ^bool, rec: Rec) {
 	})
 }
 
+ui_slider_behaviour_f32 :: proc(
+	id: UI_ID,
+	value: ^f32,
+	min, max: f32,
+	rec: Rec,
+	step: f32 = 0,
+) -> (
+	value_changed: bool,
+) {
+	value_changed = false
+	last_value := value^
+	ui_update_widget(id, rec)
+
+	if ui_ctx.active_widget == id && rl.IsMouseButtonDown(.LEFT) {
+		last_value = min + (rl.GetMousePosition().x - rec.x) * (max - min) / rec.width
+		if step != 0 {
+			last_value = (math.round(last_value / step)) * step
+		}
+		value_changed = true
+	}
+	
+	last_value = math.clamp(last_value, min, max)
+	value^ = last_value
+
+	return value_changed
+}
+
 ui_slider_f32 :: proc(
 	id: UI_ID,
 	label: string,
@@ -542,28 +583,15 @@ ui_slider_f32 :: proc(
 ) -> (
 	value_changed: bool,
 ) {
-	value_changed = false
-	last_value := value^
-	ui_update_widget(id, rec)
-
+	value_changed = ui_slider_behaviour_f32(id, value, min, max, rec, step)
 	progress_rec := rec_pad(rec, 1)
-	if ui_ctx.active_widget == id && rl.IsMouseButtonDown(.LEFT) {
-		last_value = min + (rl.GetMousePosition().x - progress_rec.x) * (max - min) / progress_rec.width
-		if step != 0 {
-			last_value = (math.round(last_value / step)) * step
-		}
-		value_changed = true
-	}
-	
-	last_value = math.clamp(last_value, min, max)
-	value^ = last_value
 
 	ui_push_command(UI_Draw_Rect {
 		rec = rec,
 		color = ui_ctx.border_color,
 	})
 
-	progress_width := (last_value - min) * (progress_rec.width) / (max - min)
+	progress_width := (value^ - min) * (progress_rec.width) / (max - min)
 	progress_rec.width = progress_width
 	ui_push_command(UI_Draw_Rect {
 		rec = progress_rec,
@@ -577,7 +605,7 @@ ui_slider_f32 :: proc(
 		color = ui_ctx.text_color,
 		align = { .Left, .Center },	
 	})
-	text := fmt.aprintf(format, last_value, allocator = context.temp_allocator)
+	text := fmt.aprintf(format, value^, allocator = context.temp_allocator)
 	ui_push_command(UI_Draw_Text {
 		rec = rec_pad({ rec.x + 2, rec.y + 2, rec.width, rec.height }, 10),
 		text = text,

@@ -202,7 +202,6 @@ main :: proc() {
 	open_project(&project)
 
 	for rl.WindowShouldClose() == false {
-		// ui
 		gui()
 
 		// update
@@ -286,7 +285,7 @@ gui :: proc() {
 	right_panel_area := rec_cut_from_right(&screen_area, panel_width)
 	middle_panel_area := screen_area
 	
-	layer_props_area := rec_cut_from_top(&middle_panel_area, ui_ctx.default_widget_height + 8)
+	layer_props_area := rec_cut_from_top(&middle_panel_area, ui_ctx.default_widget_height + 16)
 	layer_props(layer_props_area)
 
 	app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 20 * rl.GetFrameTime())
@@ -347,6 +346,10 @@ gui :: proc() {
 	ui_panel(ui_gen_id_auto(), right_panel_area)
 	right_panel_area = rec_pad(right_panel_area, 16)
 	color_panel(&right_panel_area)
+	// ui_push_command(UI_Draw_ColorPicker {
+	// 	h = 150, s = 0.5, v = 0.6,
+	// 	rec = rec_cut_from_top(&right_panel_area, 300),
+	// })
 
 	rec_delete_from_top(&right_panel_area, 16)
 
@@ -433,7 +436,7 @@ menu_bar :: proc(area: Rec) {
 
 layer_props :: proc(rec: Rec) {
 	ui_panel(ui_gen_id_auto(), rec)
-	props_area := rec_pad_ex(rec, 8, 8, 0, 8)
+	props_area := rec_pad_ex(rec, 8, 8, 8, 8)
 	
 	// draw current layer index and layer count
 	current_layer := app.project.current_layer + 1
@@ -492,7 +495,9 @@ layer_props :: proc(rec: Rec) {
 }
 
 color_panel :: proc(area: ^Rec) {	
-	preview_area := rec_cut_from_top(area, ui_ctx.default_widget_height * 2)
+	
+	// preview color
+	preview_area := rec_cut_from_top(area, ui_ctx.default_widget_height * 3)
 	ui_push_command(UI_Draw_Rect {
 		color = app.project.current_color,
 		rec = preview_area,
@@ -507,15 +512,110 @@ color_panel :: proc(area: ^Rec) {
 	@(static)
 	hsv_color := [3]f32 { 0, 0, 0 }
 
-	changed1 := ui_slider_f32(ui_gen_id_auto(), "Hue", &hsv_color[0], 0, 360, rec_cut_from_top(area, ui_ctx.default_widget_height))
+	draw_grip :: proc(value, min, max: f32, rec: Rec) {
+		grip_width := f32(10)
+		grip_x := (value - min) * (rec.width) / (max - min) - grip_width / 2
+		g_rec := Rec { rec.x + grip_x, rec.y, grip_width, rec.height }
+		ui_push_command(UI_Draw_Rect_Outline {
+			color = rl.BLACK,
+			thickness = 3,
+			rec = rec_pad(g_rec, -1),
+		})
+		ui_push_command(UI_Draw_Rect_Outline {
+			color = rl.WHITE,
+			thickness = 1,
+			rec = g_rec,
+		})
+	}
+
+	// hue slider
+	hue_rec := rec_cut_from_top(area, ui_ctx.default_widget_height)
+	hue_changed := ui_slider_behaviour_f32(ui_gen_id_auto(), &hsv_color[0], 0, 360, hue_rec)
+	ui_push_command(UI_Draw_Rect {
+		color = ui_ctx.border_color,
+		rec = hue_rec,
+	})
+	hue_rec = rec_pad(hue_rec, 1)
+	hue_rec_org := hue_rec
+	segment_width := hue_rec.width / 6
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = { 255, 0, 255, 255 },
+		right_color = { 255, 0, 0, 255 },
+		rec = rec_cut_from_right(&hue_rec, segment_width)
+	})
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = { 0, 0, 255, 255 },
+		right_color = { 255, 0, 255, 255 },
+		rec = rec_cut_from_right(&hue_rec, segment_width)
+	})
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = { 0, 255, 255, 255 },
+		right_color = { 0, 0, 255, 255 },
+		rec = rec_cut_from_right(&hue_rec, segment_width)
+	})
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = { 0, 255, 0, 255 },
+		right_color = { 0, 255, 255, 255 },
+		rec = rec_cut_from_right(&hue_rec, segment_width)
+	})
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = { 255, 255, 0, 255 },
+		right_color = { 0, 255, 0, 255 },
+		rec = rec_cut_from_right(&hue_rec, segment_width)
+	})
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = { 255, 0, 0, 255 },
+		right_color = { 255, 255, 0, 255 },
+		rec = rec_cut_from_right(&hue_rec, segment_width)
+	})
+	ui_push_command(UI_Draw_Rect {
+		color = rl.Fade(rl.BLACK, 1 - hsv_color[2]),
+		rec = hue_rec_org,
+	})
+	draw_grip(hsv_color[0], 0, 360, hue_rec_org)
+
 	rec_delete_from_top(area, 8)
 
-	changed2 := ui_slider_f32(ui_gen_id_auto(), "Saturation", &hsv_color[1], 0, 1, rec_cut_from_top(area, ui_ctx.default_widget_height))
+	// saturation slider
+	saturation_rec := rec_cut_from_top(area, ui_ctx.default_widget_height)
+	saturation_changed := ui_slider_behaviour_f32(ui_gen_id_auto(), &hsv_color[1], 0, 1, saturation_rec)
+	ui_push_command(UI_Draw_Rect {
+		color = ui_ctx.border_color,
+		rec = saturation_rec,
+	})
+	saturation_rec = rec_pad(saturation_rec, 1)
+	sat_color := hsv_color
+	sat_color[1] = 1
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = rl.WHITE,
+		right_color = rl.ColorFromHSV(sat_color[0], sat_color[1], sat_color[2]),
+		rec = saturation_rec,
+	})
+	ui_push_command(UI_Draw_Rect {
+		color = rl.Fade(rl.BLACK, 1 - hsv_color[2]),
+		rec = saturation_rec,
+	})
+	draw_grip(hsv_color[1], 0, 1, saturation_rec)
+
 	rec_delete_from_top(area, 8)
 	
-	changed3 := ui_slider_f32(ui_gen_id_auto(), "Value", &hsv_color[2], 0, 1, rec_cut_from_top(area, ui_ctx.default_widget_height))
+	// value slider
+	value_rec := rec_cut_from_top(area, ui_ctx.default_widget_height)
+	value_changed := ui_slider_behaviour_f32(ui_gen_id_auto(), &hsv_color[2], 0, 1, value_rec)
+	ui_push_command(UI_Draw_Rect {
+		color = ui_ctx.border_color,
+		rec = value_rec,
+	})
+	value_rec = rec_pad(value_rec, 1)
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = rl.BLACK,
+		right_color = rl.WHITE,
+		rec = value_rec,
+	})
+	draw_grip(hsv_color[2], 0, 1, value_rec)
 
-	if changed1 || changed2 || changed3  {
+
+	if hue_changed || saturation_changed || value_changed  {
 		app.project.current_color = rl.ColorFromHSV(hsv_color[0], hsv_color[1], hsv_color[2])
 	}
 }
