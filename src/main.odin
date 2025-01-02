@@ -494,8 +494,7 @@ layer_props :: proc(rec: Rec) {
 	}
 }
 
-color_panel :: proc(area: ^Rec) {	
-	
+color_panel :: proc(area: ^Rec) {		
 	// preview color
 	preview_area := rec_cut_from_top(area, ui_ctx.default_widget_height * 3)
 	ui_push_command(UI_Draw_Rect {
@@ -568,10 +567,10 @@ color_panel :: proc(area: ^Rec) {
 		right_color = { 255, 255, 0, 255 },
 		rec = rec_cut_from_right(&hue_rec, segment_width)
 	})
-	ui_push_command(UI_Draw_Rect {
-		color = rl.Fade(rl.BLACK, 1 - hsv_color[2]),
-		rec = hue_rec_org,
-	})
+	// ui_push_command(UI_Draw_Rect {
+	// 	color = rl.Fade(rl.BLACK, 1 - hsv_color[2]),
+	// 	rec = { hue_rec_org.x, hue_rec_org.y, hue_rec_org.width + 1, hue_rec_org.height },
+	// })
 	draw_grip(hsv_color[0], 0, 360, hue_rec_org)
 
 	rec_delete_from_top(area, 8)
@@ -586,13 +585,12 @@ color_panel :: proc(area: ^Rec) {
 	saturation_rec = rec_pad(saturation_rec, 1)
 	sat_color := hsv_color
 	sat_color[1] = 1
+	left_color := rl.ColorLerp(rl.WHITE, rl.BLACK, 1 - hsv_color[2])
+	right_color := rl.ColorFromHSV(sat_color[0], sat_color[1], sat_color[2])
+	right_color = rl.ColorLerp(right_color, rl.BLACK, 1 - hsv_color[2])
 	ui_push_command(UI_Draw_Gradient_H {
-		left_color = rl.WHITE,
-		right_color = rl.ColorFromHSV(sat_color[0], sat_color[1], sat_color[2]),
-		rec = saturation_rec,
-	})
-	ui_push_command(UI_Draw_Rect {
-		color = rl.Fade(rl.BLACK, 1 - hsv_color[2]),
+		left_color = left_color,
+		right_color = right_color,
 		rec = saturation_rec,
 	})
 	draw_grip(hsv_color[1], 0, 1, saturation_rec)
