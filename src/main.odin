@@ -24,7 +24,6 @@ App :: struct {
 	preview_rotation: f32,
 	preview_rotation_speed: f32,
 	auto_rotate_preview: bool,
-	temp_undo_image: Maybe(rl.Image),
 	temp_undo: Maybe(Action),
 	undos: [dynamic]Action,
 	redos: [dynamic]Action,
@@ -44,7 +43,6 @@ Project :: struct {
 Layer :: struct {
 	image: rl.Image,
 	texture: rl.Texture,
-	undos: [dynamic]Undo,
 }
 
 Undo :: struct {
@@ -102,7 +100,6 @@ action_preform :: proc(action: Action) {
 			layer: Layer
 			layer.image = rl.ImageCopy(app.project.layers[kind.from_index].image)
 			layer.texture = rl.LoadTextureFromImage(layer.image)
-			layer.undos = make([dynamic]Undo)
 			inject_at_elem(&app.project.layers, kind.to_index, layer)
 			app.project.current_layer = kind.to_index
 		}
@@ -150,7 +147,6 @@ action_unpreform :: proc(action: Action) {
 			layer: Layer
 			layer.image = rl.ImageCopy(kind.image)
 			layer.texture = rl.LoadTextureFromImage(layer.image)
-			layer.undos = make([dynamic]Undo)
 			inject_at(&app.project.layers, kind.layer_index, layer)
 			app.project.current_layer = kind.layer_index
 			mark_dirty_layers(app.project.current_layer)
@@ -795,7 +791,6 @@ load_project :: proc(project: ^Project, dir: string) -> (ok: bool) {
 			layer: Layer
 			layer.image = rl.LoadImage(fmt.ctprint(file.fullpath))
 			layer.texture = rl.LoadTextureFromImage(layer.image)
-			layer.undos = make([dynamic]Undo)
 			append(&project.layers, layer)
 		}
 	}
@@ -884,16 +879,11 @@ init_layer :: proc(layer: ^Layer, width, height: i32) {
 	texture := rl.LoadTextureFromImage(image)
 	layer.image = image
 	layer.texture = texture
-	layer.undos = make([dynamic]Undo)	
 }
 
 deinit_layer :: proc(layer: ^Layer) {
 	rl.UnloadTexture(layer.texture)
 	rl.UnloadImage(layer.image)
-	for undo in layer.undos {
-		rl.UnloadImage(undo.image)
-	}
-	delete(layer.undos)
 }
 
 get_current_layer :: proc() -> (layer: ^Layer) {
