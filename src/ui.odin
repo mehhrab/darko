@@ -6,13 +6,14 @@ import "core:strings"
 import "core:fmt"
 import "core:math"
 import "core:c"
+import sa "core:container/small_array"
 
 UI_Ctx :: struct {
 	hovered_widget: UI_ID,
 	active_widget: UI_ID,
 	hovered_panel: UI_ID,
 	active_panel: UI_ID,
-	draw_commands: [dynamic]UI_Draw_Command,
+	draw_commands: Draw_Commands,
 	notif_text: string,
 	notif_time: f32,	
 	
@@ -41,6 +42,8 @@ UI_Ctx :: struct {
 
 UI_ID :: u32
 
+Draw_Commands :: sa.Small_Array(1024, UI_Draw_Command)
+
 UI_Align :: struct {
 	horizontal: UI_Align_Horizontal,
 	vertical: UI_Align_Vertical,
@@ -63,7 +66,7 @@ UI_Popup :: struct {
 	show_header: bool,
 	open_time: f32,
 	rec: Rec,
-	draw_commands: [dynamic]UI_Draw_Command,
+	draw_commands: Draw_Commands,
 }
 
 UI_Menu_Item :: struct {
@@ -141,9 +144,7 @@ UI_Grid_Layout :: struct {
 
 ui_ctx: UI_Ctx
 
-ui_init_ctx :: proc() {
-	ui_ctx.draw_commands = make([dynamic]UI_Draw_Command)
-	
+ui_init_ctx :: proc() {	
 	// chars := cstring(" abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/\\.\uf8ea\uf6fd\uf62b\uf992")
 	// code_point_count := i32(len(chars))
 	// code_points := rl.LoadCodepoints(chars, &code_point_count)
@@ -169,8 +170,6 @@ ui_init_ctx :: proc() {
 
 ui_deinit_ctx :: proc() {
 	rl.UnloadFont(ui_ctx.font)
-	delete(ui_ctx.draw_commands)
-	delete(ui_ctx.open_popup.draw_commands)
 }
 
 ui_begin :: proc() {
@@ -201,7 +200,7 @@ ui_gen_id_auto :: proc(loc := #caller_location) -> UI_ID {
 }
 
 ui_draw :: proc() {
-	ui_process_commands(&ui_ctx.draw_commands)
+	ui_process_commands(sa.slice(&ui_ctx.draw_commands))
 
 	if ui_ctx.open_popup.name != "" {
 		screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
@@ -210,7 +209,7 @@ ui_draw :: proc() {
 			opacity = 40
 		}
 		rl.DrawRectangleRec(screen_rec, { 255, 255, 255, u8((opacity / 255) * 255) })
-		ui_process_commands(&ui_ctx.open_popup.draw_commands)
+		ui_process_commands(sa.slice(&ui_ctx.open_popup.draw_commands))
 	}
 	
 	// TODO: clean this up
@@ -246,13 +245,13 @@ ui_draw :: proc() {
 		}
 	}	
 
-	clear(&ui_ctx.draw_commands)
-	clear(&ui_ctx.open_popup.draw_commands)
+	sa.clear(&ui_ctx.draw_commands)
+	sa.clear(&ui_ctx.open_popup.draw_commands)
 	free_all(context.temp_allocator)
 }
 
 // TODO: should be handled in app
-ui_process_commands :: proc(commands: ^[dynamic]UI_Draw_Command) {
+ui_process_commands :: proc(commands: []UI_Draw_Command) {
 	for command in commands
 	{
 		switch kind in command {
@@ -372,26 +371,26 @@ ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: 
 
 // TODO: i don't remember why draw commands are pushed here
 ui_end_popup :: proc() {
-	inject_at(&ui_ctx.open_popup.draw_commands, 0, UI_Draw_Rect {
+	sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
 		color = ui_ctx.border_color,
 		rec = rec_pad(ui_ctx.open_popup.rec, -1),
-	})
-	inject_at(&ui_ctx.open_popup.draw_commands, 1, UI_Draw_Rect {
+	}, 0)
+	sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
 		color = ui_ctx.panel_color,
 		rec = ui_ctx.open_popup.rec,
-	})
+	}, 1)
 	if ui_ctx.open_popup.show_header {
-		inject_at(&ui_ctx.open_popup.draw_commands, 2, UI_Draw_Rect {
+		sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
 			color = ui_ctx.border_color,
 			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, ui_ctx.header_height },
-		})
-		inject_at(&ui_ctx.open_popup.draw_commands, 3, UI_Draw_Text {
+		}, 2)
+		sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Text {
 			color = rl.Fade(ui_ctx.text_color, 0.7),
 			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, ui_ctx.header_height },
 			text = ui_ctx.open_popup.name,
 			align = { .Center, .Center },
 			size = ui_ctx.font_size * 1.2,
-		})
+		}, 3)
 	}
 	ui_ctx.current_popup = ""
 }
@@ -642,10 +641,10 @@ ui_slider_i32 :: proc
 
 ui_push_command :: proc(command: UI_Draw_Command) {
 	if ui_ctx.current_popup != "" {
-		append(&ui_ctx.open_popup.draw_commands, command)
+		sa.append(&ui_ctx.open_popup.draw_commands, command)
 	}
 	else {
-		append(&ui_ctx.draw_commands, command)
+		sa.append(&ui_ctx.draw_commands, command)
 	}
 }
 
