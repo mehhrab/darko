@@ -27,6 +27,7 @@ App :: struct {
 	temp_undo_image: Maybe(rl.Image),
 	temp_undo: Maybe(Action),
 	undos: [dynamic]Action,
+	redos: [dynamic]Action,
 	diry_layers: [dynamic]int,
 }
 
@@ -59,7 +60,8 @@ Action :: union {
 }
 
 Action_Image_Change :: struct {
-	image: rl.Image,
+	before_image: rl.Image,
+	after_image: rl.Image,
 	layer_index: int,
 }
 
@@ -86,7 +88,9 @@ Action_Delete_Layer :: struct {
 action_preform :: proc(action: Action) {
 	switch &kind in action {
 		case Action_Image_Change: {
-
+			image := rl.ImageCopy(kind.after_image)
+			app.project.layers[kind.layer_index].image = image
+			mark_dirty_layers(app.project.current_layer)
 		}
 		case Action_Create_Layer: {
 			layer: Layer
@@ -117,15 +121,13 @@ action_preform :: proc(action: Action) {
 			}
 		}
 	}
-	append(&app.undos, action)
 }
 
 action_unpreform :: proc(action: Action) {
 	switch kind in action {
 		case Action_Image_Change: {
-			image := rl.ImageCopy(kind.image)
+			image := rl.ImageCopy(kind.before_image)
 			app.project.layers[kind.layer_index].image = image
-			rl.UnloadImage(kind.image)
 			mark_dirty_layers(app.project.current_layer)
 		}
 		case Action_Create_Layer: {
@@ -154,6 +156,37 @@ action_unpreform :: proc(action: Action) {
 			mark_dirty_layers(app.project.current_layer)
 		}
 	}
+}
+
+action_deinit :: proc(action: Action) {
+	switch kind in action {
+		case Action_Image_Change: {
+			rl.UnloadImage(kind.before_image)
+			rl.UnloadImage(kind.after_image)
+		}
+		case Action_Create_Layer: {
+
+		}
+		case Action_Duplicate_Layer: {
+
+		}
+		case Action_Change_Layer_Index: {
+
+		}
+		case Action_Delete_Layer: {
+			rl.UnloadImage(kind.image)
+		}
+	}
+}
+
+action_do :: proc(action: Action) {
+	action_preform(action)
+	append(&app.undos, action)
+	for action in app.redos {
+		action_deinit(action)
+	}
+	fmt.printfln("cleared redos")
+	clear(&app.redos)
 }
 
 app: App
@@ -208,7 +241,7 @@ main :: proc() {
 
 		// create new layer above the current
 		if rl.IsKeyPressed(.SPACE) {
-			action_preform(Action_Create_Layer {
+			action_do(Action_Create_Layer {
 				current_layer_index = app.project.current_layer,
 				layer_index = app.project.current_layer + 1
 			})
@@ -216,7 +249,7 @@ main :: proc() {
 
 		// create new layer at the top
 		if rl.IsKeyPressed(.S) {
-			action_preform(Action_Create_Layer {
+			action_do(Action_Create_Layer {
 				current_layer_index = app.project.current_layer,
 				layer_index = len(app.project.layers)
 			})
@@ -241,8 +274,20 @@ main :: proc() {
 		// undo
 		if rl.IsKeyPressed(.Z) {
 			if len(app.undos) > 0 {
-				action_unpreform(app.undos[len(app.undos) - 1])
-				pop(&app.undos)
+				fmt.printfln("undo")
+				action := pop(&app.undos)
+				action_unpreform(action)
+				append(&app.redos, action)
+			}	
+		}
+
+		// redo
+		if rl.IsKeyPressed(.Y) {
+			if len(app.redos) > 0 {
+				fmt.printfln("redo")
+				action := pop(&app.redos)
+				action_preform(action)
+				append(&app.undos, action)
 			}	
 		}
 
@@ -455,7 +500,7 @@ layer_props :: proc(rec: Rec) {
 			ui_show_notif("At least one layer is needed")
 		} 
 		else {
-			action_preform(Action_Delete_Layer {
+			action_do(Action_Delete_Layer {
 				layer_index = app.project.current_layer,
 			})
 
@@ -466,7 +511,7 @@ layer_props :: proc(rec: Rec) {
 	rec_cut_from_left(&props_area, 8)
 	if ui_button(ui_gen_id_auto(), "\ufc35", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		if len(app.project.layers) > 1 && app.project.current_layer < len(app.project.layers) - 1 {
-			action_preform(Action_Change_Layer_Index {
+			action_do(Action_Change_Layer_Index {
 				from_index = app.project.current_layer,
 				to_index = app.project.current_layer + 1
 			})
@@ -477,7 +522,7 @@ layer_props :: proc(rec: Rec) {
 	rec_cut_from_left(&props_area, 8)
 	if ui_button(ui_gen_id_auto(), "\ufc2c", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		if len(app.project.layers) > 1 && app.project.current_layer > 0 {
-			action_preform(Action_Change_Layer_Index {
+			action_do(Action_Change_Layer_Index {
 				from_index = app.project.current_layer,
 				to_index = app.project.current_layer - 1
 			})
@@ -487,7 +532,7 @@ layer_props :: proc(rec: Rec) {
 	// duplicate button
 	rec_cut_from_left(&props_area, 8)
 	if ui_button(ui_gen_id_auto(), "\uf68e", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
-		action_preform(Action_Duplicate_Layer {
+		action_do(Action_Duplicate_Layer {
 			from_index = app.project.current_layer,
 			to_index = app.project.current_layer + 1,
 		})
@@ -814,13 +859,21 @@ open_project :: proc(project: ^Project) {
 	app.preview_rotation = 0
 	app.preview_zoom = 10
 	app.undos = make([dynamic]Action)
+	app.redos = make([dynamic]Action)
 	app.diry_layers = make([dynamic]int)
 
 	mark_all_layers_dirty()
 }
 
 close_project :: proc() {
+	for action in app.undos {
+		action_deinit(action)
+	}
 	delete(app.undos)
+	for action in app.redos {
+		action_deinit(action)
+	}
+	delete(app.redos)
 	delete(app.diry_layers)
 	deinit_project(&app.project)
 	rl.UnloadTexture(app.bg_texture)
@@ -919,7 +972,7 @@ begin_image_change :: proc() {
 	_, exists := app.temp_undo.?
 	if exists == false {
 		app.temp_undo = Action_Image_Change {
-			image = rl.ImageCopy(get_current_layer().image),
+			before_image = rl.ImageCopy(get_current_layer().image),
 			layer_index = app.project.current_layer,
 		} 
 	}
@@ -930,7 +983,8 @@ end_image_change :: proc() {
 	action, is_correct_type := temp_undo.(Action_Image_Change)
 	if exists {
 		if is_correct_type {
-			action_preform(action)
+			action.after_image = rl.ImageCopy(get_current_layer().image)
+			action_do(action)
 			app.temp_undo = nil			
 			fmt.printfln("correct type")
 		}
