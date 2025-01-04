@@ -361,12 +361,12 @@ gui :: proc() {
 		rl.HideCursor()
 		mpos := rl.GetMousePosition()
 		// pen
-		icon := "\uf8ea"
+		icon := ICON_PEN
 		if rl.IsMouseButtonDown(.RIGHT) {
 			// eraser
-			icon = "\uf6fd"
+			icon = ICON_ERASER
 		}
-		cursor_size := f32(40)
+		cursor_size := ui_ctx.font_size * 2
 		ui_push_command(UI_Draw_Text {
 			rec = { mpos.x + 1, mpos.y - cursor_size + 5 + 1, 100, 100 },
 			color = rl.BLACK,
@@ -491,7 +491,7 @@ layer_props :: proc(rec: Rec) {
 	})
 
 	// delete button
-	if ui_button(ui_gen_id_auto(), "\uf6bf", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
+	if ui_button(ui_gen_id_auto(), ICON_TRASH, rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		if len(app.project.layers) <= 1 {
 			ui_show_notif("At least one layer is needed")
 		} 
@@ -505,7 +505,7 @@ layer_props :: proc(rec: Rec) {
 
 	// move up button
 	rec_cut_from_left(&props_area, 8)
-	if ui_button(ui_gen_id_auto(), "\ufc35", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
+	if ui_button(ui_gen_id_auto(), ICON_UP, rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		if len(app.project.layers) > 1 && app.project.current_layer < len(app.project.layers) - 1 {
 			action_do(Action_Change_Layer_Index {
 				from_index = app.project.current_layer,
@@ -516,7 +516,7 @@ layer_props :: proc(rec: Rec) {
 
 	// move down button
 	rec_cut_from_left(&props_area, 8)
-	if ui_button(ui_gen_id_auto(), "\ufc2c", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
+	if ui_button(ui_gen_id_auto(), ICON_DOWN, rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		if len(app.project.layers) > 1 && app.project.current_layer > 0 {
 			action_do(Action_Change_Layer_Index {
 				from_index = app.project.current_layer,
@@ -527,7 +527,7 @@ layer_props :: proc(rec: Rec) {
 
 	// duplicate button
 	rec_cut_from_left(&props_area, 8)
-	if ui_button(ui_gen_id_auto(), "\uf68e", rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
+	if ui_button(ui_gen_id_auto(), ICON_COPY, rec_cut_from_right(&props_area, ui_ctx.default_widget_height)) {
 		action_do(Action_Duplicate_Layer {
 			from_index = app.project.current_layer,
 			to_index = app.project.current_layer + 1,
@@ -690,7 +690,7 @@ preview :: proc(rec: Rec) {
 	ui_ctx.font_size = 20
 	prev_widget_color := ui_ctx.widget_color
 	ui_ctx.widget_color = rl.BLANK
-	if ui_button(ui_gen_id_auto(), "\uf992", settings_rec, false) {
+	if ui_button(ui_gen_id_auto(), ICON_SETTINGS, settings_rec, false) {
 		ui_open_popup("Preview settings")
 	}
 	ui_ctx.font_size = prev_font_size
@@ -714,7 +714,7 @@ new_file_popup :: proc() {
 			init_project(&project, app.width, app.height)
 			open_project(&project)
 			ui_close_current_popup()
-			ui_show_notif("\uf62b Project is created")
+			ui_show_notif(ICON_CHECK + " Project is created")
 		}	
 	}
 	ui_end_popup()

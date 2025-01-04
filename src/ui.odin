@@ -142,19 +142,45 @@ UI_Grid_Layout :: struct {
 
 }
 
+ICON_PEN :: "\uf8ea"
+ICON_ERASER :: "\uf6fd"
+ICON_TRASH :: "\uf6bf"
+ICON_UP :: "\ufc35"
+ICON_DOWN :: "\ufc2c"
+ICON_COPY :: "\uf68e"
+ICON_SETTINGS :: "\uf992"
+ICON_X :: "\uf655" 
+ICON_CHECK :: "\uf62b"
+
 ui_ctx: UI_Ctx
 
 ui_init_ctx :: proc() {	
-	// chars := cstring(" abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/\\.\uf8ea\uf6fd\uf62b\uf992")
-	// code_point_count := i32(len(chars))
-	// code_points := rl.LoadCodepoints(chars, &code_point_count)
+	ui_ctx.font_size = 18
 
-	font_data := #load("../assets/Roboto Mono Bold Nerd Font Complete.ttf")
-	// TODO: only load the codepoints/glyphs we need, not the whole thing
-	ui_ctx.font = rl.LoadFontFromMemory(".ttf", raw_data(font_data), i32(len(font_data)), 64, nil, 64565)
+	CHARS :: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789… ~!@#$%^&*()-|\"':;_+={}[]\\/`,.<>?"
+	ICONS :: ICON_PEN + 
+	ICON_ERASER + 
+	ICON_TRASH + 
+	ICON_UP + 
+	ICON_DOWN + 
+	ICON_COPY +
+	ICON_SETTINGS +
+	ICON_X +
+	ICON_CHECK
+	
+	code_point_count: i32
+	code_points := rl.LoadCodepoints(CHARS + ICONS, &code_point_count)
+
+	font_data := #load("../assets/Hack Bold Nerd Font Complete.ttf")
+	ui_ctx.font = rl.LoadFontFromMemory(
+		".ttf", 
+		raw_data(font_data), 
+		i32(len(font_data)), 
+		i32(ui_ctx.font_size * 2.5), 
+		code_points,
+		code_point_count)
 	rl.SetTextureFilter(ui_ctx.font.texture, .BILINEAR)
 	
-	ui_ctx.font_size = 16
 	ui_ctx.text_align = { .Center, .Center }
 	ui_ctx.default_widget_height = 32
 	ui_ctx.header_height = ui_ctx.default_widget_height * 1.2
@@ -325,7 +351,7 @@ ui_process_commands :: proc(commands: []UI_Draw_Command) {
 				rl.DrawRectangleGradientV(x, y, w, h, ui_ctx.panel_color, ui_ctx.widget_hover_color)
 				px, py := rec_get_center_point(kind.rec)
 				draw_sprite_stack(&app.project.layers, px, py, app.lerped_preview_zoom, app.preview_rotation, app.project.spacing)
-				rl.DrawTextEx(ui_ctx.font, "Preview", { kind.rec.x + 10, kind.rec.y + 10 }, ui_ctx.font_size * 1.2, 0, { 255, 255, 255, 100 })
+				rl.DrawTextEx(ui_ctx.font, "PREVIEW", { kind.rec.x + 10, kind.rec.y + 10 }, ui_ctx.font_size * 1.4, 0, { 255, 255, 255, 100 })
 				rl.EndScissorMode()
 				rl.DrawRectangleLinesEx(kind.rec, 1, ui_ctx.border_color)
 			}
@@ -367,7 +393,7 @@ ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: 
 		area := rec
 		header_area := rec_extend_from_top(&area, ui_ctx.header_height) 
 		ui_ctx.open_popup.rec = area
-		if ui_button(id, "\uf655", rec_pad(rec_take_from_right(&header_area, header_area.height), 8)) {
+		if ui_button(id, ICON_X, rec_pad(rec_take_from_right(&header_area, header_area.height), 8)) {
 			ui_close_current_popup()
 		}
 	}
