@@ -163,6 +163,18 @@ UI_BUTTON_STYLE_TRANSPARENT :: UI_Button_Style {
 	text_color = { 200, 209, 218, 255 },
 }
 
+UI_SLIDER_STYLE :: struct {
+	bg_color: rl.Color,
+	progress_color: rl.Color,
+	text_color: rl.Color,
+}
+
+UI_SLIDER_STYLE_DEFAULT :: UI_SLIDER_STYLE {
+	bg_color = { 20, 23, 28, 255 },
+	progress_color = { 61, 68, 77, 255 },
+	text_color = { 200, 209, 218, 255 },
+} 
+
 ICON_PEN :: "\uf8ea"
 ICON_ERASER :: "\uf6fd"
 ICON_TRASH :: "\uf6bf"
@@ -632,6 +644,7 @@ ui_slider_f32 :: proc(
 	rec: Rec,
 	format: string = "%.2f",
 	step: f32 = 0,
+	style := UI_SLIDER_STYLE_DEFAULT,
 ) -> (
 	value_changed: bool,
 ) {
@@ -640,21 +653,21 @@ ui_slider_f32 :: proc(
 
 	ui_push_command(UI_Draw_Rect {
 		rec = rec,
-		color = ui_ctx.border_color,
+		color = style.bg_color,
 	})
 
 	progress_width := (value^ - min) * (progress_rec.width) / (max - min)
 	progress_rec.width = progress_width
 	ui_push_command(UI_Draw_Rect {
 		rec = progress_rec,
-		color = ui_ctx.widget_color,	
+		color = style.progress_color,	
 	})
 	
 	ui_push_command(UI_Draw_Text {
 		rec = rec_pad(rec, 10),
 		text = label,
 		size = ui_ctx.font_size,
-		color = ui_ctx.text_color,
+		color = style.text_color,
 		align = { .Left, .Center },	
 	})
 	text := fmt.aprintf(format, value^, allocator = context.temp_allocator)
@@ -662,14 +675,14 @@ ui_slider_f32 :: proc(
 		rec = rec_pad({ rec.x + 2, rec.y + 2, rec.width, rec.height }, 10),
 		text = text,
 		size = ui_ctx.font_size,
-		color = ui_ctx.border_color,
+		color = style.bg_color,
 		align = { .Right, .Center },
 	})
 	ui_push_command(UI_Draw_Text {
 		rec = rec_pad(rec, 10),
 		text = text,
 		size = ui_ctx.font_size,
-		color = ui_ctx.text_color,
+		color = style.text_color,
 		align = { .Right, .Center },	
 	})
 	return value_changed
@@ -682,12 +695,13 @@ ui_slider_i32 :: proc
 	value: ^i32,
 	min, max: i32,
 	rec: Rec,
-	step: i32 = 1
+	step: i32 = 1,
+	style := UI_SLIDER_STYLE_DEFAULT,
 ) -> (
 	value_changed: bool,
 ) {
 	value_f32 := math.round(f32(value^))
-	value_changed = ui_slider_f32(id, label, &value_f32, f32(min), f32(max), rec, "%.0f", f32(step))
+	value_changed = ui_slider_f32(id, label, &value_f32, f32(min), f32(max), rec, "%.0f", f32(step), style)
 	value^ = i32(value_f32)
 	return value_changed
 }
