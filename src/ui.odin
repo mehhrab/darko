@@ -560,15 +560,14 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 		ui_ctx.open_popup.open_time = 0
 
 		menu_item_y := rec.y + rec.height + padding
-		prev_text_align := ui_ctx.text_align
-		ui_ctx.text_align = { .Left, .Center }
+		style := UI_BUTTON_STYLE_DEFAULT
+		style.text_align = { .Left, .Center }
 		for item, i in items^ {
-			if ui_button(item.id, item.text, { rec.x + padding, menu_item_y, item_width, item_height }) {
+			if ui_button(item.id, item.text, { rec.x + padding, menu_item_y, item_width, item_height }, style = style) {
 				clicked_item = item
 			}
 			menu_item_y += item_height
 		}
-		ui_ctx.text_align = prev_text_align
 	}
 	ui_end_popup()
 
