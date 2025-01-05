@@ -163,6 +163,7 @@ UI_BUTTON_STYLE_TRANSPARENT :: UI_Button_Style {
 	bg_color_hovered = { 101, 108, 118, 255 },
 	bg_color_active = { 101, 108, 118, 255 },
 	text_color = { 200, 209, 218, 255 },
+	text_align = { .Center, .Center },
 }
 
 UI_SLIDER_STYLE :: struct {
