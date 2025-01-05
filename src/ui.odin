@@ -442,7 +442,9 @@ ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: 
 		header_area := rec_extend_from_top(&area, ui_ctx.header_height) 
 		ui_ctx.open_popup.rec = area
 		x_rec := rec_pad(rec_take_from_right(&header_area, header_area.height), 8)
-		if ui_button(id, ICON_X, x_rec, style = UI_BUTTON_STYLE_TRANSPARENT) {
+		style := UI_BUTTON_STYLE_TRANSPARENT
+		style.text_color = ui_ctx.border_color
+		if ui_button(id, ICON_X, x_rec, style = style) {
 			ui_close_current_popup()
 		}
 	}
@@ -460,12 +462,13 @@ ui_end_popup :: proc() {
 		rec = ui_ctx.open_popup.rec,
 	}, 1)
 	if ui_ctx.open_popup.show_header {
-		sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
-			color = ui_ctx.border_color,
+		sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Gradient_H {
+			right_color = ui_ctx.accent_color,
+			left_color = { 242, 131, 240, 255 },
 			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, ui_ctx.header_height },
 		}, 2)
 		sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Text {
-			color = rl.Fade(ui_ctx.text_color, 0.7),
+			color = ui_ctx.border_color,
 			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, ui_ctx.header_height },
 			text = ui_ctx.open_popup.name,
 			align = { .Center, .Center },
