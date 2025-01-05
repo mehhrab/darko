@@ -147,6 +147,7 @@ UI_Button_Style :: struct {
 	bg_color_hovered: rl.Color,
 	bg_color_active: rl.Color,
 	text_color: rl.Color,
+	text_align: UI_Align,
 }
 
 UI_BUTTON_STYLE_DEFAULT :: UI_Button_Style {
@@ -154,6 +155,7 @@ UI_BUTTON_STYLE_DEFAULT :: UI_Button_Style {
 	bg_color_hovered = { 101, 108, 118, 255 },
 	bg_color_active = { 101, 108, 118, 255 },
 	text_color = { 200, 209, 218, 255 },
+	text_align = { .Center, .Center },
 }
 
 UI_BUTTON_STYLE_TRANSPARENT :: UI_Button_Style {
@@ -539,7 +541,7 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := 
 		text = text,
 		size = ui_ctx.font_size,
 		color = style.text_color,
-		align = ui_ctx.text_align,
+		align = style.text_align,
 	})
 	return clicked
 }
