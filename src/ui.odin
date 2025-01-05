@@ -142,6 +142,27 @@ UI_Grid_Layout :: struct {
 
 }
 
+UI_Button_Style :: struct {
+	bg_color: rl.Color,
+	bg_color_hovered: rl.Color,
+	bg_color_active: rl.Color,
+	text_color: rl.Color,
+}
+
+UI_BUTTON_STYLE_DEFAULT :: UI_Button_Style {
+	bg_color = { 61, 68, 77, 255 },
+	bg_color_hovered = { 101, 108, 118, 255 },
+	bg_color_active = { 101, 108, 118, 255 },
+	text_color = { 200, 209, 218, 255 },
+}
+
+UI_BUTTON_STYLE_TRANSPARENT :: UI_Button_Style {
+	bg_color = rl.BLANK,
+	bg_color_hovered = { 101, 108, 118, 255 },
+	bg_color_active = { 101, 108, 118, 255 },
+	text_color = { 200, 209, 218, 255 },
+}
+
 ICON_PEN :: "\uf8ea"
 ICON_ERASER :: "\uf6fd"
 ICON_TRASH :: "\uf6bf"
@@ -393,7 +414,8 @@ ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: 
 		area := rec
 		header_area := rec_extend_from_top(&area, ui_ctx.header_height) 
 		ui_ctx.open_popup.rec = area
-		if ui_button(id, ICON_X, rec_pad(rec_take_from_right(&header_area, header_area.height), 8)) {
+		x_rec := rec_pad(rec_take_from_right(&header_area, header_area.height), 8)
+		if ui_button(id, ICON_X, x_rec, style = UI_BUTTON_STYLE_TRANSPARENT) {
 			ui_close_current_popup()
 		}
 	}
@@ -471,18 +493,18 @@ ui_panel :: proc(id: UI_ID, rec: Rec) {
 	})
 }
 
-ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true) -> (clicked: bool) {	
+ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := UI_BUTTON_STYLE_DEFAULT) -> (clicked: bool) {	
 	clicked = false
 	ui_update_widget(id, rec, blocking)
 	if ui_ctx.hovered_widget == id && rl.IsMouseButtonReleased(.LEFT){
 		clicked = true
 	}
-	color := ui_ctx.widget_color
+	color := style.bg_color
 	if ui_ctx.active_widget == id {
-		color = ui_ctx.widget_active_color
+		color = style.bg_color_active
 	}
 	else if ui_ctx.hovered_widget == id {
-		color = ui_ctx.widget_hover_color
+		color = style.bg_color_hovered
 	}
 	ui_push_command(UI_Draw_Rect {
 		rec = rec,
@@ -492,7 +514,7 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true) -> (click
 		rec = rec_pad(rec, 10),
 		text = text,
 		size = ui_ctx.font_size,
-		color = ui_ctx.text_color,
+		color = style.text_color,
 		align = ui_ctx.text_align,
 	})
 	return clicked

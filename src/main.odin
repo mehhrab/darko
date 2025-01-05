@@ -690,7 +690,7 @@ preview :: proc(rec: Rec) {
 	ui_ctx.font_size = 20
 	prev_widget_color := ui_ctx.widget_color
 	ui_ctx.widget_color = rl.BLANK
-	if ui_button(ui_gen_id_auto(), ICON_SETTINGS, settings_rec, false) {
+	if ui_button(ui_gen_id_auto(), ICON_SETTINGS, settings_rec, false, style = UI_BUTTON_STYLE_TRANSPARENT) {
 		ui_open_popup("Preview settings")
 	}
 	ui_ctx.font_size = prev_font_size
