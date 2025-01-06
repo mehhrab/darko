@@ -126,22 +126,6 @@ UI_Draw_Preview :: struct {
 	rec: Rec,
 }
 
-UI_Axis :: enum {
-	Horizontal,
-	Vertical,
-}
-
-UI_Box_Layout :: struct {
-	direction: UI_Axis,
-	taken: f32,
-	spacing: f32,
-	rec: Rec,
-} 
-
-UI_Grid_Layout :: struct {
-
-}
-
 UI_Button_Style :: struct {
 	bg_color: rl.Color,
 	bg_color_hovered: rl.Color,

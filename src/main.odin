@@ -321,68 +321,14 @@ gui :: proc() {
 	menu_bar(menu_bar_area)
 
 	screen_area := screen_rec
-	panel_width := screen_area.width / 3
 
-	right_panel_area := rec_cut_from_right(&screen_area, panel_width)
+	right_panel_area := rec_cut_from_right(&screen_area, screen_area.width / 3)
 	middle_panel_area := screen_area
 	
 	layer_props_area := rec_cut_from_top(&middle_panel_area, ui_ctx.default_widget_height + 16)
 	layer_props(layer_props_area)
 
-	app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 20 * rl.GetFrameTime())
-	// work around for lerp never (taking too long) reaching it's desteniton 
-	if math.abs(app.project.zoom - app.lerped_zoom) < 0.01 {
-		app.lerped_zoom = app.project.zoom
-	}
-
-	canvas_rec := rec_center_in_area(
-		{ 0, 0, f32(app.project.width) * 10 * app.lerped_zoom, f32(app.project.height) * 10 *  app.lerped_zoom },
-		middle_panel_area)
-	
-	if ui_is_being_interacted() == false {
-		update_zoom(&app.project.zoom, 0.3, 0.1, 100)
-		update_tools(canvas_rec)
-	}
-	
-	ui_push_command(UI_Draw_Canvas {
-		rec = canvas_rec,
-		panel_rec = middle_panel_area,
-	})
-	ui_push_command(UI_Draw_Grid {
-		rec = canvas_rec,
-		panel_rec = middle_panel_area,
-	})
-	ui_push_command(UI_Draw_Rect_Outline {
-		rec = middle_panel_area,
-		color = ui_ctx.border_color,
-		thickness = 1
-	})
-	if ui_is_mouse_in_rec(middle_panel_area) && ui_is_being_interacted() == false {
-		rl.HideCursor()
-		mpos := rl.GetMousePosition()
-		// pen
-		icon := ICON_PEN
-		if rl.IsMouseButtonDown(.RIGHT) {
-			// eraser
-			icon = ICON_ERASER
-		}
-		cursor_size := ui_ctx.font_size * 2
-		ui_push_command(UI_Draw_Text {
-			rec = { mpos.x + 1, mpos.y - cursor_size + 5 + 1, 100, 100 },
-			color = rl.BLACK,
-			text = icon,
-			size = cursor_size,
-		})
-		ui_push_command(UI_Draw_Text {
-			rec = { mpos.x, mpos.y - cursor_size + 5, 100, 100 },
-			color = rl.WHITE,
-			text = icon,
-			size = cursor_size,
-		})
-	}
-	else {
-		rl.ShowCursor()
-	}
+	canvas(middle_panel_area)
 	
 	ui_panel(ui_gen_id_auto(), right_panel_area)
 	right_panel_area = rec_pad(right_panel_area, 16)
@@ -433,44 +379,53 @@ menu_bar :: proc(area: Rec) {
 	if clicked_item.text == "open project" {
 		defer ui_close_current_popup()
 
-		path: cstring
-		defer ntf.FreePathU8(path)
+		path_cstring: cstring
+		defer ntf.FreePathU8(path_cstring)
 		args: ntf.Open_Dialog_Args
-		res := ntf.PickFolderU8(&path, "")
-		if res != .Okay {
+		res := ntf.PickFolderU8(&path_cstring, "")
+		if res == .Error {
+			ui_show_notif("Could not save project")
+		}
+		else if res == .Cancel {
 			return
 		}
 
 		project: Project
-		project_path := string(path)		
-		loaded := load_project(&project, project_path)
+		path := string(path_cstring)		
+		loaded := load_project(&project, path)
 		if loaded == false {
 			ui_show_notif("Failed to open project")
 			return
 		}
+		
 		close_project()		
 		open_project(&project)
 		mark_dirty_layers(app.project.current_layer)
+
 		ui_show_notif("Project is opened")
 	}
 	if clicked_item.text == "save project" {
 		defer ui_close_current_popup()
 
-		path: cstring
-		defer ntf.FreePathU8(path)
+		path_cstring: cstring
+		defer ntf.FreePathU8(path_cstring)
 		args: ntf.Open_Dialog_Args
-		res := ntf.PickFolderU8(&path, "")
-		if res != .Okay {
+		res := ntf.PickFolderU8(&path_cstring, "")
+		if res == .Error {
+			ui_show_notif("Could not save project")
+		}
+		else if res == .Cancel {
 			return
 		}
 
-		project_path := string(path)
-		app.project.name = project_path[strings.last_index(project_path, "\\") + 1:]
-		saved := save_project(&app.project, project_path)
+		path := string(path_cstring)
+		app.project.name = path[strings.last_index(path, "\\") + 1:]
+		saved := save_project(&app.project, path)
 		if saved == false {
 			ui_show_notif("Could not save project")
 			return
 		}
+
 		ui_show_notif("Project is saved")
 	}
 }
@@ -540,6 +495,65 @@ layer_props :: proc(rec: Rec) {
 	}
 }
 
+canvas :: proc(rec: Rec) {
+	area := rec
+
+	app.lerped_zoom = rl.Lerp(app.lerped_zoom, app.project.zoom, 20 * rl.GetFrameTime())
+	// work around for lerp never (taking too long) reaching it's desteniton 
+	if math.abs(app.project.zoom - app.lerped_zoom) < 0.01 {
+		app.lerped_zoom = app.project.zoom
+	}
+
+	canvas_w := f32(app.project.width) * 10 * app.lerped_zoom 
+	canvas_h := f32(app.project.height) * 10 * app.lerped_zoom
+	canvas_rec := rec_center_in_area({ 0, 0, canvas_w, canvas_h }, area)
+	
+	if ui_is_being_interacted() == false {
+		update_zoom(&app.project.zoom, 0.3, 0.1, 100)
+		update_tools(canvas_rec)
+	}
+	
+	ui_push_command(UI_Draw_Canvas {
+		rec = canvas_rec,
+		panel_rec = area,
+	})
+	ui_push_command(UI_Draw_Grid {
+		rec = canvas_rec,
+		panel_rec = area,
+	})
+	ui_push_command(UI_Draw_Rect_Outline {
+		rec = area,
+		color = ui_ctx.border_color,
+		thickness = 1
+	})
+	if ui_is_mouse_in_rec(area) && ui_is_being_interacted() == false {
+		rl.HideCursor()
+		mpos := rl.GetMousePosition()
+		// pen
+		icon := ICON_PEN
+		if rl.IsMouseButtonDown(.RIGHT) {
+			// eraser
+			icon = ICON_ERASER
+		}
+		cursor_size := ui_ctx.font_size * 2
+		ui_push_command(UI_Draw_Text {
+			rec = { mpos.x + 1, mpos.y - cursor_size + 5 + 1, 100, 100 },
+			color = rl.BLACK,
+			text = icon,
+			size = cursor_size,
+		})
+		ui_push_command(UI_Draw_Text {
+			rec = { mpos.x, mpos.y - cursor_size + 5, 100, 100 },
+			color = rl.WHITE,
+			text = icon,
+			size = cursor_size,
+		})
+	}
+	else {
+		rl.ShowCursor()
+	}
+}
+
 color_panel :: proc(area: ^Rec) {		
 	// preview color
 	preview_area := rec_cut_from_top(area, ui_ctx.default_widget_height * 3)
@@ -557,6 +571,7 @@ color_panel :: proc(area: ^Rec) {
 	@(static)
 	hsv_color := [3]f32 { 0, 0, 0 }
 
+	// not sure if it's actually called grip...
 	draw_grip :: proc(value, min, max: f32, rec: Rec) {
 		grip_width := f32(10)
 		grip_x := (value - min) * (rec.width) / (max - min) - grip_width / 2
@@ -581,43 +596,40 @@ color_panel :: proc(area: ^Rec) {
 		rec = hue_rec,
 	})
 	hue_rec = rec_pad(hue_rec, 1)
-	hue_rec_org := hue_rec
+	hue_area := hue_rec
 	segment_width := hue_rec.width / 6
 	ui_push_command(UI_Draw_Gradient_H {
 		left_color = { 255, 0, 255, 255 },
 		right_color = { 255, 0, 0, 255 },
-		rec = rec_cut_from_right(&hue_rec, segment_width)
+		rec = rec_cut_from_right(&hue_area, segment_width)
 	})
 	ui_push_command(UI_Draw_Gradient_H {
 		left_color = { 0, 0, 255, 255 },
 		right_color = { 255, 0, 255, 255 },
-		rec = rec_cut_from_right(&hue_rec, segment_width)
+		rec = rec_cut_from_right(&hue_area, segment_width)
 	})
 	ui_push_command(UI_Draw_Gradient_H {
 		left_color = { 0, 255, 255, 255 },
 		right_color = { 0, 0, 255, 255 },
-		rec = rec_cut_from_right(&hue_rec, segment_width)
+		rec = rec_cut_from_right(&hue_area, segment_width)
 	})
 	ui_push_command(UI_Draw_Gradient_H {
 		left_color = { 0, 255, 0, 255 },
 		right_color = { 0, 255, 255, 255 },
-		rec = rec_cut_from_right(&hue_rec, segment_width)
+		rec = rec_cut_from_right(&hue_area, segment_width)
 	})
 	ui_push_command(UI_Draw_Gradient_H {
 		left_color = { 255, 255, 0, 255 },
 		right_color = { 0, 255, 0, 255 },
-		rec = rec_cut_from_right(&hue_rec, segment_width)
+		rec = rec_cut_from_right(&hue_area, segment_width)
 	})
 	ui_push_command(UI_Draw_Gradient_H {
 		left_color = { 255, 0, 0, 255 },
 		right_color = { 255, 255, 0, 255 },
-		rec = rec_cut_from_right(&hue_rec, segment_width)
+		rec = rec_cut_from_right(&hue_area, segment_width)
 	})
-	// ui_push_command(UI_Draw_Rect {
-	// 	color = rl.Fade(rl.BLACK, 1 - hsv_color[2]),
-	// 	rec = { hue_rec_org.x, hue_rec_org.y, hue_rec_org.width + 1, hue_rec_org.height },
-	// })
-	draw_grip(hsv_color[0], 0, 360, hue_rec_org)
+
+	draw_grip(hsv_color[0], 0, 360, hue_rec)
 
 	rec_delete_from_top(area, 8)
 
@@ -911,18 +923,17 @@ update_zoom :: proc(current_zoom: ^f32, strength: f32, min: f32, max: f32) {
 	current_zoom^ = zoom
 }
 
-// TODO: add parameter to set the origin, current it's centered horizontaly and verticaly
 draw_sprite_stack :: proc(layers: ^[dynamic]Layer, x, y: f32, scale: f32, rotation: f32, spacing: f32) {
 	spacing := spacing * scale
-	yy := y + f32(len(layers^) - 1) * spacing / 2
+	y := y + f32(len(layers^) - 1) * spacing / 2
 	for layer in layers {
 		layer_width := f32(layer.image.width)
 		layer_height := f32(layer.image.height)
 		source_rec := Rec { 0, 0, layer_width, layer_height }
-		dest_rec := Rec { x, yy, layer_width * scale, layer_height * scale }
+		dest_rec := Rec { x, y, layer_width * scale, layer_height * scale }
 		origin := rl.Vector2 { layer_width * scale / 2, layer_height * scale / 2 }
 		rl.DrawTexturePro(layer.texture, source_rec, dest_rec, origin, rotation, rl.WHITE)
-		yy -= spacing
+		y -= spacing
 	}
 }
 
@@ -939,6 +950,7 @@ update_tools :: proc(area: Rec) {
 	if rl.IsMouseButtonReleased(.LEFT) {
 		end_image_change()
 	}
+
 	// eraser
 	if ui_is_mouse_in_rec(area) {
 		if rl.IsMouseButtonDown(.RIGHT) {
@@ -951,6 +963,7 @@ update_tools :: proc(area: Rec) {
 	if rl.IsMouseButtonReleased(.RIGHT) {
 		end_image_change()
 	}
+
 	// fill
 	if ui_is_mouse_in_rec(area) {
 		if rl.IsMouseButtonPressed(.MIDDLE) {
