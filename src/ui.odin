@@ -166,6 +166,22 @@ UI_BUTTON_STYLE_TRANSPARENT :: UI_Button_Style {
 	text_align = { .Center, .Center },
 }
 
+UI_BUTTON_STYLE_ACCENT :: UI_Button_Style {
+	bg_color = rl.BLANK,
+	bg_color_hovered = { 101, 108, 118, 255 },
+	bg_color_active = { 101, 108, 118, 255 },
+	text_color = { 190, 141, 255, 255 },
+	text_align = { .Center, .Center },
+}
+
+UI_BUTTON_STYLE_RED :: UI_Button_Style {
+	bg_color = rl.BLANK,
+	bg_color_hovered = { 101, 108, 118, 255 },
+	bg_color_active = { 101, 108, 118, 255 },
+	text_color = { 255, 101, 125, 255 },
+	text_align = { .Center, .Center },
+}
+
 UI_SLIDER_STYLE :: struct {
 	bg_color: rl.Color,
 	progress_color: rl.Color,
