@@ -235,56 +235,58 @@ main :: proc() {
 
 		// update
 
-		// create new layer above the current
-		if rl.IsKeyPressed(.SPACE) {
-			action_do(Action_Create_Layer {
-				current_layer_index = app.project.current_layer,
-				layer_index = app.project.current_layer + 1
-			})
-		}
-
-		// create new layer at the top
-		if rl.IsKeyPressed(.S) {
-			action_do(Action_Create_Layer {
-				current_layer_index = app.project.current_layer,
-				layer_index = len(app.project.layers)
-			})
-		}
-
-		// move current layer up
-		if rl.IsKeyPressed(.UP) {
-			app.project.current_layer += 1
-			if app.project.current_layer >= len(app.project.layers) {
-				app.project.current_layer = 0
+		if ui_ctx.open_popup.name == "" {
+			// create new layer above the current
+			if rl.IsKeyPressed(.SPACE) {
+				action_do(Action_Create_Layer {
+					current_layer_index = app.project.current_layer,
+					layer_index = app.project.current_layer + 1
+				})
 			}
-		}
 
-		// move current layer down
-		if rl.IsKeyPressed(.DOWN) {
-			app.project.current_layer -= 1
-			if app.project.current_layer < 0 {
-				app.project.current_layer = len(app.project.layers) - 1
+			// create new layer at the top
+			if rl.IsKeyPressed(.S) {
+				action_do(Action_Create_Layer {
+					current_layer_index = app.project.current_layer,
+					layer_index = len(app.project.layers)
+				})
 			}
-		}
 
-		// undo
-		if rl.IsKeyPressed(.Z) {
-			if len(app.undos) > 0 {
-				fmt.printfln("undo")
-				action := pop(&app.undos)
-				action_unpreform(action)
-				append(&app.redos, action)
-			}	
-		}
+			// move current layer up
+			if rl.IsKeyPressed(.UP) {
+				app.project.current_layer += 1
+				if app.project.current_layer >= len(app.project.layers) {
+					app.project.current_layer = 0
+				}
+			}
 
-		// redo
-		if rl.IsKeyPressed(.Y) {
-			if len(app.redos) > 0 {
-				fmt.printfln("redo")
-				action := pop(&app.redos)
-				action_preform(action)
-				append(&app.undos, action)
-			}	
+			// move current layer down
+			if rl.IsKeyPressed(.DOWN) {
+				app.project.current_layer -= 1
+				if app.project.current_layer < 0 {
+					app.project.current_layer = len(app.project.layers) - 1
+				}
+			}
+
+			// undo
+			if rl.IsKeyPressed(.Z) {
+				if len(app.undos) > 0 {
+					fmt.printfln("undo")
+					action := pop(&app.undos)
+					action_unpreform(action)
+					append(&app.redos, action)
+				}	
+			}
+
+			// redo
+			if rl.IsKeyPressed(.Y) {
+				if len(app.redos) > 0 {
+					fmt.printfln("redo")
+					action := pop(&app.redos)
+					action_preform(action)
+					append(&app.undos, action)
+				}	
+			}
 		}
 
 		// update the textures for dirty layers
