@@ -7,12 +7,15 @@ import "core:fmt"
 import "core:math"
 import "core:c"
 import sa "core:container/small_array"
+import "core:strconv"
 
 UI_Ctx :: struct {
 	hovered_widget: UI_ID,
 	active_widget: UI_ID,
 	hovered_panel: UI_ID,
 	active_panel: UI_ID,
+	active_textbox: UI_ID,
+	slider_text_buffer: sa.Small_Array(40, byte),
 	draw_commands: Draw_Commands,
 	notif_text: string,
 	notif_time: f32,	
@@ -260,9 +263,13 @@ ui_begin :: proc() {
 	if ui_ctx.notif_text != "" {
 		ui_ctx.notif_time += 0.01
 	}
+
 }
 
 ui_end :: proc() {
+	if rl.IsMouseButtonReleased(.LEFT) {
+		ui_ctx.active_textbox = 0
+	}
 	if rl.IsMouseButtonReleased(.LEFT) {
 		ui_ctx.active_widget = 0
 		ui_ctx.active_panel = 0
@@ -665,7 +672,60 @@ ui_slider_f32 :: proc(
 ) -> (
 	value_changed: bool,
 ) {
-	value_changed = ui_slider_behaviour_f32(id, value, min, max, rec, step)
+	ui_update_widget(id, rec)
+	
+	// when right clicked write the value to slider_text_buffer
+	if ui_ctx.hovered_widget == id && rl.IsMouseButtonReleased(.RIGHT) {
+		ui_ctx.active_textbox = id
+		str := fmt.bprintf(ui_ctx.slider_text_buffer.data[:], format, value^)
+	    sa.resize(&ui_ctx.slider_text_buffer, len(str))
+	}
+	
+	if ui_ctx.active_textbox == id {
+		// exit text mode when escape key is pressed
+		if rl.IsKeyPressed(.ESCAPE) {
+			sa.clear(&ui_ctx.slider_text_buffer)
+			ui_ctx.active_textbox = 0
+		}
+		// when left clicked and in text mode, apply buffer to value pointer
+		if ui_ctx.hovered_widget == id && rl.IsMouseButtonReleased(.LEFT) {
+			number, ok := strconv.parse_f32(string(sa.slice(&ui_ctx.slider_text_buffer)))
+			if ok {
+				value^ = number
+			}
+		}
+	}
+
+	
+	if ui_ctx.active_textbox == id {
+		char := rl.GetCharPressed()
+		switch char {
+			case '0'..='9', '.': {
+				sa.append_elem(&ui_ctx.slider_text_buffer, u8(char))
+			}
+		}
+		if rl.IsKeyPressed(.BACKSPACE) {
+			if ui_ctx.slider_text_buffer.len > 0 {
+				sa.resize(&ui_ctx.slider_text_buffer, ui_ctx.slider_text_buffer.len - 1)
+			}
+		}
+		if rl.IsKeyPressedRepeat(.BACKSPACE) {
+			if ui_ctx.slider_text_buffer.len > 0 {
+				sa.resize(&ui_ctx.slider_text_buffer, ui_ctx.slider_text_buffer.len - 1)
+			}
+		}
+		if rl.IsKeyPressed(.ENTER) {
+			number, ok := strconv.parse_f32(string(sa.slice(&ui_ctx.slider_text_buffer)))
+			if ok {
+				value^ = number
+			}
+			ui_ctx.active_textbox = 0
+		}
+	}
+	else {
+		value_changed = ui_slider_behaviour_f32(id, value, min, max, rec, step)
+	}
+
 	progress_rec := rec_pad(rec, 1)
 
 	ui_push_command(UI_Draw_Rect {
@@ -673,35 +733,53 @@ ui_slider_f32 :: proc(
 		color = style.bg_color,
 	})
 
-	progress_width := (value^ - min) * (progress_rec.width) / (max - min)
-	progress_rec.width = progress_width
-	ui_push_command(UI_Draw_Rect {
-		rec = progress_rec,
-		color = style.progress_color,	
-	})
-	
-	ui_push_command(UI_Draw_Text {
-		rec = rec_pad(rec, 10),
-		text = label,
-		size = ui_ctx.font_size,
-		color = style.text_color,
-		align = { .Left, .Center },	
-	})
-	text := fmt.aprintf(format, value^, allocator = context.temp_allocator)
-	ui_push_command(UI_Draw_Text {
-		rec = rec_pad({ rec.x + 2, rec.y + 2, rec.width, rec.height }, 10),
-		text = text,
-		size = ui_ctx.font_size,
-		color = style.bg_color,
-		align = { .Right, .Center },
-	})
-	ui_push_command(UI_Draw_Text {
-		rec = rec_pad(rec, 10),
-		text = text,
-		size = ui_ctx.font_size,
-		color = style.text_color,
-		align = { .Right, .Center },	
-	})
+	if ui_ctx.active_textbox == id {
+		// draw textbox
+		ui_push_command(UI_Draw_Text {
+			align = { .Left, .Center },
+			color = style.text_color,
+			rec = rec_pad(rec, 8),
+			size = ui_ctx.font_size,
+			text = string(sa.slice(&ui_ctx.slider_text_buffer)),
+		})
+		ui_push_command(UI_Draw_Rect_Outline {
+			color = style.progress_color,
+			rec = rec,
+			thickness = 1,
+		})
+	}
+	else {
+		// draw slider
+		progress_width := (value^ - min) * (progress_rec.width) / (max - min)
+		progress_rec.width = progress_width
+		ui_push_command(UI_Draw_Rect {
+			rec = progress_rec,
+			color = style.progress_color,	
+		})
+		
+		ui_push_command(UI_Draw_Text {
+			rec = rec_pad(rec, 10),
+			text = label,
+			size = ui_ctx.font_size,
+			color = style.text_color,
+			align = { .Left, .Center },	
+		})
+		text := fmt.aprintf(format, value^, allocator = context.temp_allocator)
+		ui_push_command(UI_Draw_Text {
+			rec = rec_pad({ rec.x + 2, rec.y + 2, rec.width, rec.height }, 10),
+			text = text,
+			size = ui_ctx.font_size,
+			color = style.bg_color,
+			align = { .Right, .Center },
+		})
+		ui_push_command(UI_Draw_Text {
+			rec = rec_pad(rec, 10),
+			text = text,
+			size = ui_ctx.font_size,
+			color = style.text_color,
+			align = { .Right, .Center },	
+		})
+	}
 	return value_changed
 }
 

@@ -213,6 +213,7 @@ main :: proc() {
 
 	rl.SetConfigFlags({rl.ConfigFlags.WINDOW_RESIZABLE})
 	rl.InitWindow(1200, 700, "Darko")
+	rl.SetExitKey(nil)
 	when LOCK_FPS {
 		rl.SetTargetFPS(60)
 	}
