@@ -8,6 +8,8 @@ import "core:math"
 import "core:c"
 import sa "core:container/small_array"
 import "core:strconv"
+import "core:hash"
+import "core:mem"
 
 UI_Ctx :: struct {
 	hovered_widget: UI_ID,
@@ -276,8 +278,10 @@ ui_end :: proc() {
 	}
 }
 
-ui_gen_id_auto :: proc(loc := #caller_location) -> UI_ID {
-	return UI_ID(loc.line)
+ui_gen_id :: proc(i := 0, loc := #caller_location) -> UI_ID {
+    text := fmt.aprintfln("{}{}{}", loc.procedure, loc.line, i, allocator = context.temp_allocator)
+    id := hash.fnv32(mem.byte_slice(raw_data(text), len(text)))
+    return id
 }
 
 ui_draw :: proc() {
