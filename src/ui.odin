@@ -450,9 +450,9 @@ ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: 
 	if name == ui_ctx.open_popup.name {
 		ui_ctx.open_popup.show_header = true
 		area := rec
-		header_area := rec_extend_from_top(&area, ui_ctx.header_height) 
+		header_area := rec_extend_top(&area, ui_ctx.header_height) 
 		ui_ctx.open_popup.rec = area
-		x_rec := rec_pad(rec_take_from_right(&header_area, header_area.height), 8)
+		x_rec := rec_pad(rec_take_right(&header_area, header_area.height), 8)
 		style := UI_BUTTON_STYLE_TRANSPARENT
 		style.text_color = ui_ctx.border_color
 		if ui_button(id, ICON_X, x_rec, style = style) {

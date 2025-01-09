@@ -32,7 +32,7 @@ rec_center_in_area :: proc(rec: Rec, area: Rec) -> (centered_rec: Rec) {
 	return { x, y, rec.width, rec.height }
 }
 
-rec_extend_from_top :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
+rec_extend_top :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
 	res = {
 		rec.x,
 		rec.y - amount,
@@ -44,7 +44,7 @@ rec_extend_from_top :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
 	return res
 }
 
-rec_take_from_right :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
+rec_take_right :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
 	return {
 		rec.x + rec.width - amount,
 		rec.y,
@@ -53,12 +53,12 @@ rec_take_from_right :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
 	}
 }
 
-rec_delete_from_top :: proc(rec: ^Rec, amount: f32) {
+rec_delete_top :: proc(rec: ^Rec, amount: f32) {
 	rec.y += amount
 	rec.height -= amount
 }
 
-rec_cut_from_top :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
+rec_cut_top :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
 	res = {
 		rec.x,
 		rec.y,
@@ -70,7 +70,7 @@ rec_cut_from_top :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
 	return res
 }
 
-rec_cut_from_left :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
+rec_cut_left :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
 	res = {
 		rec.x,
 		rec.y,
@@ -82,7 +82,7 @@ rec_cut_from_left :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
 	return res
 }
 
-rec_cut_from_right :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
+rec_cut_right :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
 	res = {
 		rec.x + rec.width - amount,
 		rec.y,
