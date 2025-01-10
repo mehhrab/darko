@@ -266,13 +266,13 @@ ui_begin :: proc() {
 		ui_ctx.notif_time += 0.01
 	}
 
+	if rl.IsMouseButtonReleased(.LEFT) || rl.IsMouseButtonReleased(.RIGHT) {
+		ui_ctx.active_textbox = 0
+	}
 }
 
 ui_end :: proc() {
-	if rl.IsMouseButtonReleased(.LEFT) {
-		ui_ctx.active_textbox = 0
-	}
-	if rl.IsMouseButtonReleased(.LEFT) {
+	if rl.IsMouseButtonReleased(.LEFT) || rl.IsMouseButtonReleased(.RIGHT) {
 		ui_ctx.active_widget = 0
 		ui_ctx.active_panel = 0
 	}
@@ -501,7 +501,7 @@ ui_update_widget :: proc(id: UI_ID, rec: Rec, blocking := true) {
 	hovered := ui_is_mouse_in_rec(rec)
 	if hovered && (blocking == false || (ui_ctx.active_widget == 0 || ui_ctx.active_widget == id)) {
 		ui_ctx.hovered_widget = id
-		if rl.IsMouseButtonPressed(.LEFT) {
+		if rl.IsMouseButtonPressed(.LEFT) || rl.IsMouseButtonPressed(.RIGHT) {
 			ui_ctx.active_widget = id
 		}
 	}
@@ -517,7 +517,7 @@ ui_update_panel :: proc(id: UI_ID, rec: Rec) {
 	hovered := ui_is_mouse_in_rec(rec)
 	if hovered && (ui_ctx.active_panel == 0 || ui_ctx.active_panel == id) {
 		ui_ctx.hovered_panel = id
-		if rl.IsMouseButtonPressed(.LEFT) {
+		if rl.IsMouseButtonPressed(.LEFT) || rl.IsMouseButtonPressed(.RIGHT) {
 			ui_ctx.active_panel = id
 		}
 	}
@@ -537,7 +537,7 @@ ui_panel :: proc(id: UI_ID, rec: Rec) {
 ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := UI_BUTTON_STYLE_DEFAULT) -> (clicked: bool) {	
 	clicked = false
 	ui_update_widget(id, rec, blocking)
-	if ui_ctx.hovered_widget == id && rl.IsMouseButtonReleased(.LEFT){
+	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT){
 		clicked = true
 	}
 	color := style.bg_color
@@ -564,7 +564,7 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := 
 ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_width: f32, rec: Rec) -> (clicked_item: UI_Menu_Item) {	
 	clicked_item = {}
 	ui_update_widget(id, rec)
-	if ui_ctx.hovered_widget == id && rl.IsMouseButtonReleased(.LEFT){
+	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT){
 		ui_open_popup(text)	
 	}
 
@@ -615,7 +615,7 @@ ui_check_box :: proc(id: UI_ID, label: string, checked: ^bool, rec: Rec, style :
 		rec.height,
 	}
 	ui_update_widget(id, check_box_rec)
-	if ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT) {
+	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT) {
 		checked^ = !checked^ 
 	}
 	ui_push_command(UI_Draw_Rect {
@@ -677,31 +677,39 @@ ui_slider_f32 :: proc(
 	value_changed: bool,
 ) {
 	ui_update_widget(id, rec)
-	
-	// when right clicked write the value to slider_text_buffer
-	if ui_ctx.hovered_widget == id && rl.IsMouseButtonReleased(.RIGHT) {
-		ui_ctx.active_textbox = id
-		str := fmt.bprintf(ui_ctx.slider_text_buffer.data[:], format, value^)
-	    sa.resize(&ui_ctx.slider_text_buffer, len(str))
+
+	if ui_ctx.active_textbox != id {
+		// when right clicked write the value to slider_text_buffer and goto textmode
+		if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.RIGHT) {
+			ui_ctx.active_textbox = id
+			str := fmt.bprintf(ui_ctx.slider_text_buffer.data[:], format, value^)
+		    sa.resize(&ui_ctx.slider_text_buffer, len(str))
+		}
+		else {
+			value_changed = ui_slider_behaviour_f32(id, value, min, max, rec, step)
+		}
 	}
-	
-	if ui_ctx.active_textbox == id {
+	else {
+		// clear textbox if right or left clicked
+		if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && (rl.IsMouseButtonReleased(.RIGHT) || rl.IsMouseButtonReleased(.LEFT)) {
+			sa.clear(&ui_ctx.slider_text_buffer)
+			ui_ctx.active_textbox = 0
+		}
+
 		// exit text mode when escape key is pressed
 		if rl.IsKeyPressed(.ESCAPE) {
 			sa.clear(&ui_ctx.slider_text_buffer)
 			ui_ctx.active_textbox = 0
 		}
-		// when left clicked and in text mode, apply buffer to value pointer
+
+		// when left clicked and in apply buffer to value pointer
 		if ui_ctx.hovered_widget == id && rl.IsMouseButtonReleased(.LEFT) {
 			number, ok := strconv.parse_f32(string(sa.slice(&ui_ctx.slider_text_buffer)))
 			if ok {
 				value^ = number
 			}
 		}
-	}
 
-	
-	if ui_ctx.active_textbox == id {
 		char := rl.GetCharPressed()
 		switch char {
 			case '0'..='9', '.': {
@@ -725,9 +733,6 @@ ui_slider_f32 :: proc(
 			}
 			ui_ctx.active_textbox = 0
 		}
-	}
-	else {
-		value_changed = ui_slider_behaviour_f32(id, value, min, max, rec, step)
 	}
 
 	progress_rec := rec_pad(rec, 1)
