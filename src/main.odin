@@ -940,51 +940,47 @@ update_tools :: proc(area: Rec) -> (cursor_icon: string) {
 	if rl.IsKeyDown(.LEFT_CONTROL) {
 		if ui_is_mouse_in_rec(area) {
 			if rl.IsMouseButtonPressed(.LEFT) {
-				fmt.printfln("picked")
 				x, y := get_mouse_pos_in_canvas(area)
 				rgb_color := rl.GetImageColor(get_current_layer().image, x, y)
 				if rgb_color.a != 0 {
 					set_pen_color_rgb(rgb_color)
 				}
 			}
-
-			cursor_icon = ICON_EYEDROPPER
 		}
+		cursor_icon = ICON_EYEDROPPER
 	}
 	else {		
 		// pencil
-		if ui_is_mouse_in_rec(area) {
-			if rl.IsMouseButtonDown(.LEFT) {
+		if rl.IsMouseButtonDown(.LEFT) {
+			if ui_is_mouse_in_rec(area) {
 				begin_image_change()
 				x, y := get_mouse_pos_in_canvas(area)
 				rl.ImageDrawPixel(&get_current_layer().image, x, y, get_pen_color_rgb())
-				mark_dirty_layers(app.project.current_layer)
-				
-				cursor_icon = ICON_PEN
+				mark_dirty_layers(app.project.current_layer)	
 			}
+			cursor_icon = ICON_PEN
 		}
 		if rl.IsMouseButtonReleased(.LEFT) {
 			end_image_change()
 		}
 
 		// eraser
-		if ui_is_mouse_in_rec(area) {
-			if rl.IsMouseButtonDown(.RIGHT) {
+		if rl.IsMouseButtonDown(.RIGHT) {
+			if ui_is_mouse_in_rec(area) {
 				begin_image_change()
 				x, y := get_mouse_pos_in_canvas(area)
 				rl.ImageDrawPixel(&get_current_layer().image, x, y, rl.BLANK)
 				mark_dirty_layers(app.project.current_layer)
-				
-				cursor_icon = ICON_ERASER
 			}
+			cursor_icon = ICON_ERASER
 		}
 		if rl.IsMouseButtonReleased(.RIGHT) {
 			end_image_change()
 		}
 
 		// fill
-		if ui_is_mouse_in_rec(area) {
-			if rl.IsMouseButtonPressed(.MIDDLE) {
+		if rl.IsMouseButtonPressed(.MIDDLE) {
+			if ui_is_mouse_in_rec(area) {
 				begin_image_change()
 				x, y := get_mouse_pos_in_canvas(area)
 				fill(&get_current_layer().image, x, y, get_pen_color_rgb())
