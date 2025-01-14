@@ -337,10 +337,6 @@ gui :: proc() {
 	ui_panel(ui_gen_id(), right_panel_area)
 	right_panel_area = rec_pad(right_panel_area, 16)
 	color_panel(&right_panel_area)
-	// ui_push_command(UI_Draw_ColorPicker {
-	// 	h = 150, s = 0.5, v = 0.6,
-	// 	rec = rec_cut_from_top(&right_panel_area, 300),
-	// })
 
 	rec_delete_top(&right_panel_area, 16)
 
@@ -512,9 +508,10 @@ canvas :: proc(rec: Rec) {
 	canvas_h := f32(app.project.height) * 10 * app.lerped_zoom
 	canvas_rec := rec_center_in_area({ 0, 0, canvas_w, canvas_h }, area)
 	
+	cursor_icon := ""
 	if ui_is_being_interacted() == false {
 		update_zoom(&app.project.zoom, 0.3, 0.1, 100)
-		update_tools(canvas_rec)
+		cursor_icon = update_tools(canvas_rec)
 	}
 	
 	ui_push_command(UI_Draw_Canvas {
@@ -531,25 +528,22 @@ canvas :: proc(rec: Rec) {
 		thickness = 1
 	})
 	if ui_is_mouse_in_rec(area) && ui_is_being_interacted() == false {
+		if cursor_icon == "" {
+			cursor_icon = ICON_PEN
+		}
 		rl.HideCursor()
 		mpos := rl.GetMousePosition()
-		// pen
-		icon := ICON_PEN
-		if rl.IsMouseButtonDown(.RIGHT) {
-			// eraser
-			icon = ICON_ERASER
-		}
 		cursor_size := ui_ctx.font_size * 2
 		ui_push_command(UI_Draw_Text {
 			rec = { mpos.x + 1, mpos.y - cursor_size + 5 + 1, 100, 100 },
 			color = rl.BLACK,
-			text = icon,
+			text = cursor_icon,
 			size = cursor_size,
 		})
 		ui_push_command(UI_Draw_Text {
 			rec = { mpos.x, mpos.y - cursor_size + 5, 100, 100 },
 			color = rl.WHITE,
-			text = icon,
+			text = cursor_icon,
 			size = cursor_size,
 		})
 	}
@@ -939,43 +933,67 @@ draw_sprite_stack :: proc(layers: ^[dynamic]Layer, x, y: f32, scale: f32, rotati
 	}
 }
 
-update_tools :: proc(area: Rec) {
-	// pencil
-	if ui_is_mouse_in_rec(area) {
-		if rl.IsMouseButtonDown(.LEFT) {
-			begin_image_change()
-			x, y := get_mouse_pos_in_canvas(area)
-			rl.ImageDrawPixel(&get_current_layer().image, x, y, get_pen_color_rgb())
-			mark_dirty_layers(app.project.current_layer)
-		}	
-	}
-	if rl.IsMouseButtonReleased(.LEFT) {
-		end_image_change()
-	}
+update_tools :: proc(area: Rec) -> (cursor_icon: string) {
+	cursor_icon = ""
 
-	// eraser
-	if ui_is_mouse_in_rec(area) {
-		if rl.IsMouseButtonDown(.RIGHT) {
-			begin_image_change()
-			x, y := get_mouse_pos_in_canvas(area)
-			rl.ImageDrawPixel(&get_current_layer().image, x, y, rl.BLANK)
-			mark_dirty_layers(app.project.current_layer)
+	// color picker
+	if rl.IsKeyDown(.LEFT_CONTROL) {
+		if ui_is_mouse_in_rec(area) {
+			if rl.IsMouseButtonPressed(.LEFT) {
+				fmt.printfln("picked")
+				x, y := get_mouse_pos_in_canvas(area)
+				rgb_color := rl.GetImageColor(get_current_layer().image, x, y)
+				if rgb_color.a != 0 {
+					set_pen_color_rgb(rgb_color)
+				}
+			}
+
+			cursor_icon = ICON_EYEDROPPER
 		}
 	}
-	if rl.IsMouseButtonReleased(.RIGHT) {
-		end_image_change()
-	}
-
-	// fill
-	if ui_is_mouse_in_rec(area) {
-		if rl.IsMouseButtonPressed(.MIDDLE) {
-			begin_image_change()
-			x, y := get_mouse_pos_in_canvas(area)
-			fill(&get_current_layer().image, x, y, get_pen_color_rgb())
-			mark_dirty_layers(app.project.current_layer)
+	else {		
+		// pencil
+		if ui_is_mouse_in_rec(area) {
+			if rl.IsMouseButtonDown(.LEFT) {
+				begin_image_change()
+				x, y := get_mouse_pos_in_canvas(area)
+				rl.ImageDrawPixel(&get_current_layer().image, x, y, get_pen_color_rgb())
+				mark_dirty_layers(app.project.current_layer)
+				
+				cursor_icon = ICON_PEN
+			}
+		}
+		if rl.IsMouseButtonReleased(.LEFT) {
 			end_image_change()
 		}
+
+		// eraser
+		if ui_is_mouse_in_rec(area) {
+			if rl.IsMouseButtonDown(.RIGHT) {
+				begin_image_change()
+				x, y := get_mouse_pos_in_canvas(area)
+				rl.ImageDrawPixel(&get_current_layer().image, x, y, rl.BLANK)
+				mark_dirty_layers(app.project.current_layer)
+				
+				cursor_icon = ICON_ERASER
+			}
+		}
+		if rl.IsMouseButtonReleased(.RIGHT) {
+			end_image_change()
+		}
+
+		// fill
+		if ui_is_mouse_in_rec(area) {
+			if rl.IsMouseButtonPressed(.MIDDLE) {
+				begin_image_change()
+				x, y := get_mouse_pos_in_canvas(area)
+				fill(&get_current_layer().image, x, y, get_pen_color_rgb())
+				mark_dirty_layers(app.project.current_layer)
+				end_image_change()
+			}
+		}
 	}
+	return cursor_icon
 }
 
 begin_image_change :: proc() {
@@ -1075,6 +1093,14 @@ get_pen_color_rgb :: proc() -> rl.Color {
 
 get_pen_color_hsv :: proc() -> HSV {
 	return app.project.current_color
+}
+
+set_pen_color_rgb :: proc(rgb: rl.Color) {
+	app.project.current_color = HSV(rl.ColorToHSV(rgb))
+}
+
+set_pen_color_hsv :: proc(hsv: HSV) {
+	app.project.current_color = hsv
 }
 
 hsv_to_rgb :: proc(hsv: HSV) -> (rgb: rl.Color) {

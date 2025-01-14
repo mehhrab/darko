@@ -197,6 +197,7 @@ UI_CHECKBOX_STYLE_DEFAULT :: UI_CHECKBOX_STYLE {
 
 ICON_PEN :: "\uf8ea"
 ICON_ERASER :: "\uf6fd"
+ICON_EYEDROPPER :: "\uf709"
 ICON_TRASH :: "\uf6bf"
 ICON_UP :: "\ufc35"
 ICON_DOWN :: "\ufc2c"
@@ -212,7 +213,8 @@ ui_init_ctx :: proc() {
 
 	CHARS :: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789… ~!@#$%^&*()-|\"':;_+={}[]\\/`,.<>?"
 	ICONS :: ICON_PEN + 
-	ICON_ERASER + 
+	ICON_ERASER +
+	ICON_EYEDROPPER + 
 	ICON_TRASH + 
 	ICON_UP + 
 	ICON_DOWN + 
