@@ -12,6 +12,7 @@ import "core:slice"
 import ntf "../lib/nativefiledialog-odin"
 
 LOCK_FPS :: #config(LOCK_FPS, true)
+HSV :: distinct [3]f32
 
 App :: struct {
 	project: Project,
@@ -34,7 +35,7 @@ Project :: struct {
 	name: string,
 	zoom: f32,
 	spacing: f32,
-	current_color: rl.Color,
+	current_color: HSV,
 	width, height: i32,
 	current_layer: int,
 	layers: [dynamic]Layer `json:"-"`,
@@ -561,7 +562,7 @@ color_panel :: proc(area: ^Rec) {
 	// preview color
 	preview_area := rec_cut_top(area, ui_ctx.default_widget_height * 3)
 	ui_push_command(UI_Draw_Rect {
-		color = app.project.current_color,
+		color = hsv_to_rgb(app.project.current_color),
 		rec = preview_area,
 	})
 	ui_push_command(UI_Draw_Rect_Outline {
@@ -571,8 +572,7 @@ color_panel :: proc(area: ^Rec) {
 	})
 	rec_delete_top(area, 8)
 
-	@(static)
-	hsv_color := [3]f32 { 0, 0, 0 }
+	hsv_color := get_pen_color_hsv()
 
 	// not sure if it's actually called grip...
 	draw_grip :: proc(value, min, max: f32, rec: Rec) {
@@ -647,7 +647,7 @@ color_panel :: proc(area: ^Rec) {
 	sat_color := hsv_color
 	sat_color[1] = 1
 	left_color := rl.ColorLerp(rl.WHITE, rl.BLACK, 1 - hsv_color[2])
-	right_color := rl.ColorFromHSV(sat_color[0], sat_color[1], sat_color[2])
+	right_color := hsv_to_rgb(sat_color)
 	right_color = rl.ColorLerp(right_color, rl.BLACK, 1 - hsv_color[2])
 	ui_push_command(UI_Draw_Gradient_H {
 		left_color = left_color,
@@ -673,9 +673,8 @@ color_panel :: proc(area: ^Rec) {
 	})
 	draw_grip(hsv_color[2], 0, 1, value_rec)
 
-
 	if hue_changed || saturation_changed || value_changed  {
-		app.project.current_color = rl.ColorFromHSV(hsv_color[0], hsv_color[1], hsv_color[2])
+		app.project.current_color = hsv_color
 	}
 }
 
@@ -772,7 +771,7 @@ init_project :: proc(project: ^Project, width, height: i32) {
 	project.width = width
 	project.height = height
 	project.layers = make([dynamic]Layer)
-	project.current_color = { 10, 10, 10, 255 }
+	project.current_color = { 200, 0.5, 0.1 }
 	
 	{
 		layer: Layer
@@ -946,7 +945,7 @@ update_tools :: proc(area: Rec) {
 		if rl.IsMouseButtonDown(.LEFT) {
 			begin_image_change()
 			x, y := get_mouse_pos_in_canvas(area)
-			rl.ImageDrawPixel(&get_current_layer().image, x, y, app.project.current_color)
+			rl.ImageDrawPixel(&get_current_layer().image, x, y, get_pen_color_rgb())
 			mark_dirty_layers(app.project.current_layer)
 		}	
 	}
@@ -972,7 +971,7 @@ update_tools :: proc(area: Rec) {
 		if rl.IsMouseButtonPressed(.MIDDLE) {
 			begin_image_change()
 			x, y := get_mouse_pos_in_canvas(area)
-			fill(&get_current_layer().image, x, y, app.project.current_color)
+			fill(&get_current_layer().image, x, y, get_pen_color_rgb())
 			mark_dirty_layers(app.project.current_layer)
 			end_image_change()
 		}
@@ -1067,4 +1066,17 @@ draw_grid :: proc(rec: Rec) {
 		rl.DrawLineV({ rec.x, y }, { rec.x + rec.width, y }, rl.BLACK)
 		y += y_step
 	}
+}
+
+// TODO: find a better name for pen?
+get_pen_color_rgb :: proc() -> rl.Color {
+	return hsv_to_rgb(app.project.current_color)
+}
+
+get_pen_color_hsv :: proc() -> HSV {
+	return app.project.current_color
+}
+
+hsv_to_rgb :: proc(hsv: HSV) -> (rgb: rl.Color) {
+	return rl.ColorFromHSV(hsv[0], hsv[1], hsv[2])
 }
