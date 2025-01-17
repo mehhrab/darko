@@ -233,9 +233,15 @@ main :: proc() {
 	open_project(&project)
 
 	for rl.WindowShouldClose() == false {
-		gui()
-
 		// update
+		if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.EQUAL) {
+			ui_set_scale(ui_ctx.scale + 0.1)
+		}
+		if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.MINUS) {
+			ui_set_scale(ui_ctx.scale - 0.1)
+		}
+
+		gui()
 
 		if ui_ctx.open_popup.name == "" {
 			// create new layer above the current
@@ -321,24 +327,24 @@ gui :: proc() {
 	ui_begin()
 
 	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
-	menu_bar_area := rec_cut_top(&screen_rec, ui_ctx.default_widget_height)
+	menu_bar_area := rec_cut_top(&screen_rec, ui_default_widget_height())
 	menu_bar(menu_bar_area)
 
 	screen_area := screen_rec
 
-	right_panel_area := rec_cut_right(&screen_area, screen_area.width / 3)
+	right_panel_area := rec_cut_right(&screen_area, ui_px(screen_area.width / 3))
 	middle_panel_area := screen_area
 	
-	layer_props_area := rec_cut_top(&middle_panel_area, ui_ctx.default_widget_height + 16)
+	layer_props_area := rec_cut_top(&middle_panel_area, ui_default_widget_height() + ui_px(16))
 	layer_props(layer_props_area)
 
 	canvas(middle_panel_area)
 	
 	ui_panel(ui_gen_id(), right_panel_area)
-	right_panel_area = rec_pad(right_panel_area, 16)
+	right_panel_area = rec_pad(right_panel_area, ui_px(16))
 	color_panel(&right_panel_area)
 
-	rec_delete_top(&right_panel_area, 16)
+	rec_delete_top(&right_panel_area, ui_px(16))
 
 	preview(right_panel_area)
 	
@@ -432,7 +438,7 @@ menu_bar :: proc(area: Rec) {
 
 layer_props :: proc(rec: Rec) {
 	ui_panel(ui_gen_id(), rec)
-	props_area := rec_pad_ex(rec, 8, 8, 8, 8)
+	props_area := rec_pad(rec, ui_px(8))
 	
 	// draw current layer index and layer count
 	current_layer := app.project.current_layer + 1
@@ -441,12 +447,12 @@ layer_props :: proc(rec: Rec) {
 		align = { .Left, .Center },
 		color = ui_ctx.text_color,
 		rec = props_area,
-		size = ui_ctx.font_size,
+		size = ui_font_size(),
 		text = fmt.tprintf("layer {}/{}", current_layer, layer_count),
 	})
 
 	// delete button
-	delete_rec := rec_cut_right(&props_area, ui_ctx.default_widget_height)
+	delete_rec := rec_cut_right(&props_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_TRASH, delete_rec, style = UI_BUTTON_STYLE_RED) {
 		if len(app.project.layers) <= 1 {
 			ui_show_notif("At least one layer is needed")
@@ -461,8 +467,8 @@ layer_props :: proc(rec: Rec) {
 
 
 	// move up button
-	rec_cut_right(&props_area, 8)
-	move_up_rec := rec_cut_right(&props_area, ui_ctx.default_widget_height)
+	rec_cut_right(&props_area, ui_px(8))
+	move_up_rec := rec_cut_right(&props_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_UP, move_up_rec, style = UI_BUTTON_STYLE_ACCENT) {
 		if len(app.project.layers) > 1 && app.project.current_layer < len(app.project.layers) - 1 {
 			action_do(Action_Change_Layer_Index {
@@ -473,8 +479,7 @@ layer_props :: proc(rec: Rec) {
 	}
 
 	// move down button
-	rec_cut_right(&props_area, 0)
-	move_down_rec := rec_cut_right(&props_area, ui_ctx.default_widget_height)
+	move_down_rec := rec_cut_right(&props_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_DOWN, move_down_rec, style = UI_BUTTON_STYLE_ACCENT) {
 		if len(app.project.layers) > 1 && app.project.current_layer > 0 {
 			action_do(Action_Change_Layer_Index {
@@ -485,8 +490,8 @@ layer_props :: proc(rec: Rec) {
 	}
 
 	// duplicate button
-	rec_cut_right(&props_area, 8)
-	duplicate_rec := rec_cut_right(&props_area, ui_ctx.default_widget_height)
+	rec_cut_right(&props_area, ui_px(8))
+	duplicate_rec := rec_cut_right(&props_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_COPY, duplicate_rec, style = UI_BUTTON_STYLE_ACCENT) {
 		action_do(Action_Duplicate_Layer {
 			from_index = app.project.current_layer,
@@ -533,7 +538,7 @@ canvas :: proc(rec: Rec) {
 		}
 		rl.HideCursor()
 		mpos := rl.GetMousePosition()
-		cursor_size := ui_ctx.font_size * 2
+		cursor_size := ui_font_size() * 2
 		ui_push_command(UI_Draw_Text {
 			rec = { mpos.x + 1, mpos.y - cursor_size + 5 + 1, 100, 100 },
 			color = rl.BLACK,
@@ -554,7 +559,7 @@ canvas :: proc(rec: Rec) {
 
 color_panel :: proc(area: ^Rec) {		
 	// preview color
-	preview_area := rec_cut_top(area, ui_ctx.default_widget_height * 3)
+	preview_area := rec_cut_top(area, ui_default_widget_height() * 3)
 	ui_push_command(UI_Draw_Rect {
 		color = hsv_to_rgb(app.project.current_color),
 		rec = preview_area,
@@ -564,13 +569,13 @@ color_panel :: proc(area: ^Rec) {
 		rec = preview_area,
 		thickness = 1,
 	})
-	rec_delete_top(area, 8)
+	rec_delete_top(area, ui_px(8))
 
 	hsv_color := get_pen_color_hsv()
 
 	// not sure if it's actually called grip...
 	draw_grip :: proc(value, min, max: f32, rec: Rec) {
-		grip_width := f32(10)
+		grip_width := ui_px(10)
 		grip_x := (value - min) * (rec.width) / (max - min) - grip_width / 2
 		g_rec := Rec { rec.x + grip_x, rec.y, grip_width, rec.height }
 		ui_push_command(UI_Draw_Rect_Outline {
@@ -586,7 +591,7 @@ color_panel :: proc(area: ^Rec) {
 	}
 
 	// hue slider
-	hue_rec := rec_cut_top(area, ui_ctx.default_widget_height)
+	hue_rec := rec_cut_top(area, ui_default_widget_height())
 	hue_changed := ui_slider_behaviour_f32(ui_gen_id(), &hsv_color[0], 0, 360, hue_rec)
 	ui_push_command(UI_Draw_Rect {
 		color = ui_ctx.border_color,
@@ -628,10 +633,10 @@ color_panel :: proc(area: ^Rec) {
 
 	draw_grip(hsv_color[0], 0, 360, hue_rec)
 
-	rec_delete_top(area, 8)
+	rec_delete_top(area, ui_px(8))
 
 	// saturation slider
-	saturation_rec := rec_cut_top(area, ui_ctx.default_widget_height)
+	saturation_rec := rec_cut_top(area, ui_default_widget_height())
 	saturation_changed := ui_slider_behaviour_f32(ui_gen_id(), &hsv_color[1], 0, 1, saturation_rec)
 	ui_push_command(UI_Draw_Rect {
 		color = ui_ctx.border_color,
@@ -650,10 +655,10 @@ color_panel :: proc(area: ^Rec) {
 	})
 	draw_grip(hsv_color[1], 0, 1, saturation_rec)
 
-	rec_delete_top(area, 8)
+	rec_delete_top(area, ui_px(8))
 	
 	// value slider
-	value_rec := rec_cut_top(area, ui_ctx.default_widget_height)
+	value_rec := rec_cut_top(area, ui_default_widget_height())
 	value_changed := ui_slider_behaviour_f32(ui_gen_id(), &hsv_color[2], 0, 1, value_rec)
 	ui_push_command(UI_Draw_Rect {
 		color = ui_ctx.border_color,
@@ -694,10 +699,10 @@ preview :: proc(rec: Rec) {
 		rec = area,
 	})
 	settings_rec := Rec {
-		area.x + area.width - ui_ctx.default_widget_height - 8,
-		area.y + 8,
-		ui_ctx.default_widget_height,
-		ui_ctx.default_widget_height,
+		area.x + area.width - ui_default_widget_height() - ui_px(8),
+		area.y + ui_px(8),
+		ui_default_widget_height(),
+		ui_default_widget_height(),
 	}
 	prev_font_size := ui_ctx.font_size
 	ui_ctx.font_size = 20
@@ -712,14 +717,17 @@ preview :: proc(rec: Rec) {
 
 new_file_popup :: proc() {
 	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
-
-	popup_rec := rec_center_in_area({ 0, 0, 400, 150 }, screen_rec)
+	
+	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
+	popup_rec := rec_center_in_area({ 0, 0, ui_px(400), popup_h }, screen_rec)
 	if open, rec := ui_begin_popup_with_header("New file", ui_gen_id(), popup_rec); open {
-		area := rec_pad(rec, 16)
-		ui_slider_i32(ui_gen_id(), "Width", &app.width, 2, 30, rec_cut_top(&area, ui_ctx.default_widget_height))
-		rec_delete_top(&area, 8)
-		ui_slider_i32(ui_gen_id(), "Height", &app.height, 2, 30, rec_cut_top(&area, ui_ctx.default_widget_height))
-		rec_delete_top(&area, 8)
+		area := rec_pad(rec, ui_px(16))
+		ui_slider_i32(ui_gen_id(), "Width", &app.width, 2, 30, rec_cut_top(&area, ui_default_widget_height()))
+		rec_delete_top(&area, ui_px(8))
+		
+		ui_slider_i32(ui_gen_id(), "Height", &app.height, 2, 30, rec_cut_top(&area, ui_default_widget_height()))
+		rec_delete_top(&area, ui_px(8))
+		
 		if ui_button(ui_gen_id(), "Create", area) {
 			close_project()
 
@@ -727,6 +735,7 @@ new_file_popup :: proc() {
 			init_project(&project, app.width, app.height)
 			open_project(&project)
 			ui_close_current_popup()
+		
 			ui_show_notif(ICON_CHECK + " Project is created")
 		}	
 	}
@@ -735,15 +744,19 @@ new_file_popup :: proc() {
 
 preview_settings_popup :: proc() {
 	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
-	popup_area := rec_center_in_area({ 0, 0, 300, 200 }, screen_rec)
+	
+	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
+	popup_area := rec_center_in_area({ 0, 0, ui_px(300), popup_h }, screen_rec)
 	if open, rec := ui_begin_popup_with_header("Preview settings", ui_gen_id(), popup_area); open {
-		area := rec_pad(rec, 16)
-		auto_rotate_rec := rec_cut_top(&area, ui_ctx.default_widget_height)
+		area := rec_pad(rec, ui_px(16))
+		auto_rotate_rec := rec_cut_top(&area, ui_default_widget_height())
 		ui_check_box(ui_gen_id(),"Auto rotate", &app.auto_rotate_preview, auto_rotate_rec)
-		rec_delete_top(&area, 8)
-		ui_slider_f32(ui_gen_id(), "Rotation speed", &app.preview_rotation_speed, 5, 30, rec_cut_top(&area, ui_ctx.default_widget_height))
-		rec_delete_top(&area, 8)
-		ui_slider_f32(ui_gen_id(), "Spacing", &app.project.spacing, 0.1, 2, rec_cut_top(&area, ui_ctx.default_widget_height))
+		rec_delete_top(&area, ui_px(8))
+
+		ui_slider_f32(ui_gen_id(), "Rotation speed", &app.preview_rotation_speed, 5, 30, rec_cut_top(&area, ui_default_widget_height()))
+		rec_delete_top(&area, ui_px(8))
+		
+		ui_slider_f32(ui_gen_id(), "Spacing", &app.project.spacing, 0.1, 2, rec_cut_top(&area, ui_default_widget_height()))
 	}
 	ui_end_popup()
 }

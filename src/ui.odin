@@ -29,10 +29,10 @@ UI_Ctx :: struct {
 
 	// style:
 
+	scale: f32,
 	font: rl.Font,
 	font_size: f32,
 	roundness: f32,
-	header_height: f32,
 	text_align: UI_Align,
 	default_widget_height: f32,
 
@@ -209,8 +209,28 @@ ICON_CHECK :: "\uf62b"
 ui_ctx: UI_Ctx
 
 ui_init_ctx :: proc() {	
-	ui_ctx.font_size = 18
+	ui_ctx.scale = 1
+	ui_ctx.font_size = 18 
 
+	ui_load_font(i32(ui_font_size() * 2))
+	
+	ui_ctx.text_align = { .Center, .Center }
+	ui_ctx.default_widget_height = 32
+
+	ui_ctx.text_color = { 200, 209, 218, 255 }
+	ui_ctx.panel_color = { 33, 40, 48, 255 }
+	ui_ctx.accent_color = { 176, 131, 240, 255 }
+	ui_ctx.border_color = { 20, 23, 28, 255 }
+	ui_ctx.widget_color = { 61, 68, 77, 255 }
+	ui_ctx.widget_hover_color = { 101, 108, 118, 255 }
+	ui_ctx.widget_active_color = { 101, 108, 118, 255 }
+}
+
+ui_deinit_ctx :: proc() {
+	rl.UnloadFont(ui_ctx.font)
+}
+
+ui_load_font :: proc(size: i32) {
 	CHARS :: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789… ~!@#$%^&*()-|\"':;_+={}[]\\/`,.<>?"
 	ICONS :: ICON_PEN + 
 	ICON_ERASER +
@@ -231,26 +251,10 @@ ui_init_ctx :: proc() {
 		".ttf", 
 		raw_data(font_data), 
 		i32(len(font_data)), 
-		i32(ui_ctx.font_size * 2.5), 
+		i32(size), 
 		code_points,
 		code_point_count)
 	rl.SetTextureFilter(ui_ctx.font.texture, .BILINEAR)
-	
-	ui_ctx.text_align = { .Center, .Center }
-	ui_ctx.default_widget_height = 32
-	ui_ctx.header_height = ui_ctx.default_widget_height * 1.2
-
-	ui_ctx.text_color = { 200, 209, 218, 255 }
-	ui_ctx.panel_color = { 33, 40, 48, 255 }
-	ui_ctx.accent_color = { 176, 131, 240, 255 }
-	ui_ctx.border_color = { 20, 23, 28, 255 }
-	ui_ctx.widget_color = { 61, 68, 77, 255 }
-	ui_ctx.widget_hover_color = { 101, 108, 118, 255 }
-	ui_ctx.widget_active_color = { 101, 108, 118, 255 }
-}
-
-ui_deinit_ctx :: proc() {
-	rl.UnloadFont(ui_ctx.font)
 }
 
 ui_begin :: proc() {
@@ -307,7 +311,7 @@ ui_draw :: proc() {
 		text := strings.clone_to_cstring(ui_ctx.notif_text, context.temp_allocator)
 		offset := f32(80)
 		padding := f32(10)
-		text_size := rl.MeasureTextEx(ui_ctx.font, text, ui_ctx.font_size, 0)
+		text_size := rl.MeasureTextEx(ui_ctx.font, text, ui_font_size(), 0)
 		notif_w := text_size.x + padding * 2
 		notif_h := text_size.y + padding * 2
 		notif_x := ww / 2 - text_size.x / 2 + padding
@@ -328,7 +332,7 @@ ui_draw :: proc() {
 		if ui_ctx.notif_text != "" {
 			notif_y += padding
 			rl.DrawRectangleRec({ notif_x, notif_y, notif_w, notif_h }, ui_ctx.accent_color)
-			rl.DrawTextEx(ui_ctx.font, text, { notif_x + padding, notif_y + padding }, ui_ctx.font_size, 0, { 35, 38, 52, 255 })
+			rl.DrawTextEx(ui_ctx.font, text, { notif_x + padding, notif_y + padding }, ui_font_size(), 0, { 35, 38, 52, 255 })
 		}
 	}	
 
@@ -412,7 +416,7 @@ ui_process_commands :: proc(commands: []UI_Draw_Command) {
 				rl.DrawRectangleGradientV(x, y, w, h, ui_ctx.panel_color, ui_ctx.widget_hover_color)
 				px, py := rec_get_center_point(kind.rec)
 				draw_sprite_stack(&app.project.layers, px, py, app.lerped_preview_zoom, app.preview_rotation, app.project.spacing)
-				rl.DrawTextEx(ui_ctx.font, "PREVIEW", { kind.rec.x + 10, kind.rec.y + 10 }, ui_ctx.font_size * 1.4, 0, { 255, 255, 255, 100 })
+				rl.DrawTextEx(ui_ctx.font, "PREVIEW", { kind.rec.x + 10, kind.rec.y + 10 }, ui_font_size() * 1.4, 0, { 255, 255, 255, 100 })
 				rl.EndScissorMode()
 				rl.DrawRectangleLinesEx(kind.rec, 1, ui_ctx.border_color)
 			}
@@ -452,9 +456,9 @@ ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: 
 	if name == ui_ctx.open_popup.name {
 		ui_ctx.open_popup.show_header = true
 		area := rec
-		header_area := rec_extend_top(&area, ui_ctx.header_height) 
+		header_area := rec_extend_top(&area, ui_default_widget_height() + ui_px(8)) 
 		ui_ctx.open_popup.rec = area
-		x_rec := rec_pad(rec_take_right(&header_area, header_area.height), 8)
+		x_rec := rec_pad(rec_take_right(&header_area, header_area.height), ui_px(8))
 		style := UI_BUTTON_STYLE_TRANSPARENT
 		style.text_color = ui_ctx.border_color
 		if ui_button(id, ICON_X, x_rec, style = style) {
@@ -475,17 +479,18 @@ ui_end_popup :: proc() {
 		rec = ui_ctx.open_popup.rec,
 	}, 1)
 	if ui_ctx.open_popup.show_header {
+		header_height := ui_default_widget_height() + ui_px(8)
 		sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Gradient_H {
 			right_color = ui_ctx.accent_color,
 			left_color = { 242, 131, 240, 255 },
-			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, ui_ctx.header_height },
+			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, header_height },
 		}, 2)
 		sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Text {
 			color = ui_ctx.border_color,
-			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, ui_ctx.header_height },
+			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, header_height },
 			text = ui_ctx.open_popup.name,
 			align = { .Center, .Center },
-			size = ui_ctx.font_size * 1.2,
+			size = ui_font_size(),
 		}, 3)
 	}
 	ui_ctx.current_popup = ""
@@ -556,7 +561,7 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := 
 	ui_push_command(UI_Draw_Text {
 		rec = rec_pad(rec, 10),
 		text = text,
-		size = ui_ctx.font_size,
+		size = ui_font_size(),
 		color = style.text_color,
 		align = style.text_align,
 	})
@@ -565,13 +570,16 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := 
 
 ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_width: f32, rec: Rec) -> (clicked_item: UI_Menu_Item) {	
 	clicked_item = {}
+
+	item_width := item_width * ui_ctx.scale
+
 	ui_update_widget(id, rec)
 	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT){
 		ui_open_popup(text)	
 	}
 
 	padding := f32(10)
-	item_height := f32(ui_ctx.default_widget_height)
+	item_height := ui_default_widget_height()
 	if ui_begin_popup(text, { rec.x + 10, rec.y + rec.height + padding, item_width, item_height * f32(len(items^)) }) {
 		// HACK: add an option for disabling popup backaground
 		ui_ctx.open_popup.open_time = 0
@@ -602,7 +610,7 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 	ui_push_command(UI_Draw_Text {
 		rec = rec,
 		text = text,
-		size = ui_ctx.font_size,
+		size = ui_font_size(),
 		color = ui_ctx.text_color,
 		align = ui_ctx.text_align,	
 	})
@@ -611,9 +619,9 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 
 ui_check_box :: proc(id: UI_ID, label: string, checked: ^bool, rec: Rec, style := UI_CHECKBOX_STYLE_DEFAULT) {
 	check_box_rec := Rec {
-		rec.x + rec.width - ui_ctx.default_widget_height,
+		rec.x + rec.width - ui_default_widget_height(),
 		rec.y,
-		ui_ctx.default_widget_height,
+		ui_default_widget_height(),
 		rec.height,
 	}
 	ui_update_widget(id, check_box_rec)
@@ -626,7 +634,7 @@ ui_check_box :: proc(id: UI_ID, label: string, checked: ^bool, rec: Rec, style :
 	})
 	if checked^ {		
 		ui_push_command(UI_Draw_Rect {
-			rec = rec_pad(check_box_rec, 8),
+			rec = rec_pad(check_box_rec, ui_px(8)),
 			color = style.check_color,
 		})
 	}
@@ -634,7 +642,7 @@ ui_check_box :: proc(id: UI_ID, label: string, checked: ^bool, rec: Rec, style :
 		rec = rec,
 		align = { .Left, .Center },
 		color = style.text_color,
-		size = ui_ctx.font_size,
+		size = ui_font_size(),
 		text = label,
 	})
 }
@@ -749,8 +757,8 @@ ui_slider_f32 :: proc(
 		ui_push_command(UI_Draw_Text {
 			align = { .Left, .Center },
 			color = style.text_color,
-			rec = rec_pad(rec, 8),
-			size = ui_ctx.font_size,
+			rec = rec_pad(rec, ui_px(8)),
+			size = ui_font_size(),
 			text = string(sa.slice(&ui_ctx.slider_text_buffer)),
 		})
 		ui_push_command(UI_Draw_Rect_Outline {
@@ -771,7 +779,7 @@ ui_slider_f32 :: proc(
 		ui_push_command(UI_Draw_Text {
 			rec = rec_pad(rec, 10),
 			text = label,
-			size = ui_ctx.font_size,
+			size = ui_font_size(),
 			color = style.text_color,
 			align = { .Left, .Center },	
 		})
@@ -779,14 +787,14 @@ ui_slider_f32 :: proc(
 		ui_push_command(UI_Draw_Text {
 			rec = rec_pad({ rec.x + 2, rec.y + 2, rec.width, rec.height }, 10),
 			text = text,
-			size = ui_ctx.font_size,
+			size = ui_font_size(),
 			color = style.bg_color,
 			align = { .Right, .Center },
 		})
 		ui_push_command(UI_Draw_Text {
 			rec = rec_pad(rec, 10),
 			text = text,
-			size = ui_ctx.font_size,
+			size = ui_font_size(),
 			color = style.text_color,
 			align = { .Right, .Center },	
 		})
@@ -832,4 +840,29 @@ ui_is_being_interacted :: proc() -> (res: bool) {
 ui_is_mouse_in_rec :: proc(rec: Rec) -> (is_inside: bool) {
 	mpos := rl.GetMousePosition()
 	return mpos.x > rec.x && mpos.y > rec.y && mpos.x < rec.x + rec.width && mpos.y < rec.y + rec.height
+}
+
+ui_calc_popup_height :: proc(item_count: i32, item_h, seprator_h, padding: f32) -> (height: f32) {
+	return item_h * f32(item_count) + seprator_h * (f32(item_count) - 1) + padding * 2 
+}
+
+// not sure if px is the right name...
+// returns v multiplied by ui scale 
+ui_px :: #force_inline proc(v: f32) -> (px: f32) {
+	return v * ui_ctx.scale
+}
+
+// returns default widget height multiplied by ui scale 
+ui_default_widget_height :: #force_inline proc() -> (height: f32) {
+	return ui_px(ui_ctx.default_widget_height)
+}
+
+// returns font size multiplied by ui scale 
+ui_font_size :: #force_inline proc() -> (size: f32) {
+	return ui_px(ui_ctx.font_size)
+}
+
+ui_set_scale :: proc(scale: f32) {
+	ui_ctx.scale = scale
+	ui_load_font(i32(ui_font_size() * 2))
 }
