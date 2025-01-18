@@ -142,7 +142,7 @@ UI_Button_Style :: struct {
 UI_BUTTON_STYLE_DEFAULT :: UI_Button_Style {
 	bg_color = { 61, 68, 77, 255 },
 	bg_color_hovered = { 101, 108, 118, 255 },
-	bg_color_active = { 101, 108, 118, 255 },
+	bg_color_active = { 121, 128, 138, 255 },
 	text_color = { 200, 209, 218, 255 },
 	text_align = { .Center, .Center },
 }
@@ -150,23 +150,23 @@ UI_BUTTON_STYLE_DEFAULT :: UI_Button_Style {
 UI_BUTTON_STYLE_TRANSPARENT :: UI_Button_Style {
 	bg_color = rl.BLANK,
 	bg_color_hovered = { 101, 108, 118, 255 },
-	bg_color_active = { 101, 108, 118, 255 },
+	bg_color_active = { 121, 128, 138, 255 },
 	text_color = { 200, 209, 218, 255 },
 	text_align = { .Center, .Center },
 }
 
 UI_BUTTON_STYLE_ACCENT :: UI_Button_Style {
 	bg_color = rl.BLANK,
-	bg_color_hovered = { 101, 108, 118, 255 },
-	bg_color_active = { 101, 108, 118, 255 },
+	bg_color_hovered = { 190, 141, 255, 45 },
+	bg_color_active = { 190, 141, 255, 90 },
 	text_color = { 190, 141, 255, 255 },
 	text_align = { .Center, .Center },
 }
 
 UI_BUTTON_STYLE_RED :: UI_Button_Style {
 	bg_color = rl.BLANK,
-	bg_color_hovered = { 101, 108, 118, 255 },
-	bg_color_active = { 101, 108, 118, 255 },
+	bg_color_hovered = { 255, 101, 125, 45 },
+	bg_color_active = { 255, 101, 125, 90 },
 	text_color = { 255, 101, 125, 255 },
 	text_align = { .Center, .Center },
 }
