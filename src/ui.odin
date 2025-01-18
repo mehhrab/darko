@@ -863,6 +863,9 @@ ui_font_size :: #force_inline proc() -> (size: f32) {
 }
 
 ui_set_scale :: proc(scale: f32) {
+	if scale <= 0 {
+		return
+	}
 	ui_ctx.scale = scale
 	ui_load_font(i32(ui_font_size() * 2))
 }
