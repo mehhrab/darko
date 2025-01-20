@@ -275,6 +275,8 @@ ui_begin :: proc() {
 	if rl.IsMouseButtonReleased(.LEFT) || rl.IsMouseButtonReleased(.RIGHT) {
 		ui_ctx.active_textbox = 0
 	}
+	
+	ui_ctx.hovered_widget = 0
 }
 
 ui_end :: proc() {
@@ -389,24 +391,30 @@ ui_process_commands :: proc(commands: []UI_Draw_Command) {
 				rl.DrawRectangleGradientH(x, y, w, h, kind.left_color, kind.right_color)
 			}
 			case UI_Draw_Canvas: {
+				project, project_exists := app.state.(Project_State)
+				
 				rl.BeginScissorMode(
 					i32(kind.panel_rec.x), 
 					i32(kind.panel_rec.y), 
 					i32(kind.panel_rec.width), 
 					i32(kind.panel_rec.height))
-				draw_canvas(kind.rec)
+				draw_canvas(&project, kind.rec)
 				rl.EndScissorMode()
 			}
 			case UI_Draw_Grid: {
+				project, project_exists := app.state.(Project_State)
+
 				rl.BeginScissorMode(
 					i32(kind.panel_rec.x), 
 					i32(kind.panel_rec.y), 
 					i32(kind.panel_rec.width), 
 					i32(kind.panel_rec.height))
-				draw_grid(kind.rec)
+				draw_grid(project.width, project.height, kind.rec)
 				rl.EndScissorMode()
 			}
 			case UI_Draw_Preview: {
+				// FIX this as soon as possible
+				project, project_exists := app.state.(Project_State)
 				x := i32(math.round(kind.rec.x))
 				y := i32(math.round(kind.rec.y))
 				w := i32(math.round(kind.rec.width))
@@ -415,7 +423,7 @@ ui_process_commands :: proc(commands: []UI_Draw_Command) {
 				rl.BeginScissorMode(x, y, w, h)
 				rl.DrawRectangleGradientV(x, y, w, h, ui_ctx.panel_color, ui_ctx.widget_hover_color)
 				px, py := rec_get_center_point(kind.rec)
-				draw_sprite_stack(&app.project.layers, px, py, app.lerped_preview_zoom, app.preview_rotation, app.project.spacing)
+				draw_sprite_stack(&project.layers, px, py, project.lerped_preview_zoom, project.preview_rotation, project.spacing)
 				rl.DrawTextEx(ui_ctx.font, "PREVIEW", { kind.rec.x + 10, kind.rec.y + 10 }, ui_font_size() * 1.4, 0, { 255, 255, 255, 100 })
 				rl.EndScissorMode()
 				rl.DrawRectangleLinesEx(kind.rec, 1, ui_ctx.border_color)
