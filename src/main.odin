@@ -13,6 +13,8 @@ import ntf "../lib/nativefiledialog-odin"
 
 LOCK_FPS :: #config(LOCK_FPS, true)
 HSV :: distinct [3]f32
+POPUP_NEW_PROJECT :: "New project"
+POPUP_PREVIEW_SETTINGS :: "Preview settings"
 
 App :: struct {
 	state: Screen_State,
@@ -359,7 +361,7 @@ welcome_screen :: proc() {
 	})
 	buttons_area := rec_cut_top(&screen_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), "New", rec_cut_left(&buttons_area, buttons_area.width / 2 - ui_px(8))) {
-		ui_open_popup("New file")
+		ui_open_popup(POPUP_NEW_PROJECT)
 	}
 	rec_cut_left(&buttons_area, ui_px(8))
 	if ui_button(ui_gen_id(), "Open", rec_cut_left(&buttons_area, buttons_area.width - ui_px(8))) {
@@ -438,7 +440,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 	menu_items_slice := menu_items[:]
 	clicked_item := ui_menu_button(ui_gen_id(), "File", &menu_items_slice, 300, { area.x, area.y, 60, area.height })
 	if clicked_item.text == "new project" {
-		ui_open_popup("New file")
+		ui_open_popup(POPUP_NEW_PROJECT)
 	}
 	if clicked_item.text == "open project" {
 		defer ui_close_current_popup()
@@ -765,7 +767,7 @@ preview :: proc(state: ^Project_State, rec: Rec) {
 	prev_widget_color := ui_ctx.widget_color
 	ui_ctx.widget_color = rl.BLANK
 	if ui_button(ui_gen_id(), ICON_SETTINGS, settings_rec, false, style = UI_BUTTON_STYLE_TRANSPARENT) {
-		ui_open_popup("Preview settings")
+		ui_open_popup(POPUP_PREVIEW_SETTINGS)
 	}
 	ui_ctx.font_size = prev_font_size
 	ui_ctx.widget_color = prev_widget_color
@@ -776,7 +778,7 @@ new_file_popup :: proc(state: ^Screen_State) {
 	
 	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
 	popup_rec := rec_center_in_area({ 0, 0, ui_px(400), popup_h }, screen_rec)
-	if open, rec := ui_begin_popup_with_header("New file", ui_gen_id(), popup_rec); open {
+	if open, rec := ui_begin_popup_with_header(POPUP_NEW_PROJECT, ui_gen_id(), popup_rec); open {
 		area := rec_pad(rec, ui_px(16))
 		ui_slider_i32(ui_gen_id(), "Width", &app.new_file_width, 2, 30, rec_cut_top(&area, ui_default_widget_height()))
 		rec_delete_top(&area, ui_px(8))
@@ -810,7 +812,7 @@ preview_settings_popup :: proc(state: ^Project_State) {
 	
 	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
 	popup_area := rec_center_in_area({ 0, 0, ui_px(300), popup_h }, screen_rec)
-	if open, rec := ui_begin_popup_with_header("Preview settings", ui_gen_id(), popup_area); open {
+	if open, rec := ui_begin_popup_with_header(POPUP_PREVIEW_SETTINGS, ui_gen_id(), popup_area); open {
 		area := rec_pad(rec, ui_px(16))
 		auto_rotate_rec := rec_cut_top(&area, ui_default_widget_height())
 		ui_check_box(ui_gen_id(),"Auto rotate", &state.auto_rotate_preview, auto_rotate_rec)
