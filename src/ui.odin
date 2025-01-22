@@ -19,9 +19,9 @@ UI_Ctx :: struct {
 	active_textbox: UI_ID,
 	slider_text_buffer: sa.Small_Array(40, byte),
 	draw_commands: Draw_Commands,
-	notif_text: string,
-	notif_time: f32,	
 	
+	// HACK: we can only have one active notif
+	current_notif: UI_NOTIF,
 	// current popup scope
 	current_popup: string,
 	// HACK: we can only have one active popup
@@ -72,6 +72,12 @@ UI_Popup :: struct {
 	open_time: f32,
 	rec: Rec,
 	draw_commands: Draw_Commands,
+}
+
+UI_NOTIF :: struct {
+	time: f32,
+	text: string,
+	style: UI_NOTIF_STYLE,
 }
 
 UI_Menu_Item :: struct {
@@ -130,6 +136,8 @@ UI_Draw_Grid :: struct {
 UI_Draw_Preview :: struct {
 	rec: Rec,
 }
+
+// styles:
 
 UI_Button_Style :: struct {
 	bg_color: rl.Color,
@@ -194,6 +202,21 @@ UI_CHECKBOX_STYLE_DEFAULT :: UI_CHECKBOX_STYLE {
 	check_color = { 176, 131, 240, 255 },
 	text_color = { 200, 209, 218, 255 },
 } 
+
+UI_NOTIF_STYLE :: struct {
+	bg_color: rl.Color,
+	text_color: rl.Color,	
+}
+
+UI_NOTIF_STYLE_ACCENT :: UI_NOTIF_STYLE {
+	bg_color = { 176, 131, 240, 255 },
+	text_color = { 20, 23, 28, 255 },
+}
+
+UI_NOTIF_STYLE_ERROR :: UI_NOTIF_STYLE {
+	bg_color = { 255, 101, 125, 255 },
+	text_color = { 20, 23, 28, 255 },
+}
 
 ICON_PEN :: "\uf8ea"
 ICON_ERASER :: "\uf6fd"
@@ -268,8 +291,8 @@ ui_begin :: proc() {
 	if ui_ctx.open_popup.name != "" {
 		ui_ctx.open_popup.open_time += 0.01
 	}
-	if ui_ctx.notif_text != "" {
-		ui_ctx.notif_time += 0.01
+	if ui_ctx.current_notif.text != "" {
+		ui_ctx.current_notif.time += 0.01
 	}
 
 	if rl.IsMouseButtonReleased(.LEFT) || rl.IsMouseButtonReleased(.RIGHT) {
@@ -301,46 +324,51 @@ ui_draw :: proc() {
 		if opacity >= 40 {
 			opacity = 40
 		}
-		rl.DrawRectangleRec(screen_rec, { 255, 255, 255, u8((opacity / 255) * 255) })
+		rl.DrawRectangleRec(screen_rec, { 0, 0, 0, u8((opacity / 255) * 255) })
 		ui_process_commands(sa.slice(&ui_ctx.open_popup.draw_commands))
 	}
 	
+	ui_update_notif()
+
+	sa.clear(&ui_ctx.draw_commands)
+	sa.clear(&ui_ctx.open_popup.draw_commands)
+	free_all(context.temp_allocator)
+}
+
+ui_update_notif :: proc() {
 	// TODO: clean this up
-	if ui_ctx.notif_text != "" {
+	if ui_ctx.current_notif.text != "" {
 		ww := f32(rl.GetScreenWidth())
 		wh := f32(rl.GetScreenHeight())
 
-		text := strings.clone_to_cstring(ui_ctx.notif_text, context.temp_allocator)
-		offset := f32(80)
-		padding := f32(10)
+		text := strings.clone_to_cstring(ui_ctx.current_notif.text, context.temp_allocator)
+		offset := ui_px(80)
+		padding := ui_px(10)
 		text_size := rl.MeasureTextEx(ui_ctx.font, text, ui_font_size(), 0)
 		notif_w := text_size.x + padding * 2
 		notif_h := text_size.y + padding * 2
 		notif_x := ww / 2 - text_size.x / 2 + padding
 		notif_y := f32(0)
 		
-		if ui_ctx.notif_time < 0.2 {
-			notif_y = wh - offset * (ui_ctx.notif_time / 0.2)
+		if ui_ctx.current_notif.time < 0.2 {
+			notif_y = wh - offset * (ui_ctx.current_notif.time / 0.2)
 		}
-		else if ui_ctx.notif_time >= 0.2 && ui_ctx.notif_time < 1 {
+		else if ui_ctx.current_notif.time >= 0.2 && ui_ctx.current_notif.time < 1 {
 			notif_y = wh - offset
 		} 
-		else if ui_ctx.notif_time >= 1 && ui_ctx.notif_time <= 1.2 {
-			notif_y = wh - offset + offset * (ui_ctx.notif_time - 1) / 0.2
+		else if ui_ctx.current_notif.time >= 1 && ui_ctx.current_notif.time <= 1.2 {
+			notif_y = wh - offset + offset * (ui_ctx.current_notif.time - 1) / 0.2
 		}
 		else {
-			ui_ctx.notif_text = ""
+			ui_ctx.current_notif.text = ""
 		}
-		if ui_ctx.notif_text != "" {
+		if ui_ctx.current_notif.text != "" {
 			notif_y += padding
-			rl.DrawRectangleRec({ notif_x, notif_y, notif_w, notif_h }, ui_ctx.accent_color)
-			rl.DrawTextEx(ui_ctx.font, text, { notif_x + padding, notif_y + padding }, ui_font_size(), 0, { 35, 38, 52, 255 })
+			style := ui_ctx.current_notif.style
+			rl.DrawRectangleRec({ notif_x, notif_y, notif_w, notif_h }, style.bg_color)
+			rl.DrawTextEx(ui_ctx.font, text, { notif_x + padding, notif_y + padding }, ui_font_size(), 0, style.text_color)
 		}
 	}	
-
-	sa.clear(&ui_ctx.draw_commands)
-	sa.clear(&ui_ctx.open_popup.draw_commands)
-	free_all(context.temp_allocator)
 }
 
 // TODO: should be handled in app
@@ -504,9 +532,12 @@ ui_end_popup :: proc() {
 	ui_ctx.current_popup = ""
 }
 
-ui_show_notif :: proc(text: string) {
-	ui_ctx.notif_text = text
-	ui_ctx.notif_time = 0
+ui_show_notif :: proc(text: string, style := UI_NOTIF_STYLE_ACCENT) {
+	ui_ctx.current_notif = {
+		text = text,
+		time = 0,
+		style = style,
+	}
 }
 
 ui_update_widget :: proc(id: UI_ID, rec: Rec, blocking := true) {

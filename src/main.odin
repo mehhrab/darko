@@ -370,7 +370,7 @@ welcome_screen :: proc() {
 		args: ntf.Open_Dialog_Args
 		res := ntf.PickFolderU8(&path_cstring, "")
 		if res == .Error {
-			ui_show_notif("Could not open project")
+			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
 		}
 		else if res == .Cancel {
 			return
@@ -380,7 +380,7 @@ welcome_screen :: proc() {
 		path := string(path_cstring)		
 		loaded := load_project_state(&loaded_project, path)
 		if loaded == false {
-			ui_show_notif("Failed to open project")
+			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
 			return
 		}
 		
@@ -450,7 +450,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		args: ntf.Open_Dialog_Args
 		res := ntf.PickFolderU8(&path_cstring, "")
 		if res == .Error {
-			ui_show_notif("Could not open project")
+			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
 		}
 		else if res == .Cancel {
 			return
@@ -460,7 +460,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		path := string(path_cstring)		
 		loaded := load_project_state(&loaded_project, path)
 		if loaded == false {
-			ui_show_notif("Failed to open project")
+			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
 			return
 		}
 		
@@ -476,7 +476,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		args: ntf.Open_Dialog_Args
 		res := ntf.PickFolderU8(&path_cstring, "")
 		if res == .Error {
-			ui_show_notif("Could not save project")
+			ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
 		}
 		else if res == .Cancel {
 			return
@@ -486,7 +486,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		state.name = path[strings.last_index(path, "\\") + 1:]
 		saved := save_project_state(state, path)
 		if saved == false {
-			ui_show_notif("Could not save project")
+			ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
 			return
 		}
 
@@ -513,7 +513,7 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 	delete_rec := rec_cut_right(&props_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_TRASH, delete_rec, style = UI_BUTTON_STYLE_RED) {
 		if len(state.layers) <= 1 {
-			ui_show_notif("At least one layer is needed")
+			ui_show_notif("At least one layer is needed", UI_NOTIF_STYLE_ERROR)
 		} 
 		else {
 			action_do(state, Action_Delete_Layer {
