@@ -18,7 +18,7 @@ POPUP_PREVIEW_SETTINGS :: "Preview settings"
 
 App :: struct {
 	state: Screen_State,
-	new_file_width, new_file_height: i32,
+	new_project_width, new_project_height: i32,
 }
 
 Screen_State :: union {
@@ -830,6 +830,8 @@ preview_settings_popup :: proc(state: ^Project_State) {
 
 init_app :: proc(state: Screen_State) {
 	app.state = state
+	app.new_project_width = 16
+	app.new_project_height = 16
 }
 
 deinit_app :: proc() {
