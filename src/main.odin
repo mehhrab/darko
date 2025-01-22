@@ -465,8 +465,8 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		}
 		
 		close_project(state)		
-		open_project(&loaded_project)
 		mark_all_layers_dirty(&loaded_project)
+		open_project(&loaded_project)
 	}
 	if clicked_item.text == "save project" {
 		defer ui_close_current_popup()
