@@ -332,16 +332,102 @@ main :: proc() {
 
 		// draw
 		rl.BeginDrawing()
-		rl.ClearBackground(ui_ctx.border_color)
-
-		ui_draw()
-		
+		rl.ClearBackground(ui_ctx.border_color)		
+		process_commands(ui_get_draw_commmands())
 		// rl.DrawFPS(rl.GetScreenWidth() - 80, 10)
 		rl.EndDrawing()
+		ui_clear_temp_state()
 	}
 	rl.CloseWindow()
 }
 
+process_commands :: proc(commands: []UI_Draw_Command) {
+	for command in commands
+	{
+		switch kind in command {
+			case UI_Draw_Rect: {
+				rl.DrawRectangleRec(kind.rec, kind.color)
+			}
+			case UI_Draw_Rect_Outline: {
+				rl.DrawRectangleLinesEx(kind.rec, kind.thickness, kind.color)
+			}
+			case UI_Draw_Text: {
+				x := f32(0)
+				y := f32(0)
+
+				text := strings.clone_to_cstring(kind.text, context.temp_allocator)
+				text_size := rl.MeasureTextEx(ui_ctx.font, text, kind.size, 0)
+				
+				if kind.align.horizontal == .Left {
+					x = kind.rec.x
+				}
+				else if kind.align.horizontal == .Center {
+					x = kind.rec.x + kind.rec.width / 2 - text_size.x / 2
+				}
+				else if kind.align.horizontal == .Right {
+					x = kind.rec.x + kind.rec.width - text_size.x
+				}
+
+				if kind.align.vertical == .Top {
+					y = kind.rec.y
+				}
+				else if kind.align.vertical == .Center {
+					y = kind.rec.y + kind.rec.height / 2 - text_size.y / 2
+				}
+				else if kind.align.vertical == .Bottom {
+					y = kind.rec.y + kind.rec.height - text_size.y
+				}
+
+				rl.DrawTextEx(ui_ctx.font, text, {x, y}, kind.size, 0, kind.color)
+			}
+			case UI_Draw_Gradient_H: {
+				x := i32(math.ceil_f32(kind.rec.x))
+				y := i32(math.ceil_f32(kind.rec.y))
+				w := i32(math.ceil_f32(kind.rec.width))
+				h := i32(math.ceil_f32(kind.rec.height))
+				rl.DrawRectangleGradientH(x, y, w, h, kind.left_color, kind.right_color)
+			}
+			case UI_Draw_Canvas: {
+				project, project_exists := app.state.(Project_State)
+				
+				rl.BeginScissorMode(
+					i32(kind.panel_rec.x), 
+					i32(kind.panel_rec.y), 
+					i32(kind.panel_rec.width), 
+					i32(kind.panel_rec.height))
+				draw_canvas(&project, kind.rec)
+				rl.EndScissorMode()
+			}
+			case UI_Draw_Grid: {
+				project, project_exists := app.state.(Project_State)
+
+				rl.BeginScissorMode(
+					i32(kind.panel_rec.x), 
+					i32(kind.panel_rec.y), 
+					i32(kind.panel_rec.width), 
+					i32(kind.panel_rec.height))
+				draw_grid(project.width, project.height, kind.rec)
+				rl.EndScissorMode()
+			}
+			case UI_Draw_Preview: {
+				// FIX this as soon as possible
+				project, project_exists := app.state.(Project_State)
+				x := i32(math.round(kind.rec.x))
+				y := i32(math.round(kind.rec.y))
+				w := i32(math.round(kind.rec.width))
+				h := i32(math.round(kind.rec.height))
+				
+				rl.BeginScissorMode(x, y, w, h)
+				rl.DrawRectangleGradientV(x, y, w, h, ui_ctx.panel_color, ui_ctx.widget_hover_color)
+				px, py := rec_get_center_point(kind.rec)
+				draw_sprite_stack(&project.layers, px, py, project.lerped_preview_zoom, project.preview_rotation, project.spacing)
+				rl.DrawTextEx(ui_ctx.font, "PREVIEW", { kind.rec.x + 10, kind.rec.y + 10 }, ui_font_size() * 1.4, 0, { 255, 255, 255, 100 })
+				rl.EndScissorMode()
+				rl.DrawRectangleLinesEx(kind.rec, 1, ui_ctx.border_color)
+			}
+		}
+	}
+}
 // gui code
 
 welcome_screen :: proc() {

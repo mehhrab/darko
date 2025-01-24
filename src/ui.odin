@@ -21,9 +21,9 @@ UI_Ctx :: struct {
 	draw_commands: Draw_Commands,
 	
 	// HACK: we can only have one active notif
-	current_notif: UI_NOTIF,
+	current_notif: UI_Notif,
 	// current popup scope
-	current_popup: string,
+	popup_scope: string,
 	// HACK: we can only have one active popup
 	open_popup: UI_Popup,
 
@@ -74,10 +74,11 @@ UI_Popup :: struct {
 	draw_commands: Draw_Commands,
 }
 
-UI_NOTIF :: struct {
+UI_Notif :: struct {
 	time: f32,
 	text: string,
 	style: UI_NOTIF_STYLE,
+	draw_commands: Draw_Commands,
 }
 
 UI_Menu_Item :: struct {
@@ -307,6 +308,8 @@ ui_end :: proc() {
 		ui_ctx.active_widget = 0
 		ui_ctx.active_panel = 0
 	}
+
+	ui_draw_notif()
 }
 
 ui_gen_id :: proc(i := 0, loc := #caller_location) -> UI_ID {
@@ -315,28 +318,31 @@ ui_gen_id :: proc(i := 0, loc := #caller_location) -> UI_ID {
     return id
 }
 
-ui_draw :: proc() {
-	ui_process_commands(sa.slice(&ui_ctx.draw_commands))
-
-	if ui_ctx.open_popup.name != "" {
-		screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
-		opacity := ui_ctx.open_popup.open_time * 40 * 5
-		if opacity >= 40 {
-			opacity = 40
-		}
-		rl.DrawRectangleRec(screen_rec, { 0, 0, 0, u8((opacity / 255) * 255) })
-		ui_process_commands(sa.slice(&ui_ctx.open_popup.draw_commands))
+ui_get_draw_commmands :: proc() -> (commands: []UI_Draw_Command) {
+	dc := ui_ctx.draw_commands
+	pdc := ui_ctx.open_popup.draw_commands
+	ndc := ui_ctx.current_notif.draw_commands
+	res, err := make_slice([]UI_Draw_Command, dc.len + pdc.len + ndc.len, context.temp_allocator)
+	for i in 0..<dc.len {
+		res[i] = dc.data[:][i]
 	}
-	
-	ui_update_notif()
+	for i in 0..<pdc.len {
+		res[dc.len + i] = pdc.data[:][i]
+	}
+	for i in 0..<ndc.len {
+		res[dc.len + pdc.len + i] = ndc.data[:][i]
+	}
+	return res 
+}
 
+ui_clear_temp_state :: proc() {
 	sa.clear(&ui_ctx.draw_commands)
 	sa.clear(&ui_ctx.open_popup.draw_commands)
+	sa.clear(&ui_ctx.current_notif.draw_commands)
 	free_all(context.temp_allocator)
 }
 
-ui_update_notif :: proc() {
-	// TODO: clean this up
+ui_draw_notif :: proc() {
 	if ui_ctx.current_notif.text != "" {
 		ww := f32(rl.GetScreenWidth())
 		wh := f32(rl.GetScreenHeight())
@@ -365,99 +371,19 @@ ui_update_notif :: proc() {
 		if ui_ctx.current_notif.text != "" {
 			notif_y += padding
 			style := ui_ctx.current_notif.style
-			rl.DrawRectangleRec({ notif_x, notif_y, notif_w, notif_h }, style.bg_color)
-			rl.DrawTextEx(ui_ctx.font, text, { notif_x + padding, notif_y + padding }, ui_font_size(), 0, style.text_color)
+			sa.append(&ui_ctx.current_notif.draw_commands, UI_Draw_Rect {
+				color = style.bg_color,
+				rec = { notif_x, notif_y, notif_w, notif_h },
+			})
+			sa.append(&ui_ctx.current_notif.draw_commands, UI_Draw_Text {
+				align = { .Center, .Center },
+				color = style.text_color,
+				rec = { notif_x, notif_y, notif_w, notif_h },
+				size = ui_font_size(),
+				text = ui_ctx.current_notif.text,
+			})
 		}
 	}	
-}
-
-// TODO: should be handled in app
-ui_process_commands :: proc(commands: []UI_Draw_Command) {
-	for command in commands
-	{
-		switch kind in command {
-			case UI_Draw_Rect: {
-				rl.DrawRectangleRec(kind.rec, kind.color)
-			}
-			case UI_Draw_Rect_Outline: {
-				rl.DrawRectangleLinesEx(kind.rec, kind.thickness, kind.color)
-			}
-			case UI_Draw_Text: {
-				x := f32(0)
-				y := f32(0)
-
-				text := strings.clone_to_cstring(kind.text, context.temp_allocator)
-				text_size := rl.MeasureTextEx(ui_ctx.font, text, kind.size, 0)
-				
-				if kind.align.horizontal == .Left {
-					x = kind.rec.x
-				}
-				else if kind.align.horizontal == .Center {
-					x = kind.rec.x + kind.rec.width / 2 - text_size.x / 2
-				}
-				else if kind.align.horizontal == .Right {
-					x = kind.rec.x + kind.rec.width - text_size.x
-				}
-
-				if kind.align.vertical == .Top {
-					y = kind.rec.y
-				}
-				else if kind.align.vertical == .Center {
-					y = kind.rec.y + kind.rec.height / 2 - text_size.y / 2
-				}
-				else if kind.align.vertical == .Bottom {
-					y = kind.rec.y + kind.rec.height - text_size.y
-				}
-
-				rl.DrawTextEx(ui_ctx.font, text, {x, y}, kind.size, 0, kind.color)
-			}
-			case UI_Draw_Gradient_H: {
-				x := i32(math.ceil_f32(kind.rec.x))
-				y := i32(math.ceil_f32(kind.rec.y))
-				w := i32(math.ceil_f32(kind.rec.width))
-				h := i32(math.ceil_f32(kind.rec.height))
-				rl.DrawRectangleGradientH(x, y, w, h, kind.left_color, kind.right_color)
-			}
-			case UI_Draw_Canvas: {
-				project, project_exists := app.state.(Project_State)
-				
-				rl.BeginScissorMode(
-					i32(kind.panel_rec.x), 
-					i32(kind.panel_rec.y), 
-					i32(kind.panel_rec.width), 
-					i32(kind.panel_rec.height))
-				draw_canvas(&project, kind.rec)
-				rl.EndScissorMode()
-			}
-			case UI_Draw_Grid: {
-				project, project_exists := app.state.(Project_State)
-
-				rl.BeginScissorMode(
-					i32(kind.panel_rec.x), 
-					i32(kind.panel_rec.y), 
-					i32(kind.panel_rec.width), 
-					i32(kind.panel_rec.height))
-				draw_grid(project.width, project.height, kind.rec)
-				rl.EndScissorMode()
-			}
-			case UI_Draw_Preview: {
-				// FIX this as soon as possible
-				project, project_exists := app.state.(Project_State)
-				x := i32(math.round(kind.rec.x))
-				y := i32(math.round(kind.rec.y))
-				w := i32(math.round(kind.rec.width))
-				h := i32(math.round(kind.rec.height))
-				
-				rl.BeginScissorMode(x, y, w, h)
-				rl.DrawRectangleGradientV(x, y, w, h, ui_ctx.panel_color, ui_ctx.widget_hover_color)
-				px, py := rec_get_center_point(kind.rec)
-				draw_sprite_stack(&project.layers, px, py, project.lerped_preview_zoom, project.preview_rotation, project.spacing)
-				rl.DrawTextEx(ui_ctx.font, "PREVIEW", { kind.rec.x + 10, kind.rec.y + 10 }, ui_font_size() * 1.4, 0, { 255, 255, 255, 100 })
-				rl.EndScissorMode()
-				rl.DrawRectangleLinesEx(kind.rec, 1, ui_ctx.border_color)
-			}
-		}
-	}
 }
 
 ui_open_popup :: proc(name: string) {
@@ -473,13 +399,15 @@ ui_close_current_popup :: proc() {
 	ui_ctx.open_popup.name = ""
 	ui_ctx.open_popup.rec = {}
 	ui_ctx.open_popup.show_header = false
+	sa.clear(&ui_ctx.open_popup.draw_commands)
 }
 
 // NOTE: name is also used as the id
 ui_begin_popup :: proc(name: string, rec: Rec) -> (open: bool) {
-	ui_ctx.current_popup = name
+	ui_ctx.popup_scope = name
 
 	if name == ui_ctx.open_popup.name {
+		ui_push_popup_draw()
 		ui_ctx.open_popup.rec = rec
 	}
 	 
@@ -487,9 +415,10 @@ ui_begin_popup :: proc(name: string, rec: Rec) -> (open: bool) {
 }
 
 ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: bool, client_rec: Rec) {
-	ui_ctx.current_popup = name
+	ui_ctx.popup_scope = name
 
 	if name == ui_ctx.open_popup.name {
+		ui_push_popup_draw()
 		ui_ctx.open_popup.show_header = true
 		area := rec
 		header_area := rec_extend_top(&area, ui_default_widget_height() + ui_px(8)) 
@@ -504,32 +433,48 @@ ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: 
 	return name == ui_ctx.open_popup.name, { rec.x, rec.y, rec.width, rec.height }
 }
 
-// TODO: i don't remember why draw commands are pushed here
-ui_end_popup :: proc() {
+ui_push_popup_draw :: proc() {
+	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
+	opacity := ui_ctx.open_popup.open_time * 40 * 8
+	if opacity >= 40 {
+		opacity = 40
+	}
+	sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
+		color =  { 0, 0, 0, u8((opacity / 255) * 255) },
+		rec = screen_rec,
+	}, 0)
 	sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
 		color = ui_ctx.border_color,
 		rec = rec_pad(ui_ctx.open_popup.rec, -1),
-	}, 0)
+	}, 1)
+	sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
+		color = ui_ctx.border_color,
+		rec = rec_pad(ui_ctx.open_popup.rec, -1),
+	}, 2)
 	sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
 		color = ui_ctx.panel_color,
 		rec = ui_ctx.open_popup.rec,
-	}, 1)
+	}, 3)
 	if ui_ctx.open_popup.show_header {
 		header_height := ui_default_widget_height() + ui_px(8)
 		sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Gradient_H {
 			right_color = ui_ctx.accent_color,
 			left_color = { 242, 131, 240, 255 },
 			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, header_height },
-		}, 2)
+		}, 4)
 		sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Text {
 			color = ui_ctx.border_color,
 			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, header_height },
 			text = ui_ctx.open_popup.name,
 			align = { .Center, .Center },
 			size = ui_font_size(),
-		}, 3)
+		}, 5)
 	}
-	ui_ctx.current_popup = ""
+}
+
+// TODO: i don't remember why draw commands are pushed here
+ui_end_popup :: proc() {
+	ui_ctx.popup_scope = ""
 }
 
 ui_show_notif :: proc(text: string, style := UI_NOTIF_STYLE_ACCENT) {
@@ -541,7 +486,7 @@ ui_show_notif :: proc(text: string, style := UI_NOTIF_STYLE_ACCENT) {
 }
 
 ui_update_widget :: proc(id: UI_ID, rec: Rec, blocking := true) {
-	if ui_ctx.open_popup.name != ui_ctx.current_popup && ui_ctx.open_popup.name != "" {
+	if ui_ctx.open_popup.name != ui_ctx.popup_scope && ui_ctx.open_popup.name != "" {
 		return
 	}
 	hovered := ui_is_mouse_in_rec(rec)
@@ -557,7 +502,7 @@ ui_update_widget :: proc(id: UI_ID, rec: Rec, blocking := true) {
 }
 
 ui_update_panel :: proc(id: UI_ID, rec: Rec) {
-	if ui_ctx.open_popup.name != ui_ctx.current_popup && ui_ctx.open_popup.name != "" {
+	if ui_ctx.open_popup.name != ui_ctx.popup_scope && ui_ctx.open_popup.name != "" {
 		return
 	}
 	hovered := ui_is_mouse_in_rec(rec)
@@ -860,7 +805,7 @@ ui_slider_i32 :: proc
 }
 
 ui_push_command :: proc(command: UI_Draw_Command) {
-	if ui_ctx.current_popup != "" {
+	if ui_ctx.popup_scope != "" {
 		sa.append(&ui_ctx.open_popup.draw_commands, command)
 	}
 	else {
