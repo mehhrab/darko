@@ -414,7 +414,7 @@ ui_begin_popup :: proc(name: string, rec: Rec) -> (open: bool) {
 	return name == ui_ctx.open_popup.name
 }
 
-ui_begin_popup_with_header :: proc(name: string, id: UI_ID, rec: Rec) -> (open: bool, client_rec: Rec) {
+ui_begin_popup_title :: proc(id: UI_ID, name: string, rec: Rec) -> (open: bool, content_rec: Rec) {
 	ui_ctx.popup_scope = name
 
 	if name == ui_ctx.open_popup.name {

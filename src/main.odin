@@ -864,7 +864,7 @@ new_file_popup :: proc(state: ^Screen_State) {
 	
 	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
 	popup_rec := rec_center_in_area({ 0, 0, ui_px(400), popup_h }, screen_rec)
-	if open, rec := ui_begin_popup_with_header(POPUP_NEW_PROJECT, ui_gen_id(), popup_rec); open {
+	if open, rec := ui_begin_popup_title(ui_gen_id(), POPUP_NEW_PROJECT, popup_rec); open {
 		area := rec_pad(rec, ui_px(16))
 		ui_slider_i32(ui_gen_id(), "Width", &app.new_project_width, 2, 30, rec_cut_top(&area, ui_default_widget_height()))
 		rec_delete_top(&area, ui_px(8))
@@ -898,7 +898,7 @@ preview_settings_popup :: proc(state: ^Project_State) {
 	
 	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
 	popup_area := rec_center_in_area({ 0, 0, ui_px(300), popup_h }, screen_rec)
-	if open, rec := ui_begin_popup_with_header(POPUP_PREVIEW_SETTINGS, ui_gen_id(), popup_area); open {
+	if open, rec := ui_begin_popup_title(ui_gen_id(), POPUP_PREVIEW_SETTINGS, popup_area); open {
 		area := rec_pad(rec, ui_px(16))
 		auto_rotate_rec := rec_cut_top(&area, ui_default_widget_height())
 		ui_check_box(ui_gen_id(),"Auto rotate", &state.auto_rotate_preview, auto_rotate_rec)
