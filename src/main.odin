@@ -148,7 +148,7 @@ main :: proc() {
 			case Project_State: {
 				project_screen(&state)
 
-				if ui_ctx.open_popup.name == "" {
+				if ui_is_any_popup_open() == false {
 					// create new layer above the current
 					if rl.IsKeyPressed(.SPACE) {
 						action_do(&state, Action_Create_Layer {

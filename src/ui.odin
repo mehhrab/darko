@@ -497,7 +497,6 @@ ui_push_popup_draw :: proc() {
 	}
 }
 
-// TODO: i don't remember why draw commands are pushed here
 ui_end_popup :: proc() {
 	ui_ctx.popup_scope = ""
 }
