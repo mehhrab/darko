@@ -1,3 +1,5 @@
+/* immediate mode ui library
+currently depends on app (main.odin) for some draw commands */
 package darko
 
 import rl "vendor:raylib"

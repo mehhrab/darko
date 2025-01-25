@@ -1,3 +1,5 @@
+/* rectangle helpers library
+also used for layout */
 package darko
 import rl "vendor:raylib"
 
