@@ -11,7 +11,7 @@ import "core:os/os2"
 import "core:slice"
 import ntf "../lib/nativefiledialog-odin"
 
-LOCK_FPS :: #config(LOCK_FPS, true)
+TARGET_FPS :: 60
 HSV :: distinct [3]f32
 POPUP_NEW_PROJECT :: "New project"
 POPUP_PREVIEW_SETTINGS :: "Preview settings"
@@ -19,6 +19,8 @@ POPUP_PREVIEW_SETTINGS :: "Preview settings"
 App :: struct {
 	state: Screen_State,
 	new_project_width, new_project_height: i32,
+	show_fps: bool,
+	unlock_fps: bool,
 }
 
 Screen_State :: union {
@@ -120,9 +122,7 @@ main :: proc() {
 	rl.SetConfigFlags({rl.ConfigFlags.WINDOW_RESIZABLE})
 	rl.InitWindow(1200, 700, "Darko")
 	rl.SetExitKey(nil)
-	when LOCK_FPS {
-		rl.SetTargetFPS(60)
-	}
+	rl.SetTargetFPS(TARGET_FPS)
 
 	ntf.Init()
 	defer ntf.Quit()
@@ -221,15 +221,32 @@ main :: proc() {
 				panic("what")
 			}
 		}
-		
 		new_file_popup(&app.state)
+
+		// toggle unlock_fps
+		if rl.IsKeyPressed(.F1) {
+			app.unlock_fps = !app.unlock_fps
+			if app.unlock_fps {
+				rl.SetTargetFPS(-1)
+			}
+			else {
+				rl.SetTargetFPS(TARGET_FPS)
+			}
+		}
+		// toggle show_fps
+		if rl.IsKeyPressed(.F2) {
+			app.show_fps = !app.show_fps
+		}
+
 		ui_end()
 
 		// draw
 		rl.BeginDrawing()
 		rl.ClearBackground(ui_ctx.border_color)		
 		process_commands(ui_get_draw_commmands())
-		// rl.DrawFPS(rl.GetScreenWidth() - 80, 10)
+		if app.show_fps {
+			rl.DrawFPS(rl.GetScreenWidth() - 80, 10)
+		}
 		rl.EndDrawing()
 		ui_clear_temp_state()
 	}
