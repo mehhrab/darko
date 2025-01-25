@@ -95,107 +95,6 @@ Action_Delete_Layer :: struct {
 	layer_index: int,
 }
 
-action_preform :: proc(state: ^Project_State, action: Action) {
-	switch &kind in action {
-		case Action_Image_Change: {
-			image := rl.ImageCopy(kind.after_image)
-			state.layers[kind.layer_index].image = image
-			mark_dirty_layers(state, state.current_layer)
-		}
-		case Action_Create_Layer: {
-			layer: Layer
-			init_layer(&layer, state.width, state.height)
-			inject_at(&state.layers, kind.layer_index, layer)
-			state.current_layer = kind.layer_index
-		}
-		case Action_Duplicate_Layer: {
-			layer: Layer
-			layer.image = rl.ImageCopy(state.layers[kind.from_index].image)
-			layer.texture = rl.LoadTextureFromImage(layer.image)
-			inject_at_elem(&state.layers, kind.to_index, layer)
-			state.current_layer = kind.to_index
-		}
-		case Action_Change_Layer_Index: {
-			layer := state.layers[kind.from_index]
-			ordered_remove(&state.layers, kind.from_index)
-			inject_at_elem(&state.layers, kind.to_index, layer)
-			state.current_layer = kind.to_index
-		}
-		case Action_Delete_Layer: {
-			kind.image = rl.ImageCopy(get_current_layer(state).image)
-			deinit_layer(&state.layers[kind.layer_index])
-			ordered_remove(&state.layers, kind.layer_index)
-			if kind.layer_index > 0 {
-				state.current_layer -= 1
-			}
-		}
-	}
-}
-
-action_unpreform :: proc(state: ^Project_State, action: Action) {
-	switch kind in action {
-		case Action_Image_Change: {
-			image := rl.ImageCopy(kind.before_image)
-			state.layers[kind.layer_index].image = image
-			mark_dirty_layers(state, state.current_layer)
-		}
-		case Action_Create_Layer: {
-			deinit_layer(&state.layers[kind.layer_index])
-			ordered_remove(&state.layers, kind.layer_index)
-			state.current_layer = kind.current_layer_index
-		}
-		case Action_Duplicate_Layer: {
-			deinit_layer(&state.layers[kind.to_index])
-			ordered_remove(&state.layers, kind.to_index)
-			state.current_layer = kind.from_index
-		}
-		case Action_Change_Layer_Index: {
-			layer := state.layers[kind.to_index]
-			ordered_remove(&state.layers, kind.to_index)
-			inject_at_elem(&state.layers, kind.from_index, layer)
-			state.current_layer = kind.from_index
-		}
-		case Action_Delete_Layer: {
-			layer: Layer
-			layer.image = rl.ImageCopy(kind.image)
-			layer.texture = rl.LoadTextureFromImage(layer.image)
-			inject_at(&state.layers, kind.layer_index, layer)
-			state.current_layer = kind.layer_index
-			mark_dirty_layers(state, state.current_layer)
-		}
-	}
-}
-
-action_deinit :: proc(action: Action) {
-	switch kind in action {
-		case Action_Image_Change: {
-			rl.UnloadImage(kind.before_image)
-			rl.UnloadImage(kind.after_image)
-		}
-		case Action_Create_Layer: {
-
-		}
-		case Action_Duplicate_Layer: {
-
-		}
-		case Action_Change_Layer_Index: {
-
-		}
-		case Action_Delete_Layer: {
-			rl.UnloadImage(kind.image)
-		}
-	}
-}
-
-action_do :: proc(state: ^Project_State, action: Action) {
-	action_preform(state, action)
-	append(&state.undos, action)
-	for action in state.redos {
-		action_deinit(action)
-	}
-	clear(&state.redos)
-}
-
 app: App
 
 main :: proc() {
@@ -913,6 +812,106 @@ preview_settings_popup :: proc(state: ^Project_State) {
 }
 
 // backend code
+action_preform :: proc(state: ^Project_State, action: Action) {
+	switch &kind in action {
+		case Action_Image_Change: {
+			image := rl.ImageCopy(kind.after_image)
+			state.layers[kind.layer_index].image = image
+			mark_dirty_layers(state, state.current_layer)
+		}
+		case Action_Create_Layer: {
+			layer: Layer
+			init_layer(&layer, state.width, state.height)
+			inject_at(&state.layers, kind.layer_index, layer)
+			state.current_layer = kind.layer_index
+		}
+		case Action_Duplicate_Layer: {
+			layer: Layer
+			layer.image = rl.ImageCopy(state.layers[kind.from_index].image)
+			layer.texture = rl.LoadTextureFromImage(layer.image)
+			inject_at_elem(&state.layers, kind.to_index, layer)
+			state.current_layer = kind.to_index
+		}
+		case Action_Change_Layer_Index: {
+			layer := state.layers[kind.from_index]
+			ordered_remove(&state.layers, kind.from_index)
+			inject_at_elem(&state.layers, kind.to_index, layer)
+			state.current_layer = kind.to_index
+		}
+		case Action_Delete_Layer: {
+			kind.image = rl.ImageCopy(get_current_layer(state).image)
+			deinit_layer(&state.layers[kind.layer_index])
+			ordered_remove(&state.layers, kind.layer_index)
+			if kind.layer_index > 0 {
+				state.current_layer -= 1
+			}
+		}
+	}
+}
+
+action_unpreform :: proc(state: ^Project_State, action: Action) {
+	switch kind in action {
+		case Action_Image_Change: {
+			image := rl.ImageCopy(kind.before_image)
+			state.layers[kind.layer_index].image = image
+			mark_dirty_layers(state, state.current_layer)
+		}
+		case Action_Create_Layer: {
+			deinit_layer(&state.layers[kind.layer_index])
+			ordered_remove(&state.layers, kind.layer_index)
+			state.current_layer = kind.current_layer_index
+		}
+		case Action_Duplicate_Layer: {
+			deinit_layer(&state.layers[kind.to_index])
+			ordered_remove(&state.layers, kind.to_index)
+			state.current_layer = kind.from_index
+		}
+		case Action_Change_Layer_Index: {
+			layer := state.layers[kind.to_index]
+			ordered_remove(&state.layers, kind.to_index)
+			inject_at_elem(&state.layers, kind.from_index, layer)
+			state.current_layer = kind.from_index
+		}
+		case Action_Delete_Layer: {
+			layer: Layer
+			layer.image = rl.ImageCopy(kind.image)
+			layer.texture = rl.LoadTextureFromImage(layer.image)
+			inject_at(&state.layers, kind.layer_index, layer)
+			state.current_layer = kind.layer_index
+			mark_dirty_layers(state, state.current_layer)
+		}
+	}
+}
+
+action_deinit :: proc(action: Action) {
+	switch kind in action {
+		case Action_Image_Change: {
+			rl.UnloadImage(kind.before_image)
+			rl.UnloadImage(kind.after_image)
+		}
+		case Action_Create_Layer: {
+
+		}
+		case Action_Duplicate_Layer: {
+
+		}
+		case Action_Change_Layer_Index: {
+
+		}
+		case Action_Delete_Layer: {
+			rl.UnloadImage(kind.image)
+		}
+	}
+}
+
+action_do :: proc(state: ^Project_State, action: Action) {
+	action_preform(state, action)
+	append(&state.undos, action)
+	for action in state.redos {
+		action_deinit(action)
+	}
+	clear(&state.redos)
+}
 
 init_app :: proc(state: Screen_State) {
 	app.state = state
