@@ -306,14 +306,14 @@ ui_load_font :: proc(size: i32) {
 }
 
 ui_begin :: proc() {
-	if ui_ctx.open_popup.name != "" &&
+	if ui_is_any_popup_open() &&
 		rl.IsMouseButtonReleased(.LEFT) &&
 		ui_is_mouse_in_rec(ui_ctx.open_popup.rec) == false &&
 		ui_ctx.active_widget == 0 &&
 		ui_ctx.active_panel == 0 {
 		ui_close_current_popup()
 	}
-	if ui_ctx.open_popup.name != "" {
+	if ui_is_any_popup_open() {
 		ui_ctx.open_popup.open_time += 0.01
 	}
 	if ui_ctx.current_notif.text != "" {
@@ -511,7 +511,7 @@ ui_show_notif :: proc(text: string, style := UI_NOTIF_STYLE_ACCENT) {
 }
 
 ui_update_widget :: proc(id: UI_ID, rec: Rec, blocking := true) {
-	if ui_ctx.open_popup.name != ui_ctx.popup_scope && ui_ctx.open_popup.name != "" {
+	if ui_ctx.open_popup.name != ui_ctx.popup_scope && ui_is_any_popup_open() {
 		return
 	}
 	hovered := ui_is_mouse_in_rec(rec)
@@ -527,7 +527,7 @@ ui_update_widget :: proc(id: UI_ID, rec: Rec, blocking := true) {
 }
 
 ui_update_panel :: proc(id: UI_ID, rec: Rec) {
-	if ui_ctx.open_popup.name != ui_ctx.popup_scope && ui_ctx.open_popup.name != "" {
+	if ui_ctx.open_popup.name != ui_ctx.popup_scope && ui_is_any_popup_open() {
 		return
 	}
 	hovered := ui_is_mouse_in_rec(rec)
@@ -847,7 +847,7 @@ ui_is_being_interacted :: proc() -> (res: bool) {
 	ui_ctx.active_widget != 0 ||
 	ui_ctx.hovered_panel != 0 ||
 	ui_ctx.active_panel != 0 ||
-	(ui_ctx.open_popup.name != "")
+	(ui_is_any_popup_open())
 }
 
 ui_is_mouse_in_rec :: proc(rec: Rec) -> (is_inside: bool) {
@@ -857,6 +857,10 @@ ui_is_mouse_in_rec :: proc(rec: Rec) -> (is_inside: bool) {
 
 ui_calc_popup_height :: proc(item_count: i32, item_h, seprator_h, padding: f32) -> (height: f32) {
 	return item_h * f32(item_count) + seprator_h * (f32(item_count) - 1) + padding * 2 
+}
+
+ui_is_any_popup_open :: #force_inline proc() -> (res: bool) {
+	return ui_ctx.open_popup.name != ""
 }
 
 // not sure if px is the right name...
