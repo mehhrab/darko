@@ -57,10 +57,6 @@ Layer :: struct {
 	texture: rl.Texture,
 }
 
-Undo :: struct {
-	image: rl.Image,
-}
-
 Action :: union {
 	Action_Image_Change,
 	Action_Create_Layer,
