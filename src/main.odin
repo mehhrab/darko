@@ -396,10 +396,7 @@ project_screen :: proc(state: ^Project_State) {
 }
 
 menu_bar :: proc(state: ^Project_State, area: Rec) {
-	prev_panel_color := ui_ctx.panel_color
-	ui_ctx.panel_color = ui_ctx.widget_color 
-	ui_panel(ui_gen_id(), area)
-	ui_ctx.panel_color = prev_panel_color
+	ui_panel(ui_gen_id(), area, { bg_color = ui_ctx.widget_color })
 
 	menu_items := [?]UI_Menu_Item {
 		UI_Menu_Item { 
@@ -745,13 +742,10 @@ preview :: proc(state: ^Project_State, rec: Rec) {
 	}
 	prev_font_size := ui_ctx.font_size
 	ui_ctx.font_size = 20
-	prev_widget_color := ui_ctx.widget_color
-	ui_ctx.widget_color = rl.BLANK
 	if ui_button(ui_gen_id(), ICON_SETTINGS, settings_rec, false, style = UI_BUTTON_STYLE_TRANSPARENT) {
 		ui_open_popup(POPUP_PREVIEW_SETTINGS)
 	}
 	ui_ctx.font_size = prev_font_size
-	ui_ctx.widget_color = prev_widget_color
 }
 
 new_file_popup :: proc(state: ^Screen_State) {

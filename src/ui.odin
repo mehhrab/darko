@@ -219,6 +219,14 @@ UI_NOTIF_STYLE_ERROR :: UI_NOTIF_STYLE {
 	text_color = { 20, 23, 28, 255 },
 }
 
+UI_PANEL_STYLE :: struct {
+	bg_color: rl.Color,
+}
+
+UI_PANEL_STYLE_DEFAULT :: UI_PANEL_STYLE {
+	bg_color = { 33, 40, 48, 255 },
+}
+
 ICON_PEN :: "\uf8ea"
 ICON_ERASER :: "\uf6fd"
 ICON_EYEDROPPER :: "\uf709"
@@ -517,11 +525,11 @@ ui_update_panel :: proc(id: UI_ID, rec: Rec) {
 	}
 }
 
-ui_panel :: proc(id: UI_ID, rec: Rec) {
+ui_panel :: proc(id: UI_ID, rec: Rec, style := UI_PANEL_STYLE_DEFAULT) {
 	ui_update_panel(id, rec)
 	ui_push_command(UI_Draw_Rect {
 		rec = rec,
-		color = ui_ctx.panel_color,
+		color = style.bg_color,
 	})
 }
 
