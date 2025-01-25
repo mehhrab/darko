@@ -146,6 +146,8 @@ UI_Button_Style :: struct {
 	bg_color_active: rl.Color,
 	text_color: rl.Color,
 	text_align: UI_Align,
+	// when zero will default to ui_font_size()
+	font_size: f32,
 }
 
 UI_BUTTON_STYLE_DEFAULT :: UI_Button_Style {
@@ -154,6 +156,7 @@ UI_BUTTON_STYLE_DEFAULT :: UI_Button_Style {
 	bg_color_active = { 121, 128, 138, 255 },
 	text_color = { 200, 209, 218, 255 },
 	text_align = { .Center, .Center },
+	font_size = 0,
 }
 
 UI_BUTTON_STYLE_TRANSPARENT :: UI_Button_Style {
@@ -162,6 +165,7 @@ UI_BUTTON_STYLE_TRANSPARENT :: UI_Button_Style {
 	bg_color_active = { 121, 128, 138, 255 },
 	text_color = { 200, 209, 218, 255 },
 	text_align = { .Center, .Center },
+	font_size = 0,
 }
 
 UI_BUTTON_STYLE_ACCENT :: UI_Button_Style {
@@ -170,6 +174,7 @@ UI_BUTTON_STYLE_ACCENT :: UI_Button_Style {
 	bg_color_active = { 190, 141, 255, 90 },
 	text_color = { 190, 141, 255, 255 },
 	text_align = { .Center, .Center },
+	font_size = 0,
 }
 
 UI_BUTTON_STYLE_RED :: UI_Button_Style {
@@ -178,45 +183,56 @@ UI_BUTTON_STYLE_RED :: UI_Button_Style {
 	bg_color_active = { 255, 101, 125, 90 },
 	text_color = { 255, 101, 125, 255 },
 	text_align = { .Center, .Center },
+	font_size = 0,
 }
 
 UI_SLIDER_STYLE :: struct {
 	bg_color: rl.Color,
 	progress_color: rl.Color,
 	text_color: rl.Color,
+	// when zero will default to ui_font_size()
+	font_size: f32,
 }
 
 UI_SLIDER_STYLE_DEFAULT :: UI_SLIDER_STYLE {
 	bg_color = { 20, 23, 28, 255 },
 	progress_color = { 61, 68, 77, 255 },
 	text_color = { 200, 209, 218, 255 },
+	font_size = 0,
 }
 
 UI_CHECKBOX_STYLE :: struct {
 	bg_color: rl.Color,
 	check_color: rl.Color,
 	text_color: rl.Color,
+	// when zero will default to ui_font_size()
+	font_size: f32,
 }
 
 UI_CHECKBOX_STYLE_DEFAULT :: UI_CHECKBOX_STYLE {
 	bg_color = { 20, 23, 28, 255 },
 	check_color = { 176, 131, 240, 255 },
 	text_color = { 200, 209, 218, 255 },
-} 
+	font_size = 0,
+}
 
 UI_NOTIF_STYLE :: struct {
 	bg_color: rl.Color,
-	text_color: rl.Color,	
+	text_color: rl.Color,
+	// when zero will default to ui_font_size()
+	font_size: f32,	
 }
 
 UI_NOTIF_STYLE_ACCENT :: UI_NOTIF_STYLE {
 	bg_color = { 176, 131, 240, 255 },
 	text_color = { 20, 23, 28, 255 },
+	font_size = 0,
 }
 
 UI_NOTIF_STYLE_ERROR :: UI_NOTIF_STYLE {
 	bg_color = { 255, 101, 125, 255 },
 	text_color = { 20, 23, 28, 255 },
+	font_size = 0,
 }
 
 UI_PANEL_STYLE :: struct {
@@ -355,10 +371,12 @@ ui_draw_notif :: proc() {
 		ww := f32(rl.GetScreenWidth())
 		wh := f32(rl.GetScreenHeight())
 
+		style := ui_ctx.current_notif.style
 		text := strings.clone_to_cstring(ui_ctx.current_notif.text, context.temp_allocator)
+		font_size := style.font_size == 0 ? ui_font_size() : style.font_size
 		offset := ui_px(80)
 		padding := ui_px(10)
-		text_size := rl.MeasureTextEx(ui_ctx.font, text, ui_font_size(), 0)
+		text_size := rl.MeasureTextEx(ui_ctx.font, text, font_size, 0)
 		notif_w := text_size.x + padding * 2
 		notif_h := text_size.y + padding * 2
 		notif_x := ww / 2 - text_size.x / 2 + padding
@@ -378,7 +396,6 @@ ui_draw_notif :: proc() {
 		}
 		if ui_ctx.current_notif.text != "" {
 			notif_y += padding
-			style := ui_ctx.current_notif.style
 			sa.append(&ui_ctx.current_notif.draw_commands, UI_Draw_Rect {
 				color = style.bg_color,
 				rec = { notif_x, notif_y, notif_w, notif_h },
@@ -387,7 +404,7 @@ ui_draw_notif :: proc() {
 				align = { .Center, .Center },
 				color = style.text_color,
 				rec = { notif_x, notif_y, notif_w, notif_h },
-				size = ui_font_size(),
+				size = font_size,
 				text = ui_ctx.current_notif.text,
 			})
 		}
@@ -539,6 +556,7 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := 
 	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT){
 		clicked = true
 	}
+	font_size := style.font_size == 0 ? ui_font_size() : style.font_size
 	color := style.bg_color
 	if ui_ctx.active_widget == id {
 		color = style.bg_color_active
@@ -553,7 +571,7 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := 
 	ui_push_command(UI_Draw_Text {
 		rec = rec_pad(rec, 10),
 		text = text,
-		size = ui_font_size(),
+		size = font_size,
 		color = style.text_color,
 		align = style.text_align,
 	})
@@ -578,6 +596,7 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 
 		menu_item_y := rec.y + rec.height + padding
 		style := UI_BUTTON_STYLE_DEFAULT
+		style.font_size = ui_font_size()
 		style.text_align = { .Left, .Center }
 		for item, i in items^ {
 			if ui_button(item.id, item.text, { rec.x + padding, menu_item_y, item_width, item_height }, style = style) {
@@ -610,6 +629,7 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 }
 
 ui_check_box :: proc(id: UI_ID, label: string, checked: ^bool, rec: Rec, style := UI_CHECKBOX_STYLE_DEFAULT) {
+	font_size := style.font_size == 0 ? ui_font_size() : style.font_size
 	check_box_rec := Rec {
 		rec.x + rec.width - ui_default_widget_height(),
 		rec.y,
@@ -634,7 +654,7 @@ ui_check_box :: proc(id: UI_ID, label: string, checked: ^bool, rec: Rec, style :
 		rec = rec,
 		align = { .Left, .Center },
 		color = style.text_color,
-		size = ui_font_size(),
+		size = font_size,
 		text = label,
 	})
 }
@@ -738,6 +758,7 @@ ui_slider_f32 :: proc(
 	}
 
 	progress_rec := rec_pad(rec, 1)
+	font_size := style.font_size == 0 ? ui_font_size() : style.font_size
 
 	ui_push_command(UI_Draw_Rect {
 		rec = rec,
@@ -750,7 +771,7 @@ ui_slider_f32 :: proc(
 			align = { .Left, .Center },
 			color = style.text_color,
 			rec = rec_pad(rec, ui_px(8)),
-			size = ui_font_size(),
+			size = font_size,
 			text = string(sa.slice(&ui_ctx.slider_text_buffer)),
 		})
 		ui_push_command(UI_Draw_Rect_Outline {
@@ -771,7 +792,7 @@ ui_slider_f32 :: proc(
 		ui_push_command(UI_Draw_Text {
 			rec = rec_pad(rec, 10),
 			text = label,
-			size = ui_font_size(),
+			size = font_size,
 			color = style.text_color,
 			align = { .Left, .Center },	
 		})
@@ -779,14 +800,14 @@ ui_slider_f32 :: proc(
 		ui_push_command(UI_Draw_Text {
 			rec = rec_pad({ rec.x + 2, rec.y + 2, rec.width, rec.height }, 10),
 			text = text,
-			size = ui_font_size(),
+			size = font_size,
 			color = style.bg_color,
 			align = { .Right, .Center },
 		})
 		ui_push_command(UI_Draw_Text {
 			rec = rec_pad(rec, 10),
 			text = text,
-			size = ui_font_size(),
+			size = font_size,
 			color = style.text_color,
 			align = { .Right, .Center },	
 		})

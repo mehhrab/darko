@@ -740,12 +740,9 @@ preview :: proc(state: ^Project_State, rec: Rec) {
 		ui_default_widget_height(),
 		ui_default_widget_height(),
 	}
-	prev_font_size := ui_ctx.font_size
-	ui_ctx.font_size = 20
 	if ui_button(ui_gen_id(), ICON_SETTINGS, settings_rec, false, style = UI_BUTTON_STYLE_TRANSPARENT) {
 		ui_open_popup(POPUP_PREVIEW_SETTINGS)
 	}
-	ui_ctx.font_size = prev_font_size
 }
 
 new_file_popup :: proc(state: ^Screen_State) {
