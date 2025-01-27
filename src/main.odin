@@ -21,7 +21,7 @@ POPUP_NEW_PROJECT :: "New project"
 POPUP_PREVIEW_SETTINGS :: "Preview settings"
 
 App :: struct {
-	state: Screen_State,
+	state: Screen_State `json:"-"`, 
 	new_project_width, new_project_height: i32,
 	show_fps: bool,
 	unlock_fps: bool,
@@ -137,7 +137,15 @@ main :: proc() {
 	defer ui_deinit_ctx()
 	
 	welcome_state := Welcome_State {}
-	init_app(welcome_state)
+	if os2.exists("data.json") {
+		load_app_data()
+		app.state = welcome_state
+	}
+	else {
+		init_app(welcome_state)
+	}
+
+	defer save_app_data()
 	defer deinit_app()
 
 	for rl.WindowShouldClose() == false {
@@ -940,6 +948,32 @@ deinit_app :: proc() {
 
 		}
 	}
+}
+
+load_app_data :: proc() {
+	json_exists := os2.exists("data.json")
+	assert(json_exists)
+
+	size: i32
+	data := rl.LoadFileData("data.json", &size)
+	text := strings.string_from_null_terminated_ptr(data, int(size))
+	loaded_data: App
+	unmarshal_err := json.unmarshal(transmute([]u8)text, &loaded_data, allocator = context.temp_allocator)
+	if unmarshal_err != nil {
+		return
+	}
+	app = loaded_data
+}
+
+save_app_data :: proc() {
+	// save project.json
+	text, marshal_err := json.marshal(app, { pretty = true }, context.temp_allocator)
+	if marshal_err != nil {
+		fmt.printfln("{}", marshal_err)
+		return
+	}
+	// current_dir := rl.GetWorkingDirectory()
+	saved := rl.SaveFileText("data.json", raw_data(text))
 }
 
 init_project_state :: proc(state: ^Project_State, width, height: i32) {
