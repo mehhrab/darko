@@ -987,6 +987,11 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 		return false
 	}
 	state^ = loaded_state
+	
+	// some duplicate code from init_project_state() not sure what's the alternative
+	bg_image := rl.GenImageChecked(state.width,  state.height, 1, 1, { 198, 208, 245, 255 }, { 131, 139, 167, 255 })
+	defer rl.UnloadImage(bg_image)
+	state.bg_texture = rl.LoadTextureFromImage(bg_image)
 
 	// load layers
 	files, read_dir_err := os2.read_all_directory_by_path(dir, context.allocator)
