@@ -72,6 +72,18 @@ rec_cut_top :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
 	return res
 }
 
+rec_cut_bottom :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
+	res = {
+		rec.x,
+		rec.y + rec.height - amount,
+		rec.width,
+		amount,
+	}
+	// rec.y += amount
+	rec.height -= amount
+	return res
+}
+
 rec_cut_left :: proc(rec: ^Rec, amount: f32) -> (res: Rec) {
 	res = {
 		rec.x,
