@@ -629,6 +629,47 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 	return clicked_item
 }
 
+ui_path_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := UI_BUTTON_STYLE_DEFAULT) -> (clicked: bool) {	
+	clicked = false
+	ui_update_widget(id, rec, blocking)
+	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT){
+		clicked = true
+	}
+	font_size := style.font_size == 0 ? ui_font_size() : style.font_size
+	color := style.bg_color
+	if ui_ctx.active_widget == id {
+		color = style.bg_color_active
+	}
+	else if ui_ctx.hovered_widget == id {
+		color = style.bg_color_hovered
+	}
+	ui_push_command(UI_Draw_Rect {
+		rec = rec,
+		color = color
+	})
+	bslash_index := strings.last_index(text, "\\")
+	text_cstring := strings.clone_to_cstring(text[:bslash_index + 1], context.temp_allocator)
+	path_width := rl.MeasureTextEx(ui_ctx.font, text_cstring, font_size, 0)[0]
+	path_color := style.text_color
+	path_color.a = 100
+	ui_push_command(UI_Draw_Text {
+		rec = rec_pad(rec, 10),
+		text = text[:bslash_index + 1],
+		size = font_size,
+		color = path_color,
+		align = style.text_align,
+	})
+	ui_push_command(UI_Draw_Text {
+		rec = rec_pad_ex(rec, 10 + f32(path_width), 10, 10, 10),
+		text = text[bslash_index + 1:],
+		size = font_size,
+		color = style.text_color,
+		align = style.text_align,
+	})
+	return clicked
+}
+
+
 ui_check_box :: proc(id: UI_ID, label: string, checked: ^bool, rec: Rec, style := UI_CHECKBOX_STYLE_DEFAULT) {
 	font_size := style.font_size == 0 ? ui_font_size() : style.font_size
 	check_box_rec := Rec {
