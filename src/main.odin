@@ -41,7 +41,7 @@ Welcome_State :: struct {
 }
 
 Project_State :: struct {
-	name: string,
+	dir: string,
 	zoom: f32,
 	spacing: f32,
 	current_color: HSV,
@@ -290,6 +290,7 @@ main :: proc() {
 					open_project(&state)
 				}
 				case Welcome_State: {
+					rl.SetWindowTitle("Darko")
 					app.state = next_state	
 				}
 			}
@@ -493,7 +494,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		}
 
 		path := string(path_cstring)
-		state.name = path[strings.last_index(path, "\\") + 1:]
+		state.dir = path
 		saved := save_project_state(state, path)
 		if saved == false {
 			ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
@@ -1076,7 +1077,7 @@ save_app_data :: proc() {
 }
 
 init_project_state :: proc(state: ^Project_State, width, height: i32) {
-	state.name = "untitled"
+	state.dir = ""
 	state.zoom = 1
 	state.spacing = 1
 	state.width = width
@@ -1120,7 +1121,8 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 		return false
 	}
 	state^ = loaded_state
-	
+	state.dir = dir
+
 	// some duplicate code from init_project_state() not sure what's the alternative
 	bg_image := rl.GenImageChecked(state.width,  state.height, 1, 1, { 198, 208, 245, 255 }, { 131, 139, 167, 255 })
 	defer rl.UnloadImage(bg_image)
@@ -1146,6 +1148,8 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 
 // TODO: return an error value instead of a bool
 save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
+	state.dir = dir
+
 	// clear the directory
 	remove_err := os2.remove_all(dir)
 	if remove_err != os2.ERROR_NONE {
@@ -1196,7 +1200,7 @@ deinit_project_state :: proc(state: ^Project_State) {
 }
 
 open_project :: proc(state: ^Project_State) {
-	rl.SetWindowTitle(fmt.ctprintf("darko - {}", state.name))
+	rl.SetWindowTitle(fmt.ctprintf("Darko   {}", state.dir))
 	app.state = state^
 	ui_show_notif(ICON_CHECK + " Project is opened")
 }
