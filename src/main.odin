@@ -5,12 +5,14 @@ package darko
 import "core:fmt"
 import rl "vendor:raylib"
 import "core:mem"
+import vmem "core:mem/virtual"
 import "core:math"
 import "core:encoding/json"
 import "core:strings"
 import "core:c"
 import "core:os/os2"
 import "core:slice"
+import sa "core:container/small_array"
 import ntf "../lib/nativefiledialog-odin"
 
 TARGET_FPS :: 60
@@ -22,7 +24,9 @@ POPUP_PREVIEW_SETTINGS :: "Preview settings"
 
 App :: struct {
 	state: Screen_State `json:"-"`, 
+	arena: vmem.Arena `json:"-"`, 
 	new_project_width, new_project_height: i32,
+	recent_projects: sa.Small_Array(8, string),
 	show_fps: bool,
 	unlock_fps: bool,
 }
@@ -124,7 +128,11 @@ main :: proc() {
 			mem.tracking_allocator_destroy(&track)
 		}
 	}
-
+	
+	err := vmem.arena_init_growing(&app.arena)
+	assert(err == nil)
+	defer vmem.arena_destroy(&app.arena)
+	
 	rl.SetConfigFlags({rl.ConfigFlags.WINDOW_RESIZABLE})
 	rl.InitWindow(1200, 700, "Darko")
 	rl.SetExitKey(nil)
@@ -138,11 +146,12 @@ main :: proc() {
 	
 	welcome_state := Welcome_State {}
 	if os2.exists("data.json") {
-		load_app_data()
+		load_app_data("data.json")
 		app.state = welcome_state
 	}
 	else {
-		init_app(welcome_state)
+		init_app()
+		app.state = welcome_state
 	}
 
 	defer save_app_data()
@@ -229,7 +238,7 @@ main :: proc() {
 				}
 			}
 			case Welcome_State: {
-				welcome_screen()
+				welcome_screen(&state)
 			}
 			case: {
 				panic("what")
@@ -269,27 +278,36 @@ main :: proc() {
 
 // ui code:
 
-welcome_screen :: proc() {
+welcome_screen :: proc(state: ^Welcome_State) {
 	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
 	screen_area := screen_rec
+	
+	left_area := rec_cut_right(&screen_area, screen_area.width / 2)
+	right_area := screen_area
 	ui_push_command(UI_Draw_Rect {
 		color = ui_ctx.accent_color,
-		rec = rec_cut_right(&screen_area, screen_area.width / 2)
+		rec = left_area
 	})
-	screen_area = rec_pad(screen_area, ui_px(16))
+
+	right_area = rec_pad(right_area, ui_px(16))
 	ui_push_command(UI_Draw_Text {
 		text = "Welcome to Darko!",
 		align = { .Center, .Center },
 		size = ui_font_size() * 2,
 		color = ui_ctx.accent_color,
-		rec = rec_cut_top(&screen_area, ui_default_widget_height() * 2)
+		rec = rec_cut_top(&right_area, ui_default_widget_height() * 2)
 	})
-	buttons_area := rec_cut_top(&screen_area, ui_default_widget_height())
-	if ui_button(ui_gen_id(), "New", rec_cut_left(&buttons_area, buttons_area.width / 2 - ui_px(8))) {
+
+	buttons_area := rec_cut_top(&right_area, ui_default_widget_height())
+	new_button_rec := rec_cut_left(&buttons_area, buttons_area.width / 2 - ui_px(8))
+	if ui_button(ui_gen_id(), "New", new_button_rec) {
 		ui_open_popup(POPUP_NEW_PROJECT)
 	}
+	
 	rec_cut_left(&buttons_area, ui_px(8))
-	if ui_button(ui_gen_id(), "Open", rec_cut_left(&buttons_area, buttons_area.width - ui_px(8))) {
+	
+	open_button_rec := rec_cut_left(&buttons_area, buttons_area.width - ui_px(8))
+	if ui_button(ui_gen_id(), "Open", open_button_rec) {
 		path_cstring: cstring
 		defer ntf.FreePathU8(path_cstring)
 		args: ntf.Open_Dialog_Args
@@ -310,7 +328,43 @@ welcome_screen :: proc() {
 		}
 		
 		mark_all_layers_dirty(&loaded_project)
+		add_recent_project(strings.clone(path))
 		open_project(&loaded_project)
+	}
+	if app.recent_projects.len == 0 {
+		ui_push_command(UI_Draw_Text {
+			align = { .Left, .Center },
+			color = ui_ctx.text_color,
+			rec = rec_cut_bottom(&right_area, ui_default_widget_height()),
+			size = ui_font_size(),
+			text = "No recent projects"
+		})
+	}
+	else {		
+		for i in 0..<app.recent_projects.len {
+			recent := app.recent_projects.data[i]
+			recent_rec := rec_cut_bottom(&right_area, ui_default_widget_height())
+			style := UI_BUTTON_STYLE_DEFAULT
+			style.text_align = { .Left, .Center }
+			if ui_path_button(ui_gen_id(i), recent, recent_rec, style = style) {
+				project: Project_State
+				ok := load_project_state(&project, recent)
+				if ok {
+					add_recent_project(strings.clone(recent))
+					open_project(&project)
+				}
+				else {
+					ui_show_notif("Could not open project")
+				}
+			}
+		}
+		ui_push_command(UI_Draw_Text {
+			align = { .Left, .Center },
+			color = ui_ctx.text_color,
+			rec = rec_cut_bottom(&right_area, ui_default_widget_height()),
+			size = ui_font_size(),
+			text = "Recent projects:"
+		})
 	}
 }
 
@@ -388,6 +442,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		
 		close_project(state)		
 		mark_all_layers_dirty(&loaded_project)
+		add_recent_project(strings.clone(path))
 		open_project(&loaded_project)
 	}
 	if clicked_item.text == "save project" {
@@ -411,7 +466,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 			ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
 			return
 		}
-
+		add_recent_project(strings.clone(path))
 		ui_show_notif("Project is saved")
 	}
 }
@@ -933,8 +988,7 @@ action_do :: proc(state: ^Project_State, action: Action) {
 	clear(&state.redos)
 }
 
-init_app :: proc(state: Screen_State) {
-	app.state = state
+init_app :: proc() {
 	app.new_project_width = 16
 	app.new_project_height = 16
 }
@@ -948,21 +1002,29 @@ deinit_app :: proc() {
 
 		}
 	}
+	for i in 0..<app.recent_projects.len {
+		delete(app.recent_projects.data[i])
+	}
 }
 
-load_app_data :: proc() {
-	json_exists := os2.exists("data.json")
+load_app_data :: proc(path: string) {
+	json_exists := os2.exists(path)
 	assert(json_exists)
 
 	size: i32
 	data := rl.LoadFileData("data.json", &size)
 	text := strings.string_from_null_terminated_ptr(data, int(size))
+	allocator := vmem.arena_allocator(&app.arena)
 	loaded_data: App
-	unmarshal_err := json.unmarshal(transmute([]u8)text, &loaded_data, allocator = context.temp_allocator)
+	unmarshal_err := json.unmarshal(transmute([]u8)text, &loaded_data, allocator = allocator)
 	if unmarshal_err != nil {
 		return
 	}
 	app = loaded_data
+	// HACK: we have to clone these so we don't have "incorret frees" later
+	for i in 0..<app.recent_projects.len {
+		app.recent_projects.data[i] = strings.clone(app.recent_projects.data[i])
+	}
 }
 
 save_app_data :: proc() {
@@ -972,7 +1034,6 @@ save_app_data :: proc() {
 		fmt.printfln("{}", marshal_err)
 		return
 	}
-	// current_dir := rl.GetWorkingDirectory()
 	saved := rl.SaveFileText("data.json", raw_data(text))
 }
 
@@ -986,7 +1047,7 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	state.current_color = { 200, 0.5, 0.1 }	
 	state.lerped_zoom = 1
 	state.lerped_preview_zoom = 1
-	bg_image := rl.GenImageChecked(state.width,  state.height, 1, 1, { 198, 208, 245, 255 }, { 131, 139, 167, 255 })
+	bg_image := rl.GenImageChecked(state.width, state.height, 1, 1, { 198, 208, 245, 255 }, { 131, 139, 167, 255 })
 	defer rl.UnloadImage(bg_image)
 	state.bg_texture = rl.LoadTextureFromImage(bg_image)
 	state.preview_rotation = 0
@@ -1097,8 +1158,8 @@ deinit_project_state :: proc(state: ^Project_State) {
 }
 
 open_project :: proc(state: ^Project_State) {
-	app.state = state^
 	rl.SetWindowTitle(fmt.ctprintf("darko - {}", state.name))
+	app.state = state^
 	ui_show_notif(ICON_CHECK + " Project is opened")
 }
 
@@ -1130,6 +1191,26 @@ mark_all_layers_dirty :: proc(state: ^Project_State) {
 	for i in 0..<len(state.layers) {
 		append(&state.diry_layers, i)
 	}
+}
+
+/* NOTE: use `strings.clone` on the `path` parameter 
+so we don't get any "bad frees" when we later delete them */
+add_recent_project :: proc(path: string) {
+	// remove first recent when `recent_projects` is full
+	if app.recent_projects.len >= len(app.recent_projects.data) {
+		delete(app.recent_projects.data[0])
+		sa.ordered_remove(&app.recent_projects, 0)
+	}
+	// remove duplicate recents
+	if slice.contains(app.recent_projects.data[:], path) {
+		recent_index, found := slice.linear_search(app.recent_projects.data[:], path)
+		if found {
+			delete(app.recent_projects.data[recent_index])
+			sa.ordered_remove(&app.recent_projects, recent_index)
+		}
+	}
+
+	sa.append(&app.recent_projects, path)
 }
 
 update_zoom :: proc(current_zoom: ^f32, strength: f32, min: f32, max: f32) {
