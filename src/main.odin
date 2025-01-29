@@ -1179,7 +1179,7 @@ deinit_layer :: proc(layer: ^Layer) {
 	rl.UnloadImage(layer.image)
 }
 
-get_current_layer :: proc(state: ^Project_State) -> (layer: ^Layer) {
+get_current_layer :: #force_inline proc(state: ^Project_State) -> (layer: ^Layer) {
 	return &state.layers[state.current_layer]
 }
 
@@ -1384,10 +1384,10 @@ draw_grid :: proc(slice_w, slice_h: i32, rec: Rec) {
 	}
 }
 
-rgb_to_hsv :: proc(rgb: rl.Color) -> (hsv: HSV) {
+rgb_to_hsv :: #force_inline proc(rgb: rl.Color) -> (hsv: HSV) {
 	return HSV(rl.ColorToHSV(rgb))
 }
 
-hsv_to_rgb :: proc(hsv: HSV) -> (rgb: rl.Color) {
+hsv_to_rgb :: #force_inline proc(hsv: HSV) -> (rgb: rl.Color) {
 	return rl.ColorFromHSV(hsv[0], hsv[1], hsv[2])
 }

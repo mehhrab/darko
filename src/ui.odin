@@ -884,7 +884,7 @@ ui_push_command :: proc(command: UI_Draw_Command) {
 	}
 }
 
-ui_is_being_interacted :: proc() -> (res: bool) {
+ui_is_being_interacted :: #force_inline proc() -> (res: bool) {
 	return ui_ctx.hovered_widget != 0 ||
 	ui_ctx.active_widget != 0 ||
 	ui_ctx.hovered_panel != 0 ||
