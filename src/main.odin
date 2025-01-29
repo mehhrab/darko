@@ -275,6 +275,7 @@ main :: proc() {
 		ui_clear_temp_state()
 
 		if next_state, ok := app.next_state.?; ok {
+			// cleanup previuos state
 			switch &state in app.state {
 				case Project_State: {
 					close_project(&state)
@@ -283,7 +284,16 @@ main :: proc() {
 
 				}
 			}
-			app.state = next_state	
+			// switch to the new state
+			switch &state in next_state {
+				case Project_State: {
+					open_project(&state)
+				}
+				case Welcome_State: {
+					app.state = next_state	
+				}
+			}
+			app.next_state = nil
 		} 
 	}
 	rl.CloseWindow()
@@ -342,7 +352,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 		
 		mark_all_layers_dirty(&loaded_project)
 		add_recent_project(strings.clone(path))
-		open_project(&loaded_project)
+		schedule_state_change(loaded_project)
 	}
 	if app.recent_projects.len == 0 {
 		ui_push_command(UI_Draw_Text {
@@ -364,7 +374,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 				ok := load_project_state(&project, recent)
 				if ok {
 					add_recent_project(strings.clone(recent))
-					open_project(&project)
+					schedule_state_change(project)
 				}
 				else {
 					ui_show_notif("Could not open project")
@@ -466,7 +476,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		close_project(state)		
 		mark_all_layers_dirty(&loaded_project)
 		add_recent_project(strings.clone(path))
-		open_project(&loaded_project)
+		schedule_state_change(loaded_project)
 	}
 
 	if clicked_item.text == SAVE_PROJECT {
@@ -495,6 +505,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 	}
 
 	if clicked_item.text == OPEN_WELCOME_SCREEN {
+		defer ui_close_current_popup()
 		schedule_state_change(Welcome_State {})
 	}
 }
@@ -797,7 +808,7 @@ new_file_popup :: proc(state: ^Screen_State) {
 
 			project: Project_State
 			init_project_state(&project, app.new_project_width, app.new_project_height)
-			open_project(&project)
+			schedule_state_change(project)
 			ui_close_current_popup()
 		
 			ui_show_notif(ICON_CHECK + " Project is created")
