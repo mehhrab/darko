@@ -23,8 +23,9 @@ POPUP_NEW_PROJECT :: "New project"
 POPUP_PREVIEW_SETTINGS :: "Preview settings"
 
 App :: struct {
-	state: Screen_State `json:"-"`, 
 	arena: vmem.Arena `json:"-"`, 
+	state: Screen_State `json:"-"`, 
+	next_state: Maybe(Screen_State) `json:"-"`,
 	new_project_width, new_project_height: i32,
 	recent_projects: sa.Small_Array(8, string),
 	show_fps: bool,
@@ -272,6 +273,18 @@ main :: proc() {
 		}
 		rl.EndDrawing()
 		ui_clear_temp_state()
+
+		if next_state, ok := app.next_state.?; ok {
+			switch &state in app.state {
+				case Project_State: {
+					close_project(&state)
+				}
+				case Welcome_State: {
+
+				}
+			}
+			app.state = next_state	
+		} 
 	}
 	rl.CloseWindow()
 }
@@ -1165,6 +1178,11 @@ open_project :: proc(state: ^Project_State) {
 
 close_project :: proc(state: ^Project_State) {
 	deinit_project_state(state)
+}
+
+// NOTE: deinit calls for the previous state will be handled automatically 
+schedule_state_change :: proc(state: Screen_State) {
+	app.next_state = state
 }
 
 init_layer :: proc(layer: ^Layer, width, height: i32) {
