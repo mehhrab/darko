@@ -472,8 +472,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
 			return
 		}
-		
-		close_project(state)		
+			
 		mark_all_layers_dirty(&loaded_project)
 		add_recent_project(strings.clone(path))
 		schedule_state_change(loaded_project)
