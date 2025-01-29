@@ -408,30 +408,40 @@ project_screen :: proc(state: ^Project_State) {
 
 menu_bar :: proc(state: ^Project_State, area: Rec) {
 	ui_panel(ui_gen_id(), area, { bg_color = ui_ctx.widget_color })
-
+	NEW_PROJECT :: "new project" 
+	OPEN_PROJECT :: "open project" 
+	SAVE_PROJECT :: "save project" 
+	OPEN_WELCOME_SCREEN :: "open welcome screen" 
 	menu_items := [?]UI_Menu_Item {
 		UI_Menu_Item { 
 			ui_gen_id(),
-			"new project",
+			NEW_PROJECT,
 			"",
 		},
 		UI_Menu_Item { 
 			ui_gen_id(),
-			"open project",
+			OPEN_PROJECT,
 			"",
 		},
 		UI_Menu_Item { 
 			ui_gen_id(),
-			"save project",
+			SAVE_PROJECT,
+			"",
+		},
+		UI_Menu_Item { 
+			ui_gen_id(),
+			OPEN_WELCOME_SCREEN,
 			"",
 		},
 	}
 	menu_items_slice := menu_items[:]
 	clicked_item := ui_menu_button(ui_gen_id(), "File", &menu_items_slice, 300, { area.x, area.y, 60, area.height })
-	if clicked_item.text == "new project" {
+	
+	if clicked_item.text == NEW_PROJECT {
 		ui_open_popup(POPUP_NEW_PROJECT)
 	}
-	if clicked_item.text == "open project" {
+	
+	if clicked_item.text == OPEN_PROJECT {
 		defer ui_close_current_popup()
 
 		path_cstring: cstring
@@ -458,7 +468,8 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		add_recent_project(strings.clone(path))
 		open_project(&loaded_project)
 	}
-	if clicked_item.text == "save project" {
+
+	if clicked_item.text == SAVE_PROJECT {
 		defer ui_close_current_popup()
 
 		path_cstring: cstring
@@ -481,6 +492,10 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		}
 		add_recent_project(strings.clone(path))
 		ui_show_notif("Project is saved")
+	}
+
+	if clicked_item.text == OPEN_WELCOME_SCREEN {
+		schedule_state_change(Welcome_State {})
 	}
 }
 
