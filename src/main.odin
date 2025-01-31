@@ -41,7 +41,8 @@ Welcome_State :: struct {
 }
 
 Project_State :: struct {
-	dir: string,
+	arena: vmem.Arena `json:"-"`,
+	dir: string `json:"-"`,
 	zoom: f32,
 	spacing: f32,
 	current_color: HSV,
@@ -352,7 +353,8 @@ welcome_screen :: proc(state: ^Welcome_State) {
 		}
 		
 		mark_all_layers_dirty(&loaded_project)
-		add_recent_project(strings.clone(path))
+		app_allocator := vmem.arena_allocator(&app.arena)
+		add_recent_project(strings.clone(path, app_allocator))
 		schedule_state_change(loaded_project)
 	}
 	if app.recent_projects.len == 0 {
@@ -374,7 +376,8 @@ welcome_screen :: proc(state: ^Welcome_State) {
 				project: Project_State
 				ok := load_project_state(&project, recent)
 				if ok {
-					add_recent_project(strings.clone(recent))
+					app_allocator := vmem.arena_allocator(&app.arena)
+					add_recent_project(strings.clone(recent, app_allocator))
 					schedule_state_change(project)
 				}
 				else {
@@ -458,7 +461,8 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		path_cstring: cstring
 		defer ntf.FreePathU8(path_cstring)
 		args: ntf.Open_Dialog_Args
-		res := ntf.PickFolderU8(&path_cstring, "")
+		current_dir := strings.clone_to_cstring(state.dir, context.temp_allocator)
+		res := ntf.PickFolderU8(&path_cstring, current_dir)
 		if res == .Error {
 			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
 		}
@@ -485,7 +489,8 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		path_cstring: cstring
 		defer ntf.FreePathU8(path_cstring)
 		args: ntf.Open_Dialog_Args
-		res := ntf.PickFolderU8(&path_cstring, "")
+		current_dir := strings.clone_to_cstring(state.dir, context.temp_allocator)
+		res := ntf.PickFolderU8(&path_cstring, current_dir)
 		if res == .Error {
 			ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
 		}
@@ -500,7 +505,9 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 			ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
 			return
 		}
-		add_recent_project(strings.clone(path))
+
+		app_allocator := vmem.arena_allocator(&app.arena)
+		add_recent_project(strings.clone(path, app_allocator))
 		ui_show_notif("Project is saved")
 	}
 
@@ -1041,9 +1048,6 @@ deinit_app :: proc() {
 
 		}
 	}
-	for i in 0..<app.recent_projects.len {
-		delete(app.recent_projects.data[i])
-	}
 }
 
 load_app_data :: proc(path: string) {
@@ -1053,17 +1057,13 @@ load_app_data :: proc(path: string) {
 	size: i32
 	data := rl.LoadFileData("data.json", &size)
 	text := strings.string_from_null_terminated_ptr(data, int(size))
-	allocator := vmem.arena_allocator(&app.arena)
+	app_allocator := vmem.arena_allocator(&app.arena)
 	loaded_data: App
-	unmarshal_err := json.unmarshal(transmute([]u8)text, &loaded_data, allocator = allocator)
+	unmarshal_err := json.unmarshal(transmute([]u8)text, &loaded_data, allocator = app_allocator)
 	if unmarshal_err != nil {
 		return
 	}
 	app = loaded_data
-	// HACK: we have to clone these so we don't have "incorret frees" later
-	for i in 0..<app.recent_projects.len {
-		app.recent_projects.data[i] = strings.clone(app.recent_projects.data[i])
-	}
 }
 
 save_app_data :: proc() {
@@ -1077,12 +1077,17 @@ save_app_data :: proc() {
 }
 
 init_project_state :: proc(state: ^Project_State, width, height: i32) {
+	arena_err := vmem.arena_init_growing(&state.arena)
+	assert(arena_err == nil)
+
+	project_allocator := vmem.arena_allocator(&state.arena)
+
 	state.dir = ""
 	state.zoom = 1
 	state.spacing = 1
 	state.width = width
 	state.height = height
-	state.layers = make([dynamic]Layer)
+	state.layers = make([dynamic]Layer, project_allocator)
 	state.current_color = { 200, 0.5, 0.1 }	
 	state.lerped_zoom = 1
 	state.lerped_preview_zoom = 1
@@ -1091,9 +1096,9 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	state.bg_texture = rl.LoadTextureFromImage(bg_image)
 	state.preview_rotation = 0
 	state.preview_zoom = 10
-	state.undos = make([dynamic]Action)
-	state.redos = make([dynamic]Action)
-	state.diry_layers = make([dynamic]int)
+	state.undos = make([dynamic]Action, project_allocator)
+	state.redos = make([dynamic]Action, project_allocator)
+	state.diry_layers = make([dynamic]int, project_allocator)
 	
 	layer: Layer
 	init_layer(&layer, width, height)
@@ -1101,7 +1106,8 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	mark_all_layers_dirty(state)
 }
 
-// TODO: return an error value instead of a bool
+/* some duplicate code from init_project_state() not sure what's the alternative
+TODO: return an error value instead of a bool */
 load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	// check if project.json and at least one layer exists
 	json_exists := os2.exists(fmt.tprintf("{}{}", dir, "\\project.json"))
@@ -1110,25 +1116,31 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 		return false
 	}
 
+	loaded_state: Project_State
+
+	arena_err := vmem.arena_init_growing(&loaded_state.arena)
+	assert(arena_err == nil)
+	project_allocator := vmem.arena_allocator(&loaded_state.arena)
+
 	// load project.json
 	size: i32
 	data := rl.LoadFileData(fmt.ctprintf("{}{}", dir, "\\project.json"), &size)
 	defer rl.UnloadFileData(data)
 	text := strings.string_from_null_terminated_ptr(data, int(size))
-	loaded_state: Project_State
-	unmarshal_err := json.unmarshal(transmute([]u8)text, &loaded_state, allocator = context.temp_allocator)
+	unmarshal_err := json.unmarshal(transmute([]u8)text, &loaded_state, allocator = project_allocator)
 	if unmarshal_err != nil {
 		return false
 	}
 	state^ = loaded_state
-	state.dir = dir
+	
+	state.dir = strings.clone(dir, project_allocator)
 
-	// some duplicate code from init_project_state() not sure what's the alternative
 	bg_image := rl.GenImageChecked(state.width,  state.height, 1, 1, { 198, 208, 245, 255 }, { 131, 139, 167, 255 })
 	defer rl.UnloadImage(bg_image)
 	state.bg_texture = rl.LoadTextureFromImage(bg_image)
 
 	// load layers
+	state.layers = make([dynamic]Layer, project_allocator)
 	files, read_dir_err := os2.read_all_directory_by_path(dir, context.allocator)
 	defer os2.file_info_slice_delete(files, context.allocator)
 	if read_dir_err != os2.ERROR_NONE {
@@ -1186,17 +1198,14 @@ deinit_project_state :: proc(state: ^Project_State) {
 	for &layer in state.layers {
 		deinit_layer(&layer)
 	}
-	delete(state.layers)
 	for action in state.undos {
 		action_deinit(action)
 	}
-	delete(state.undos)
 	for action in state.redos {
 		action_deinit(action)
 	}
-	delete(state.redos)
-	delete(state.diry_layers)
 	rl.UnloadTexture(state.bg_texture)
+	vmem.arena_destroy(&state.arena)
 }
 
 open_project :: proc(state: ^Project_State) {
@@ -1240,19 +1249,15 @@ mark_all_layers_dirty :: proc(state: ^Project_State) {
 	}
 }
 
-/* NOTE: use `strings.clone` on the `path` parameter 
-so we don't get any "bad frees" when we later delete them */
 add_recent_project :: proc(path: string) {
 	// remove first recent when `recent_projects` is full
 	if app.recent_projects.len >= len(app.recent_projects.data) {
-		delete(app.recent_projects.data[0])
 		sa.ordered_remove(&app.recent_projects, 0)
 	}
 	// remove duplicate recents
 	if slice.contains(app.recent_projects.data[:], path) {
 		recent_index, found := slice.linear_search(app.recent_projects.data[:], path)
 		if found {
-			delete(app.recent_projects.data[recent_index])
 			sa.ordered_remove(&app.recent_projects, recent_index)
 		}
 	}
