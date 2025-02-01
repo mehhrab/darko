@@ -1,0 +1,3 @@
+[submodule "lib/ntf"]
+	path = lib/ntf
+	url = https://github.com/mehhrab/nativefiledialog-odin
