@@ -13,7 +13,7 @@ import "core:c"
 import "core:os/os2"
 import "core:slice"
 import sa "core:container/small_array"
-import ntf "../lib/nativefiledialog-odin"
+import ntf "../lib/ntf"
 
 TARGET_FPS :: 60
 HSV :: distinct [3]f32
