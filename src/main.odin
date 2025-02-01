@@ -460,9 +460,15 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 
 		path_cstring: cstring
 		defer ntf.FreePathU8(path_cstring)
-		args: ntf.Open_Dialog_Args
 		current_dir := strings.clone_to_cstring(state.dir, context.temp_allocator)
-		res := ntf.PickFolderU8(&path_cstring, current_dir)
+		args := ntf.Pick_Folder_Args {
+			default_path = current_dir,
+			parent_window = {
+				handle = rl.GetWindowHandle(),
+				type = .Windows,
+			}
+		}
+		res := ntf.PickFolderU8_With(&path_cstring, &args)
 		if res == .Error {
 			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
 		}
@@ -488,9 +494,15 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 
 		path_cstring: cstring
 		defer ntf.FreePathU8(path_cstring)
-		args: ntf.Open_Dialog_Args
 		current_dir := strings.clone_to_cstring(state.dir, context.temp_allocator)
-		res := ntf.PickFolderU8(&path_cstring, current_dir)
+		args := ntf.Pick_Folder_Args {
+			default_path = current_dir,
+			parent_window = {
+				handle = rl.GetWindowHandle(),
+				type = .Windows,
+			}
+		}
+		res := ntf.PickFolderU8_With(&path_cstring, &args)
 		if res == .Error {
 			ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
 		}
