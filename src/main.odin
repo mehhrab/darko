@@ -63,7 +63,7 @@ Project_State :: struct {
 	temp_undo: Maybe(Action) `json:"-"`,
 	undos: [dynamic]Action `json:"-"`,
 	redos: [dynamic]Action `json:"-"`,
-	diry_layers: [dynamic]int `json:"-"`,
+	dirty_layers: [dynamic]int `json:"-"`,
 }
 
 Layer :: struct {
@@ -230,15 +230,15 @@ main :: proc() {
 				}
 
 				// update the textures for dirty layers
-				if len(state.diry_layers) > 0 {
+				if len(state.dirty_layers) > 0 {
 					for layer, i in state.layers {
-						if slice.contains(state.diry_layers[:], i) {
+						if slice.contains(state.dirty_layers[:], i) {
 							colors := rl.LoadImageColors(layer.image)
 							defer rl.UnloadImageColors(colors)
 							rl.UpdateTexture(layer.texture, colors)
 						}
 					}
-					clear(&state.diry_layers)
+					clear(&state.dirty_layers)
 				}
 			}
 			case Welcome_State: {
@@ -1166,7 +1166,7 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	state.preview_zoom = 10
 	state.undos = make([dynamic]Action, project_allocator)
 	state.redos = make([dynamic]Action, project_allocator)
-	state.diry_layers = make([dynamic]int, project_allocator)
+	state.dirty_layers = make([dynamic]int, project_allocator)
 	
 	layer: Layer
 	init_layer(&layer, width, height)
@@ -1308,12 +1308,12 @@ get_current_layer :: #force_inline proc(state: ^Project_State) -> (layer: ^Layer
 }
 
 mark_dirty_layers :: proc(state: ^Project_State, indexes: ..int) {
-	append(&state.diry_layers, ..indexes)
+	append(&state.dirty_layers, ..indexes)
 }
 
 mark_all_layers_dirty :: proc(state: ^Project_State) {
 	for i in 0..<len(state.layers) {
-		append(&state.diry_layers, i)
+		append(&state.dirty_layers, i)
 	}
 }
 
