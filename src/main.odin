@@ -14,6 +14,8 @@ import "core:os/os2"
 import "core:slice"
 import sa "core:container/small_array"
 import ntf "../lib/ntf"
+import "core:encoding/ini"
+import "core:strconv"
 
 TARGET_FPS :: 60
 HSV :: distinct [3]f32
@@ -23,9 +25,9 @@ POPUP_NEW_PROJECT :: "New project"
 POPUP_PREVIEW_SETTINGS :: "Preview settings"
 
 App :: struct {
-	arena: vmem.Arena `json:"-"`, 
-	state: Screen_State `json:"-"`, 
-	next_state: Maybe(Screen_State) `json:"-"`,
+	arena: vmem.Arena, 
+	state: Screen_State, 
+	next_state: Maybe(Screen_State),
 	new_project_width, new_project_height: i32,
 	recent_projects: sa.Small_Array(8, string),
 	show_fps: bool,
@@ -130,7 +132,7 @@ main :: proc() {
 			mem.tracking_allocator_destroy(&track)
 		}
 	}
-	
+
 	err := vmem.arena_init_growing(&app.arena)
 	assert(err == nil)
 	defer vmem.arena_destroy(&app.arena)
@@ -147,8 +149,8 @@ main :: proc() {
 	defer ui_deinit_ctx()
 	
 	welcome_state := Welcome_State {}
-	if os2.exists("data.json") {
-		load_app_data("data.json")
+	if os2.exists("data.ini") {
+		load_app_data("data.ini")
 		app.state = welcome_state
 	}
 	else {
@@ -1063,29 +1065,82 @@ deinit_app :: proc() {
 }
 
 load_app_data :: proc(path: string) {
-	json_exists := os2.exists(path)
-	assert(json_exists)
-
-	size: i32
-	data := rl.LoadFileData("data.json", &size)
-	text := strings.string_from_null_terminated_ptr(data, int(size))
-	app_allocator := vmem.arena_allocator(&app.arena)
-	loaded_data: App
-	unmarshal_err := json.unmarshal(transmute([]u8)text, &loaded_data, allocator = app_allocator)
-	if unmarshal_err != nil {
+	file_exists := os2.exists(path)
+	if file_exists == false {
 		return
 	}
-	app = loaded_data
+
+	loaded_map, alloc_err, loaded := ini.load_map_from_path(path, context.temp_allocator)
+	assert(alloc_err == nil)
+	if loaded == false {
+		return
+	}
+
+	fmt.printfln("loaded map: {}", loaded_map)
+
+	read_bool :: proc(mapp: ini.Map, section, name: string, default: bool = false) -> (res: bool) {
+		if name in mapp[section] {
+			value, ok := strconv.parse_bool(mapp[section][name])
+			if ok {
+				return value
+			}
+		}
+		return default
+	}
+
+	read_int :: proc(mapp: ini.Map, section, name: string, default: int = 0) -> (res: int) {
+		if name in mapp[section] {
+			value, ok := strconv.parse_int(mapp[section][name])
+			if ok {
+				return value
+			}
+		}
+		return default
+	} 
+
+	read_string :: proc(mapp: ini.Map, section, name: string, default: string = "") -> (res: string) {
+		if name in mapp[section] {
+			value, ok := mapp[section][name]
+			if ok {
+				return value
+			}
+		}
+		return default
+	} 
+	
+	app.show_fps = read_bool(loaded_map, "", "show_fps")
+	app.unlock_fps = read_bool(loaded_map, "", "unlock_fps")
+	app.new_project_width = i32(read_int(loaded_map, "", "new_project_width"))
+	app.new_project_height = i32(read_int(loaded_map, "", "new_project_height"))
+	
+	sa.clear(&app.recent_projects)
+	if "recent_projects" in loaded_map {
+		for i in 0..<len(app.recent_projects.data) {
+			recent := read_string(loaded_map, "recent_projects", fmt.tprint(i))
+			if recent == "" {
+				continue
+			}
+			sa.append(&app.recent_projects, strings.clone(recent))
+		}
+	}
 }
 
 save_app_data :: proc() {
-	// save project.json
-	text, marshal_err := json.marshal(app, { pretty = true }, context.temp_allocator)
-	if marshal_err != nil {
-		fmt.printfln("{}", marshal_err)
+	file, create_err := os2.create("data.ini")
+	defer os2.close(file)
+	if create_err != nil {
 		return
 	}
-	saved := rl.SaveFileText("data.json", raw_data(text))
+
+	ini.write_pair(file.stream, "new_project_width", fmt.tprint(app.new_project_width))
+	ini.write_pair(file.stream, "new_project_height", fmt.tprint(app.new_project_height))
+	ini.write_pair(file.stream, "show_fps", fmt.tprint(app.show_fps))
+	ini.write_pair(file.stream, "unlock_fps", fmt.tprint(app.unlock_fps))
+
+	ini.write_section(file.stream, "recent_projects")
+	for recent, i in app.recent_projects.data {
+		ini.write_pair(file.stream, fmt.tprint(i), recent)
+	}
 }
 
 init_project_state :: proc(state: ^Project_State, width, height: i32) {
