@@ -355,8 +355,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 		}
 		
 		mark_all_layers_dirty(&loaded_project)
-		app_allocator := vmem.arena_allocator(&app.arena)
-		add_recent_project(strings.clone(path, app_allocator))
+		add_recent_project(strings.clone(path))
 		schedule_state_change(loaded_project)
 	}
 	if app.recent_projects.len == 0 {
@@ -378,8 +377,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 				project: Project_State
 				ok := load_project_state(&project, recent)
 				if ok {
-					app_allocator := vmem.arena_allocator(&app.arena)
-					add_recent_project(strings.clone(recent, app_allocator))
+					add_recent_project(strings.clone(recent))
 					schedule_state_change(project)
 				}
 				else {
@@ -520,8 +518,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 			return
 		}
 
-		app_allocator := vmem.arena_allocator(&app.arena)
-		add_recent_project(strings.clone(path, app_allocator))
+		add_recent_project(strings.clone(path))
 		ui_show_notif("Project is saved")
 	}
 
@@ -1062,6 +1059,10 @@ deinit_app :: proc() {
 
 		}
 	}
+
+	for recent in app.recent_projects.data {
+		delete(recent)
+	}
 }
 
 load_app_data :: proc(path: string) {
@@ -1319,12 +1320,14 @@ mark_all_layers_dirty :: proc(state: ^Project_State) {
 add_recent_project :: proc(path: string) {
 	// remove first recent when `recent_projects` is full
 	if app.recent_projects.len >= len(app.recent_projects.data) {
+		delete(app.recent_projects.data[0])
 		sa.ordered_remove(&app.recent_projects, 0)
 	}
 	// remove duplicate recents
 	if slice.contains(app.recent_projects.data[:], path) {
 		recent_index, found := slice.linear_search(app.recent_projects.data[:], path)
 		if found {
+			delete(app.recent_projects.data[recent_index])
 			sa.ordered_remove(&app.recent_projects, recent_index)
 		}
 	}
