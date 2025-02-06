@@ -7,7 +7,6 @@ import rl "vendor:raylib"
 import "core:mem"
 import vmem "core:mem/virtual"
 import "core:math"
-import "core:encoding/json"
 import "core:strings"
 import "core:c"
 import "core:os/os2"
@@ -1065,6 +1064,46 @@ deinit_app :: proc() {
 	}
 }
 
+read_bool :: proc(mapp: ini.Map, section, name: string, default: bool = false) -> (res: bool) {
+	if name in mapp[section] {
+		value, ok := strconv.parse_bool(mapp[section][name])
+		if ok {
+			return value
+		}
+	}
+	return default
+}
+
+read_int :: proc(mapp: ini.Map, section, name: string, default: int = 0) -> (res: int) {
+	if name in mapp[section] {
+		value, ok := strconv.parse_int(mapp[section][name])
+		if ok {
+			return value
+		}
+	}
+	return default
+}
+
+read_f32 :: proc(mapp: ini.Map, section, name: string, default: f32 = 0) -> (res: f32) {
+	if name in mapp[section] {
+		value, ok := strconv.parse_f32(mapp[section][name])
+		if ok {
+			return value
+		}
+	}
+	return default
+} 
+
+read_string :: proc(mapp: ini.Map, section, name: string, default: string = "") -> (res: string) {
+	if name in mapp[section] {
+		value, ok := mapp[section][name]
+		if ok {
+			return value
+		}
+	}
+	return default
+}
+
 load_app_data :: proc(path: string) {
 	file_exists := os2.exists(path)
 	if file_exists == false {
@@ -1077,37 +1116,7 @@ load_app_data :: proc(path: string) {
 		return
 	}
 
-	fmt.printfln("loaded map: {}", loaded_map)
-
-	read_bool :: proc(mapp: ini.Map, section, name: string, default: bool = false) -> (res: bool) {
-		if name in mapp[section] {
-			value, ok := strconv.parse_bool(mapp[section][name])
-			if ok {
-				return value
-			}
-		}
-		return default
-	}
-
-	read_int :: proc(mapp: ini.Map, section, name: string, default: int = 0) -> (res: int) {
-		if name in mapp[section] {
-			value, ok := strconv.parse_int(mapp[section][name])
-			if ok {
-				return value
-			}
-		}
-		return default
-	} 
-
-	read_string :: proc(mapp: ini.Map, section, name: string, default: string = "") -> (res: string) {
-		if name in mapp[section] {
-			value, ok := mapp[section][name]
-			if ok {
-				return value
-			}
-		}
-		return default
-	} 
+	fmt.printfln("loaded app map: {}", loaded_map) 
 	
 	app.show_fps = read_bool(loaded_map, "", "show_fps")
 	app.unlock_fps = read_bool(loaded_map, "", "unlock_fps")
@@ -1178,37 +1187,50 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 TODO: return an error value instead of a bool */
 load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	// check if project.json and at least one layer exists
-	json_exists := os2.exists(fmt.tprintf("{}{}", dir, "\\project.json"))
+	file_exists := os2.exists(fmt.tprintf("{}{}", dir, "\\project.ini"))
 	layer0_exists := os2.exists(fmt.tprintf("{}{}", dir, "\\layer0.png"))
-	if (json_exists || layer0_exists) == false {
+	if (file_exists || layer0_exists) == false {
 		return false
 	}
 
+	loaded_map, alloc_err, loaded:= ini.load_map_from_path(fmt.tprintf("{}{}", dir, "\\project.ini"), context.temp_allocator)
+	assert(alloc_err == nil)
+	if loaded == false {
+		return
+	}
+	
+	fmt.printfln("loaded project map: {}", loaded_map) 
+	
 	loaded_state: Project_State
-
+	
 	arena_err := vmem.arena_init_growing(&loaded_state.arena)
 	assert(arena_err == nil)
 	project_allocator := vmem.arena_allocator(&loaded_state.arena)
-
-	// load project.json
-	size: i32
-	data := rl.LoadFileData(fmt.ctprintf("{}{}", dir, "\\project.json"), &size)
-	defer rl.UnloadFileData(data)
-	text := strings.string_from_null_terminated_ptr(data, int(size))
-	unmarshal_err := json.unmarshal(transmute([]u8)text, &loaded_state, allocator = project_allocator)
-	if unmarshal_err != nil {
-		return false
-	}
-	state^ = loaded_state
 	
 	state.dir = strings.clone(dir, project_allocator)
+	
+	loaded_state.zoom = read_f32(loaded_map, "", "zoom", 1)
+	loaded_state.spacing = read_f32(loaded_map, "", "spacing")
+	loaded_state.preview_zoom = read_f32(loaded_map, "", "preview_zoom", 1)
+	loaded_state.preview_rotation = read_f32(loaded_map, "", "preview_rotation")
+	loaded_state.preview_rotation_speed = read_f32(loaded_map, "", "preview_rotation_speed")
+	loaded_state.auto_rotate_preview = read_bool(loaded_map, "", "auto_rotate_preview")
+	loaded_state.width = i32(read_int(loaded_map, "", "width"))
+	loaded_state.height = i32(read_int(loaded_map, "", "height"))
+	loaded_state.current_color[0] = read_f32(loaded_map, "current_color", "h")
+	loaded_state.current_color[1] = read_f32(loaded_map, "current_color", "s")
+	loaded_state.current_color[2] = read_f32(loaded_map, "current_color", "v")
 
-	bg_image := rl.GenImageChecked(state.width,  state.height, 1, 1, { 198, 208, 245, 255 }, { 131, 139, 167, 255 })
+	bg_image := rl.GenImageChecked(loaded_state.width,  loaded_state.height, 1, 1, { 198, 208, 245, 255 }, { 131, 139, 167, 255 })
 	defer rl.UnloadImage(bg_image)
-	state.bg_texture = rl.LoadTextureFromImage(bg_image)
+	loaded_state.bg_texture = rl.LoadTextureFromImage(bg_image)
+
+	state.layers = make([dynamic]Layer, project_allocator)
+	state.undos = make([dynamic]Action, project_allocator)
+	state.redos = make([dynamic]Action, project_allocator)
+	loaded_state.dirty_layers = make([dynamic]int, project_allocator)
 
 	// load layers
-	state.layers = make([dynamic]Layer, project_allocator)
 	files, read_dir_err := os2.read_all_directory_by_path(dir, context.allocator)
 	defer os2.file_info_slice_delete(files, context.allocator)
 	if read_dir_err != os2.ERROR_NONE {
@@ -1219,9 +1241,13 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 			layer: Layer
 			layer.image = rl.LoadImage(fmt.ctprint(file.fullpath))
 			layer.texture = rl.LoadTextureFromImage(layer.image)
-			append(&state.layers, layer)
+			append(&loaded_state.layers, layer)
 		}
 	}
+
+	mark_all_layers_dirty(&loaded_state)
+
+	state^ = loaded_state
 
 	return true
 }
@@ -1242,18 +1268,27 @@ save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 		return false
 	}
 
-	// save project.json
-	text, marshal_err := json.marshal(state^, { pretty = true }, context.temp_allocator)
-	if marshal_err != nil {
-		fmt.printfln("{}", marshal_err)
-		return false
-	}
-	saved := rl.SaveFileText(fmt.ctprintf("{}\\project.json", dir), raw_data(text))
-	if saved == false {
-		fmt.printfln("svae file text")
-		return false
+	file, create_err := os2.create(fmt.tprintf("{}\\project.ini", dir))
+	defer os2.close(file)
+	if create_err != nil {
+		return
 	}
 
+	ini.write_pair(file.stream, "zoom", fmt.tprint(state.zoom))
+	ini.write_pair(file.stream, "spacing", fmt.tprint(state.spacing))
+	ini.write_pair(file.stream, "current_layer", fmt.tprint(state.current_layer))
+	ini.write_pair(file.stream, "preview_zoom", fmt.tprint(state.preview_zoom))
+	ini.write_pair(file.stream, "preview_rotation", fmt.tprint(state.preview_rotation))
+	ini.write_pair(file.stream, "preview_rotation_speed", fmt.tprint(state.preview_rotation_speed))
+	ini.write_pair(file.stream, "auto_rotate_preview", fmt.tprint(state.auto_rotate_preview))
+	ini.write_pair(file.stream, "width", fmt.tprint(state.width))
+	ini.write_pair(file.stream, "height", fmt.tprint(state.height))
+	
+	ini.write_section(file.stream, "current_color")
+	ini.write_pair(file.stream, "h", fmt.tprint(state.current_color[0]))
+	ini.write_pair(file.stream, "s", fmt.tprint(state.current_color[1]))
+	ini.write_pair(file.stream, "v", fmt.tprint(state.current_color[2]))
+	
 	// save layers
 	for layer, i in state.layers {
 		rl.ExportImage(layer.image, fmt.ctprintf("{}\\layer{}.png", dir, i))
