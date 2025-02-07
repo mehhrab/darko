@@ -41,7 +41,6 @@ Welcome_State :: struct {
 }
 
 Project_State :: struct {
-	arena: vmem.Arena `json:"-"`,
 	dir: string `json:"-"`,
 	zoom: f32,
 	spacing: f32,
@@ -1149,17 +1148,12 @@ save_app_data :: proc() {
 }
 
 init_project_state :: proc(state: ^Project_State, width, height: i32) {
-	arena_err := vmem.arena_init_growing(&state.arena)
-	assert(arena_err == nil)
-
-	project_allocator := vmem.arena_allocator(&state.arena)
-
 	state.dir = ""
 	state.zoom = 1
 	state.spacing = 1
 	state.width = width
 	state.height = height
-	state.layers = make([dynamic]Layer, project_allocator)
+	state.layers = make([dynamic]Layer)
 	state.current_color = { 200, 0.5, 0.1 }	
 	state.lerped_zoom = 1
 	state.lerped_preview_zoom = 1
@@ -1168,9 +1162,9 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	state.bg_texture = rl.LoadTextureFromImage(bg_image)
 	state.preview_rotation = 0
 	state.preview_zoom = 10
-	state.undos = make([dynamic]Action, project_allocator)
-	state.redos = make([dynamic]Action, project_allocator)
-	state.dirty_layers = make([dynamic]int, project_allocator)
+	state.undos = make([dynamic]Action)
+	state.redos = make([dynamic]Action)
+	state.dirty_layers = make([dynamic]int)
 	
 	layer: Layer
 	init_layer(&layer, width, height)
@@ -1198,11 +1192,7 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	
 	loaded_state: Project_State
 	
-	arena_err := vmem.arena_init_growing(&loaded_state.arena)
-	assert(arena_err == nil)
-	project_allocator := vmem.arena_allocator(&loaded_state.arena)
-	
-	state.dir = strings.clone(dir, project_allocator)
+	state.dir = strings.clone(dir)
 	
 	loaded_state.zoom = read_f32(loaded_map, "", "zoom", 1)
 	loaded_state.spacing = read_f32(loaded_map, "", "spacing")
@@ -1220,10 +1210,10 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	defer rl.UnloadImage(bg_image)
 	loaded_state.bg_texture = rl.LoadTextureFromImage(bg_image)
 
-	state.layers = make([dynamic]Layer, project_allocator)
-	state.undos = make([dynamic]Action, project_allocator)
-	state.redos = make([dynamic]Action, project_allocator)
-	loaded_state.dirty_layers = make([dynamic]int, project_allocator)
+	state.layers = make([dynamic]Layer)
+	state.undos = make([dynamic]Action)
+	state.redos = make([dynamic]Action)
+	loaded_state.dirty_layers = make([dynamic]int)
 
 	// load layers
 	files, read_dir_err := os2.read_all_directory_by_path(dir, context.allocator)
@@ -1293,17 +1283,21 @@ save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 }
 
 deinit_project_state :: proc(state: ^Project_State) {
+	delete(state.dir)
+	delete(state.layers)
 	for &layer in state.layers {
 		deinit_layer(&layer)
 	}
+	delete(state.undos)
 	for action in state.undos {
 		action_deinit(action)
 	}
+	delete(state.redos)
 	for action in state.redos {
 		action_deinit(action)
 	}
+	delete(state.dirty_layers)
 	rl.UnloadTexture(state.bg_texture)
-	vmem.arena_destroy(&state.arena)
 }
 
 open_project :: proc(state: ^Project_State) {
