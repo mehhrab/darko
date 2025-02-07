@@ -41,26 +41,26 @@ Welcome_State :: struct {
 }
 
 Project_State :: struct {
-	dir: string `json:"-"`,
+	dir: string,
 	zoom: f32,
 	spacing: f32,
 	current_color: HSV,
 	width: i32,
 	height: i32,
 	current_layer: int,
-	layers: [dynamic]Layer `json:"-"`,
-	lerped_zoom: f32 `json:"-"`,
-	image_changed: bool `json:"-"`,
-	bg_texture: rl.Texture `json:"-"`,
+	layers: [dynamic]Layer,
+	lerped_zoom: f32,
+	image_changed: bool,
+	bg_texture: rl.Texture,
 	preview_zoom: f32,
-	lerped_preview_zoom: f32 `json:"-"`,
+	lerped_preview_zoom: f32,
 	preview_rotation: f32,
 	preview_rotation_speed: f32,
 	auto_rotate_preview: bool,
-	temp_undo: Maybe(Action) `json:"-"`,
-	undos: [dynamic]Action `json:"-"`,
-	redos: [dynamic]Action `json:"-"`,
-	dirty_layers: [dynamic]int `json:"-"`,
+	temp_undo: Maybe(Action),
+	undos: [dynamic]Action,
+	redos: [dynamic]Action,
+	dirty_layers: [dynamic]int,
 }
 
 Layer :: struct {
