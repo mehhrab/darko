@@ -24,7 +24,6 @@ POPUP_NEW_PROJECT :: "New project"
 POPUP_PREVIEW_SETTINGS :: "Preview settings"
 
 App :: struct {
-	arena: vmem.Arena, 
 	state: Screen_State, 
 	next_state: Maybe(Screen_State),
 	new_project_width, new_project_height: i32,
@@ -131,10 +130,6 @@ main :: proc() {
 			mem.tracking_allocator_destroy(&track)
 		}
 	}
-
-	err := vmem.arena_init_growing(&app.arena)
-	assert(err == nil)
-	defer vmem.arena_destroy(&app.arena)
 	
 	rl.SetConfigFlags({rl.ConfigFlags.WINDOW_RESIZABLE})
 	rl.InitWindow(1200, 700, "Darko")
