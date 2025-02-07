@@ -504,7 +504,6 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		}
 
 		path := string(path_cstring)
-		state.dir = path
 		saved := save_project_state(state, path)
 		if saved == false {
 			ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
@@ -1148,7 +1147,6 @@ save_app_data :: proc() {
 }
 
 init_project_state :: proc(state: ^Project_State, width, height: i32) {
-	state.dir = ""
 	state.zoom = 1
 	state.spacing = 1
 	state.width = width
@@ -1192,7 +1190,7 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	
 	loaded_state: Project_State
 	
-	state.dir = strings.clone(dir)
+	loaded_state.dir = strings.clone(dir)
 	
 	loaded_state.zoom = read_f32(loaded_map, "", "zoom", 1)
 	loaded_state.spacing = read_f32(loaded_map, "", "spacing")
@@ -1210,9 +1208,9 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	defer rl.UnloadImage(bg_image)
 	loaded_state.bg_texture = rl.LoadTextureFromImage(bg_image)
 
-	state.layers = make([dynamic]Layer)
-	state.undos = make([dynamic]Action)
-	state.redos = make([dynamic]Action)
+	loaded_state.layers = make([dynamic]Layer)
+	loaded_state.undos = make([dynamic]Action)
+	loaded_state.redos = make([dynamic]Action)
 	loaded_state.dirty_layers = make([dynamic]int)
 
 	// load layers
@@ -1239,7 +1237,10 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 
 // TODO: return an error value instead of a bool
 save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
-	state.dir = dir
+	if state.dir != dir {
+		delete(state.dir)
+		state.dir = strings.clone(dir)
+	}
 
 	// clear the directory
 	remove_err := os2.remove_all(dir)
