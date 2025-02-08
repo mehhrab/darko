@@ -262,7 +262,7 @@ main :: proc() {
 
 		// draw
 		rl.BeginDrawing()
-		rl.ClearBackground(ui_ctx.border_color)		
+		rl.ClearBackground(COLOR_BASE_0)		
 		process_commands(ui_get_draw_commmands())
 		if app.show_fps {
 			rl.DrawFPS(rl.GetScreenWidth() - 80, 10)
@@ -305,7 +305,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 	left_area := rec_cut_right(&screen_area, screen_area.width / 2)
 	right_area := screen_area
 	ui_push_command(UI_Draw_Rect {
-		color = ui_ctx.accent_color,
+		color = COLOR_ACCENT_0,
 		rec = left_area
 	})
 
@@ -314,7 +314,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 		text = "Welcome to Darko!",
 		align = { .Center, .Center },
 		size = ui_font_size() * 2,
-		color = ui_ctx.accent_color,
+		color = COLOR_ACCENT_0,
 		rec = rec_cut_top(&right_area, ui_default_widget_height() * 2)
 	})
 
@@ -354,7 +354,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 	if app.recent_projects.len == 0 {
 		ui_push_command(UI_Draw_Text {
 			align = { .Left, .Center },
-			color = ui_ctx.text_color,
+			color = COLOR_TEXT_0,
 			rec = rec_cut_bottom(&right_area, ui_default_widget_height()),
 			size = ui_font_size(),
 			text = "No recent projects"
@@ -380,7 +380,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 		}
 		ui_push_command(UI_Draw_Text {
 			align = { .Left, .Center },
-			color = ui_ctx.text_color,
+			color = COLOR_TEXT_0,
 			rec = rec_cut_bottom(&right_area, ui_default_widget_height()),
 			size = ui_font_size(),
 			text = "Recent projects:"
@@ -414,7 +414,7 @@ project_screen :: proc(state: ^Project_State) {
 }
 
 menu_bar :: proc(state: ^Project_State, area: Rec) {
-	ui_panel(ui_gen_id(), area, { bg_color = ui_ctx.widget_color })
+	ui_panel(ui_gen_id(), area, { bg_color = COLOR_BASE_2 })
 	NEW_PROJECT :: "new project" 
 	OPEN_PROJECT :: "open project" 
 	SAVE_PROJECT :: "save project" 
@@ -529,7 +529,7 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 	layer_count := len(state.layers)
 	ui_push_command(UI_Draw_Text {
 		align = { .Left, .Center },
-		color = ui_ctx.text_color,
+		color = COLOR_TEXT_0,
 		rec = props_area,
 		size = ui_font_size(),
 		text = fmt.tprintf("layer {}/{}", current_layer, layer_count),
@@ -613,7 +613,7 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 	})
 	ui_push_command(UI_Draw_Rect_Outline {
 		rec = area,
-		color = ui_ctx.border_color,
+		color = COLOR_BASE_0,
 		thickness = 1
 	})
 	if ui_is_mouse_in_rec(area) && ui_is_being_interacted() == false {
@@ -649,7 +649,7 @@ color_panel :: proc(state: ^Project_State, area: ^Rec) {
 		rec = preview_area,
 	})
 	ui_push_command(UI_Draw_Rect_Outline {
-		color = ui_ctx.border_color,
+		color = COLOR_BASE_0,
 		rec = preview_area,
 		thickness = 1,
 	})
@@ -678,7 +678,7 @@ color_panel :: proc(state: ^Project_State, area: ^Rec) {
 	hue_rec := rec_cut_top(area, ui_default_widget_height())
 	hue_changed := ui_slider_behaviour_f32(ui_gen_id(), &hsv_color[0], 0, 360, hue_rec)
 	ui_push_command(UI_Draw_Rect {
-		color = ui_ctx.border_color,
+		color = COLOR_BASE_0,
 		rec = hue_rec,
 	})
 	hue_rec = rec_pad(hue_rec, 1)
@@ -723,7 +723,7 @@ color_panel :: proc(state: ^Project_State, area: ^Rec) {
 	saturation_rec := rec_cut_top(area, ui_default_widget_height())
 	saturation_changed := ui_slider_behaviour_f32(ui_gen_id(), &hsv_color[1], 0, 1, saturation_rec)
 	ui_push_command(UI_Draw_Rect {
-		color = ui_ctx.border_color,
+		color = COLOR_BASE_0,
 		rec = saturation_rec,
 	})
 	saturation_rec = rec_pad(saturation_rec, 1)
@@ -745,7 +745,7 @@ color_panel :: proc(state: ^Project_State, area: ^Rec) {
 	value_rec := rec_cut_top(area, ui_default_widget_height())
 	value_changed := ui_slider_behaviour_f32(ui_gen_id(), &hsv_color[2], 0, 1, value_rec)
 	ui_push_command(UI_Draw_Rect {
-		color = ui_ctx.border_color,
+		color = COLOR_BASE_0,
 		rec = value_rec,
 	})
 	value_rec = rec_pad(value_rec, 1)
@@ -925,12 +925,12 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 				h := i32(math.round(kind.rec.height))
 				
 				rl.BeginScissorMode(x, y, w, h)
-				rl.DrawRectangleGradientV(x, y, w, h, ui_ctx.panel_color, ui_ctx.widget_hover_color)
+				rl.DrawRectangleGradientV(x, y, w, h, COLOR_BASE_1, COLOR_BASE_4)
 				px, py := rec_get_center_point(kind.rec)
 				draw_sprite_stack(&project.layers, px, py, project.lerped_preview_zoom, project.preview_rotation, project.spacing)
 				rl.DrawTextEx(ui_ctx.font, "PREVIEW", { kind.rec.x + 10, kind.rec.y + 10 }, ui_font_size() * 1.4, 0, { 255, 255, 255, 100 })
 				rl.EndScissorMode()
-				rl.DrawRectangleLinesEx(kind.rec, 1, ui_ctx.border_color)
+				rl.DrawRectangleLinesEx(kind.rec, 1, COLOR_BASE_0)
 			}
 		}
 	}

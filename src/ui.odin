@@ -38,14 +38,6 @@ UI_Ctx :: struct {
 	roundness: f32,
 	text_align: UI_Align,
 	default_widget_height: f32,
-
-	text_color: rl.Color,
-	panel_color: rl.Color,
-	accent_color: rl.Color,
-	border_color: rl.Color,
-	widget_color: rl.Color,
-	widget_hover_color: rl.Color,
-	widget_active_color: rl.Color,
 }
 
 UI_ID :: u32
@@ -143,6 +135,16 @@ UI_Draw_Preview :: struct {
 
 // styles:
 
+COLOR_BASE_0 :: rl.Color { 20, 23, 37, 255 }
+COLOR_BASE_1 :: rl.Color { 48, 52, 70, 255 }
+COLOR_BASE_2 :: rl.Color { 65, 69, 89, 255 }
+COLOR_BASE_3 :: rl.Color { 81, 87, 109, 255 }
+COLOR_BASE_4 :: rl.Color { 115, 121, 148, 255 }
+COLOR_ACCENT_0 :: rl.Color{ 176, 131, 240, 255 }
+COLOR_ACCENT_1 :: rl.Color { 242, 131, 240, 255 }
+COLOR_ERROR_0 :: rl.Color { 255, 101, 125, 255 }
+COLOR_TEXT_0 :: rl.Color { 200, 209, 218, 255 }
+
 UI_Button_Style :: struct {
 	bg_color: rl.Color,
 	bg_color_hovered: rl.Color,
@@ -154,37 +156,43 @@ UI_Button_Style :: struct {
 }
 
 UI_BUTTON_STYLE_DEFAULT :: UI_Button_Style {
-	bg_color = { 61, 68, 77, 255 },
-	bg_color_hovered = { 101, 108, 118, 255 },
-	bg_color_active = { 121, 128, 138, 255 },
-	text_color = { 200, 209, 218, 255 },
+	bg_color = COLOR_BASE_2,
+	bg_color_hovered = COLOR_BASE_3,
+	bg_color_active = COLOR_BASE_4,
+	text_color = COLOR_TEXT_0,
 	text_align = { .Center, .Center },
 	font_size = 0,
 }
 
 UI_BUTTON_STYLE_TRANSPARENT :: UI_Button_Style {
 	bg_color = rl.BLANK,
-	bg_color_hovered = { 101, 108, 118, 255 },
-	bg_color_active = { 121, 128, 138, 255 },
-	text_color = { 200, 209, 218, 255 },
+	bg_color_hovered = COLOR_BASE_3,
+	bg_color_active = COLOR_BASE_4,
+	text_color = COLOR_TEXT_0,
 	text_align = { .Center, .Center },
 	font_size = 0,
 }
+
+COLOR_ACCENT_0_T0 :: rl.Color { 190, 141, 255, 45 }
+COLOR_ACCENT_0_T1 :: rl.Color { 190, 141, 255, 90 }
 
 UI_BUTTON_STYLE_ACCENT :: UI_Button_Style {
 	bg_color = rl.BLANK,
-	bg_color_hovered = { 190, 141, 255, 45 },
-	bg_color_active = { 190, 141, 255, 90 },
-	text_color = { 190, 141, 255, 255 },
+	bg_color_hovered = COLOR_ACCENT_0_T0,
+	bg_color_active = COLOR_ACCENT_0_T1,
+	text_color = COLOR_ACCENT_0,
 	text_align = { .Center, .Center },
 	font_size = 0,
 }
 
+COLOR_ERROR_0_T1 :: rl.Color { 255, 101, 125, 45 }
+COLOR_ERROR_0_T2 :: rl.Color { 255, 101, 125, 90 }
+
 UI_BUTTON_STYLE_RED :: UI_Button_Style {
 	bg_color = rl.BLANK,
-	bg_color_hovered = { 255, 101, 125, 45 },
-	bg_color_active = { 255, 101, 125, 90 },
-	text_color = { 255, 101, 125, 255 },
+	bg_color_hovered = COLOR_ERROR_0_T1,
+	bg_color_active = COLOR_ERROR_0_T2,
+	text_color = COLOR_ERROR_0,
 	text_align = { .Center, .Center },
 	font_size = 0,
 }
@@ -198,9 +206,9 @@ UI_SLIDER_STYLE :: struct {
 }
 
 UI_SLIDER_STYLE_DEFAULT :: UI_SLIDER_STYLE {
-	bg_color = { 20, 23, 28, 255 },
-	progress_color = { 61, 68, 77, 255 },
-	text_color = { 200, 209, 218, 255 },
+	bg_color = COLOR_BASE_0,
+	progress_color = COLOR_BASE_2,
+	text_color = COLOR_TEXT_0,
 	font_size = 0,
 }
 
@@ -213,9 +221,9 @@ UI_CHECKBOX_STYLE :: struct {
 }
 
 UI_CHECKBOX_STYLE_DEFAULT :: UI_CHECKBOX_STYLE {
-	bg_color = { 20, 23, 28, 255 },
-	check_color = { 176, 131, 240, 255 },
-	text_color = { 200, 209, 218, 255 },
+	bg_color = COLOR_BASE_0,
+	check_color = COLOR_ACCENT_0,
+	text_color = COLOR_TEXT_0,
 	font_size = 0,
 }
 
@@ -227,14 +235,14 @@ UI_NOTIF_STYLE :: struct {
 }
 
 UI_NOTIF_STYLE_ACCENT :: UI_NOTIF_STYLE {
-	bg_color = { 176, 131, 240, 255 },
-	text_color = { 20, 23, 28, 255 },
+	bg_color = COLOR_ACCENT_0,
+	text_color = COLOR_BASE_0,
 	font_size = 0,
 }
 
 UI_NOTIF_STYLE_ERROR :: UI_NOTIF_STYLE {
-	bg_color = { 255, 101, 125, 255 },
-	text_color = { 20, 23, 28, 255 },
+	bg_color = COLOR_ERROR_0,
+	text_color = COLOR_BASE_0,
 	font_size = 0,
 }
 
@@ -243,8 +251,10 @@ UI_PANEL_STYLE :: struct {
 }
 
 UI_PANEL_STYLE_DEFAULT :: UI_PANEL_STYLE {
-	bg_color = { 33, 40, 48, 255 },
+	bg_color = COLOR_BASE_1,
 }
+
+// icons:
 
 ICON_PEN :: "\uf8ea"
 ICON_ERASER :: "\uf6fd"
@@ -268,14 +278,6 @@ ui_init_ctx :: proc() {
 	
 	ui_ctx.text_align = { .Center, .Center }
 	ui_ctx.default_widget_height = 32
-
-	ui_ctx.text_color = { 200, 209, 218, 255 }
-	ui_ctx.panel_color = { 33, 40, 48, 255 }
-	ui_ctx.accent_color = { 176, 131, 240, 255 }
-	ui_ctx.border_color = { 20, 23, 28, 255 }
-	ui_ctx.widget_color = { 61, 68, 77, 255 }
-	ui_ctx.widget_hover_color = { 101, 108, 118, 255 }
-	ui_ctx.widget_active_color = { 101, 108, 118, 255 }
 }
 
 ui_deinit_ctx :: proc() {
@@ -454,7 +456,7 @@ ui_begin_popup_title :: proc(id: UI_ID, name: string, rec: Rec) -> (open: bool, 
 		ui_ctx.open_popup.rec = area
 		x_rec := rec_pad(rec_take_right(&header_area, header_area.height), ui_px(8))
 		style := UI_BUTTON_STYLE_TRANSPARENT
-		style.text_color = ui_ctx.border_color
+		style.text_color = COLOR_BASE_0
 		if ui_button(id, ICON_X, x_rec, style = style) {
 			ui_close_current_popup()
 		}
@@ -473,26 +475,26 @@ ui_push_popup_draw :: proc() {
 		rec = screen_rec,
 	}, 0)
 	sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
-		color = ui_ctx.border_color,
+		color = COLOR_BASE_0,
 		rec = rec_pad(ui_ctx.open_popup.rec, -1),
 	}, 1)
 	sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
-		color = ui_ctx.border_color,
+		color = COLOR_BASE_0,
 		rec = rec_pad(ui_ctx.open_popup.rec, -1),
 	}, 2)
 	sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
-		color = ui_ctx.panel_color,
+		color = COLOR_BASE_1,
 		rec = ui_ctx.open_popup.rec,
 	}, 3)
 	if ui_ctx.open_popup.show_header {
 		header_height := ui_default_widget_height() + ui_px(8)
 		sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Gradient_H {
-			right_color = ui_ctx.accent_color,
-			left_color = { 242, 131, 240, 255 },
+			right_color = COLOR_ACCENT_0,
+			left_color = COLOR_ACCENT_1,
 			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, header_height },
 		}, 4)
 		sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Text {
-			color = ui_ctx.border_color,
+			color = COLOR_BASE_0,
 			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, header_height },
 			text = ui_ctx.open_popup.name,
 			align = { .Center, .Center },
@@ -610,12 +612,12 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 	}
 	ui_end_popup()
 
-	color := ui_ctx.widget_color
+	color := COLOR_BASE_2
 	if ui_ctx.active_widget == id {
-		color = ui_ctx.widget_active_color
+		color = COLOR_BASE_4
 	}
 	else if ui_ctx.hovered_widget == id {
-		color = ui_ctx.widget_hover_color
+		color = COLOR_BASE_3
 	}
 	ui_push_command(UI_Draw_Rect {
 		rec = rec,
@@ -625,7 +627,7 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 		rec = rec,
 		text = text,
 		size = ui_font_size(),
-		color = ui_ctx.text_color,
+		color = COLOR_TEXT_0,
 		align = ui_ctx.text_align,	
 	})
 	return clicked_item
