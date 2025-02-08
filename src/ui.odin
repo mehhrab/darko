@@ -19,7 +19,8 @@ UI_Ctx :: struct {
 	hovered_panel: UI_ID,
 	active_panel: UI_ID,
 	active_textbox: UI_ID,
-	slider_text_buffer: sa.Small_Array(40, byte),
+	slider_text_buffer: [32]byte,
+	slider_text: strings.Builder,
 	draw_commands: Draw_Commands,
 	
 	// HACK: we can only have one active notif
@@ -259,6 +260,7 @@ ICON_CHECK :: "\uf62b"
 ui_ctx: UI_Ctx
 
 ui_init_ctx :: proc() {	
+	ui_ctx.slider_text = strings.builder_from_bytes(ui_ctx.slider_text_buffer[:])
 	ui_ctx.scale = 1
 	ui_ctx.font_size = 18 
 
@@ -746,8 +748,8 @@ ui_slider_f32 :: proc(
 		// when right clicked write the value to slider_text_buffer and goto textmode
 		if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.RIGHT) {
 			ui_ctx.active_textbox = id
-			str := fmt.bprintf(ui_ctx.slider_text_buffer.data[:], format, value^)
-		    sa.resize(&ui_ctx.slider_text_buffer, len(str))
+			strings.builder_reset(&ui_ctx.slider_text)
+			strings.write_string(&ui_ctx.slider_text, fmt.tprintf(format, value^))
 		}
 		else {
 			value_changed = ui_slider_behaviour_f32(id, value, min, max, rec, step)
@@ -755,20 +757,20 @@ ui_slider_f32 :: proc(
 	}
 	else {
 		// clear textbox if right or left clicked
-		if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && (rl.IsMouseButtonReleased(.RIGHT) || rl.IsMouseButtonReleased(.LEFT)) {
-			sa.clear(&ui_ctx.slider_text_buffer)
+		if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && (rl.IsMouseButtonReleased(.RIGHT)) {
+			strings.builder_reset(&ui_ctx.slider_text)
 			ui_ctx.active_textbox = 0
 		}
 
 		// exit text mode when escape key is pressed
 		if rl.IsKeyPressed(.ESCAPE) {
-			sa.clear(&ui_ctx.slider_text_buffer)
+			strings.builder_reset(&ui_ctx.slider_text)
 			ui_ctx.active_textbox = 0
 		}
 
 		// when left clicked and in apply buffer to value pointer
 		if ui_ctx.hovered_widget == id && rl.IsMouseButtonReleased(.LEFT) {
-			number, ok := strconv.parse_f32(string(sa.slice(&ui_ctx.slider_text_buffer)))
+			number, ok := strconv.parse_f32(strings.to_string(ui_ctx.slider_text))
 			if ok {
 				value^ = number
 			}
@@ -777,24 +779,27 @@ ui_slider_f32 :: proc(
 		char := rl.GetCharPressed()
 		switch char {
 			case '0'..='9', '.': {
-				sa.append_elem(&ui_ctx.slider_text_buffer, u8(char))
+				strings.write_byte(&ui_ctx.slider_text, byte(char))
 			}
 		}
 		if rl.IsKeyPressed(.BACKSPACE) {
-			if ui_ctx.slider_text_buffer.len > 0 {
-				sa.resize(&ui_ctx.slider_text_buffer, ui_ctx.slider_text_buffer.len - 1)
+			if strings.builder_len(ui_ctx.slider_text) > 0 {
+				index := strings.builder_len(ui_ctx.slider_text) - 1
+				ordered_remove(&ui_ctx.slider_text.buf, index)
 			}
 		}
 		if rl.IsKeyPressedRepeat(.BACKSPACE) {
-			if ui_ctx.slider_text_buffer.len > 0 {
-				sa.resize(&ui_ctx.slider_text_buffer, ui_ctx.slider_text_buffer.len - 1)
+			if strings.builder_len(ui_ctx.slider_text) > 0 {
+				index := strings.builder_len(ui_ctx.slider_text) - 1
+				ordered_remove(&ui_ctx.slider_text.buf, index)
 			}
 		}
 		if rl.IsKeyPressed(.ENTER) {
-			number, ok := strconv.parse_f32(string(sa.slice(&ui_ctx.slider_text_buffer)))
+			number, ok := strconv.parse_f32(strings.to_string(ui_ctx.slider_text))
 			if ok {
 				value^ = number
 			}
+			strings.builder_reset(&ui_ctx.slider_text)
 			ui_ctx.active_textbox = 0
 		}
 	}
@@ -814,8 +819,9 @@ ui_slider_f32 :: proc(
 			color = style.text_color,
 			rec = rec_pad(rec, ui_px(8)),
 			size = font_size,
-			text = string(sa.slice(&ui_ctx.slider_text_buffer)),
+			text = strings.to_string(ui_ctx.slider_text),
 		})
+		
 		ui_push_command(UI_Draw_Rect_Outline {
 			color = style.progress_color,
 			rec = rec,
