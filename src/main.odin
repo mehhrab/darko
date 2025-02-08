@@ -1284,14 +1284,14 @@ deinit_project_state :: proc(state: ^Project_State) {
 	for &layer in state.layers {
 		deinit_layer(&layer)
 	}
-	delete(state.undos)
 	for action in state.undos {
 		action_deinit(action)
 	}
-	delete(state.redos)
+	delete(state.undos)
 	for action in state.redos {
 		action_deinit(action)
 	}
+	delete(state.redos)
 	delete(state.dirty_layers)
 	rl.UnloadTexture(state.bg_texture)
 }
