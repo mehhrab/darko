@@ -1168,10 +1168,9 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 /* some duplicate code from init_project_state() not sure what's the alternative
 TODO: return an error value instead of a bool */
 load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
-	// check if project.json and at least one layer exists
-	file_exists := os2.exists(fmt.tprintf("{}{}", dir, "\\project.ini"))
-	layer0_exists := os2.exists(fmt.tprintf("{}{}", dir, "\\layer0.png"))
-	if (file_exists || layer0_exists) == false {
+	data_exists := os2.exists(fmt.tprintf("{}{}", dir, "\\project.ini"))
+	sprites_exists := os2.exists(fmt.tprintf("{}{}", dir, "\\sprites.png"))
+	if (data_exists || sprites_exists) == false {
 		return false
 	}
 
@@ -1209,24 +1208,21 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	loaded_state.dirty_layers = make([dynamic]int)
 
 	// load layers
-	files, read_dir_err := os2.read_all_directory_by_path(dir, context.allocator)
-	defer os2.file_info_slice_delete(files, context.allocator)
-	if read_dir_err != os2.ERROR_NONE {
-		return false
-	}
-	for file in files {
-		if strings.has_suffix(file.fullpath, ".png") {
-			layer: Layer
-			layer.image = rl.LoadImage(fmt.ctprint(file.fullpath))
-			layer.texture = rl.LoadTextureFromImage(layer.image)
-			append(&loaded_state.layers, layer)
-		}
-	}
+	sprites := rl.LoadImage(fmt.ctprintf("{}{}", dir, "\\sprites.png"))
+	defer rl.UnloadImage(sprites)
 
-	mark_all_layers_dirty(&loaded_state)
+	layer_w := f32(loaded_state.width)
+	layer_h := f32(loaded_state.height)
+	layer_count := sprites.width / i32(layer_w)
+	for i in 0..<layer_count {
+		image := rl.ImageFromImage(sprites, { f32(i) * layer_w, 0, layer_w, layer_h })
+		append(&loaded_state.layers, Layer {
+			image = image,
+			texture = rl.LoadTextureFromImage(image)
+		})
+	}
 
 	state^ = loaded_state
-
 	return true
 }
 
@@ -1270,11 +1266,17 @@ save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	ini.write_pair(file.stream, "s", fmt.tprint(state.current_color[1]))
 	ini.write_pair(file.stream, "v", fmt.tprint(state.current_color[2]))
 	
-	// save layers
+	// save layers into one image
+	sprites := rl.GenImageColor(state.width * i32(len(state.layers)), state.height, rl.BLANK)
+	layer_w := f32(state.width)
+	layer_h := f32(state.height)
 	for layer, i in state.layers {
-		rl.ExportImage(layer.image, fmt.ctprintf("{}\\layer{}.png", dir, i))
+		src_rec := Rec { 0, 0, layer_w, layer_h }
+		dest_rec := Rec { layer_w * f32(i), 0, layer_w, layer_h }
+		rl.ImageDraw(&sprites, layer.image, src_rec, dest_rec, rl.WHITE)
 	}
-	
+	rl.ExportImage(sprites, fmt.ctprintf("{}\\sprites.png", dir))
+
 	return true
 }
 
