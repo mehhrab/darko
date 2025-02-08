@@ -1188,6 +1188,7 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	
 	loaded_state.zoom = read_f32(loaded_map, "", "zoom", 1)
 	loaded_state.spacing = read_f32(loaded_map, "", "spacing")
+	loaded_state.current_layer = read_int(loaded_map, "", "current_layer", 0)
 	loaded_state.preview_zoom = read_f32(loaded_map, "", "preview_zoom", 1)
 	loaded_state.preview_rotation = read_f32(loaded_map, "", "preview_rotation")
 	loaded_state.preview_rotation_speed = read_f32(loaded_map, "", "preview_rotation_speed")
