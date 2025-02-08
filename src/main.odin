@@ -287,7 +287,10 @@ main :: proc() {
 				}
 				case Welcome_State: {
 					rl.SetWindowTitle("Darko")
-					app.state = next_state	
+					app.state = state	
+				}
+				case: {
+					panic("x")
 				}
 			}
 			app.next_state = nil
@@ -807,15 +810,6 @@ new_file_popup :: proc(state: ^Screen_State) {
 		rec_delete_top(&area, ui_px(8))
 		
 		if ui_button(ui_gen_id(), "Create", area) {
-			switch &current_state in state {
-				case Project_State: {
-					close_project(&current_state)
-				}
-				case Welcome_State: {
-
-				}
-			}
-
 			project: Project_State
 			init_project_state(&project, app.new_project_width, app.new_project_height)
 			schedule_state_change(project)
@@ -1160,6 +1154,7 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	state.bg_texture = rl.LoadTextureFromImage(bg_image)
 	state.preview_rotation = 0
 	state.preview_zoom = 10
+	state.layers = make([dynamic]Layer)
 	state.undos = make([dynamic]Action)
 	state.redos = make([dynamic]Action)
 	state.dirty_layers = make([dynamic]int)

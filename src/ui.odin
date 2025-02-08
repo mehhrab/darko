@@ -185,6 +185,7 @@ UI_BUTTON_STYLE_ACCENT :: UI_Button_Style {
 	font_size = 0,
 }
 
+// TODO: calculate these based on other none transparent colors
 COLOR_ERROR_0_T1 :: rl.Color { 255, 101, 125, 45 }
 COLOR_ERROR_0_T2 :: rl.Color { 255, 101, 125, 90 }
 
