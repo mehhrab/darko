@@ -881,6 +881,10 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 
 				rl.DrawTextEx(ui_ctx.font, text, {x, y}, kind.size, 0, kind.color)
 			}
+			case UI_Draw_Texture: {
+				src_rec := Rec { 0, 0, f32(kind.texture.width), f32(kind.texture.height) }
+				rl.DrawTexturePro(kind.texture, src_rec, kind.rec, { 0, 0 }, 0, rl.WHITE)
+			}
 			case UI_Draw_Gradient_H: {
 				x := i32(math.ceil_f32(kind.rec.x))
 				y := i32(math.ceil_f32(kind.rec.y))

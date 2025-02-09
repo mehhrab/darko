@@ -87,6 +87,7 @@ UI_Draw_Command :: union {
 	UI_Draw_Rect_Outline,
 	UI_Draw_Text,
 	UI_Draw_Gradient_H,
+	UI_Draw_Texture,
 	UI_Draw_Canvas,
 	UI_Draw_Grid,
 	UI_Draw_Preview,
@@ -109,6 +110,11 @@ UI_Draw_Text :: struct {
 	rec: Rec,
 	color: rl.Color,
 	align: UI_Align,
+}
+
+UI_Draw_Texture :: struct {
+	texture: rl.Texture,
+	rec: Rec,
 }
 
 UI_Draw_Gradient_H :: struct {
