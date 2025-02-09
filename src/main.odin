@@ -1283,10 +1283,10 @@ save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 
 deinit_project_state :: proc(state: ^Project_State) {
 	delete(state.dir)
-	delete(state.layers)
 	for &layer in state.layers {
 		deinit_layer(&layer)
 	}
+	delete(state.layers)
 	for action in state.undos {
 		action_deinit(action)
 	}
