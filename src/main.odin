@@ -38,6 +38,7 @@ Screen_State :: union {
 }
 
 Welcome_State :: struct {
+	mascot: rl.Texture2D,
 }
 
 Project_State :: struct {
@@ -141,13 +142,16 @@ main :: proc() {
 	ui_init_ctx()
 	defer ui_deinit_ctx()
 	
-	welcome_state := Welcome_State {}
 	if os2.exists("data.ini") {
 		load_app_data("data.ini")
+		welcome_state := Welcome_State {}
+		init_welcome_state(&welcome_state)
 		app.state = welcome_state
 	}
 	else {
 		init_app()
+		welcome_state := Welcome_State {}
+		init_welcome_state(&welcome_state)
 		app.state = welcome_state
 	}
 
@@ -277,7 +281,7 @@ main :: proc() {
 					close_project(&state)
 				}
 				case Welcome_State: {
-
+					deinit_welcome_state(&state)
 				}
 			}
 			// switch to the new state
@@ -310,6 +314,14 @@ welcome_screen :: proc(state: ^Welcome_State) {
 	ui_push_command(UI_Draw_Rect {
 		color = COLOR_ACCENT_0,
 		rec = left_area
+	})
+	
+	mascot_size := ui_px(left_area.width / 2)
+	mascot_rec := rec_center_in_area({ 0, 0, mascot_size , mascot_size }, left_area)
+	mascot_rec.y += f32(math.cos(rl.GetTime())) * 10
+	ui_push_command(UI_Draw_Texture {
+		rec = mascot_rec,
+		texture = state.mascot, 
 	})
 
 	right_area = rec_pad(right_area, ui_px(16))
@@ -519,7 +531,10 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 
 	if clicked_item.text == OPEN_WELCOME_SCREEN {
 		defer ui_close_current_popup()
-		schedule_state_change(Welcome_State {})
+
+		welcome_state := Welcome_State {}
+		init_welcome_state(&welcome_state)
+		schedule_state_change(welcome_state)
 	}
 }
 
@@ -1143,6 +1158,17 @@ save_app_data :: proc() {
 		ini.write_pair(file.stream, fmt.tprint(i), recent)
 	}
 }
+
+init_welcome_state :: proc(state: ^Welcome_State) {
+	mascot_data := #load("../res/darko2.png")
+	mascot_image := rl.LoadImageFromMemory(".png", raw_data(mascot_data), i32(len(mascot_data)))
+	defer rl.UnloadImage(mascot_image)
+	state.mascot = rl.LoadTextureFromImage(mascot_image)
+} 
+
+deinit_welcome_state :: proc(state: ^Welcome_State) {
+	rl.UnloadTexture(state.mascot)
+} 
 
 init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	state.zoom = 1
