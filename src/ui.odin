@@ -301,7 +301,7 @@ ui_load_font :: proc(size: i32) {
 	code_point_count: i32
 	code_points := rl.LoadCodepoints(CHARS + ICONS, &code_point_count)
 
-	font_data := #load("../assets/Hack Bold Nerd Font Complete.ttf")
+	font_data := #load("../res/Hack Bold Nerd Font Complete.ttf")
 	ui_ctx.font = rl.LoadFontFromMemory(
 		".ttf", 
 		raw_data(font_data), 
