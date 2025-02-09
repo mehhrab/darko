@@ -309,31 +309,31 @@ welcome_screen :: proc(state: ^Welcome_State) {
 	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
 	screen_area := screen_rec
 	
-	left_area := rec_cut_right(&screen_area, screen_area.width / 2)
-	right_area := screen_area
+	right_area := rec_cut_right(&screen_area, screen_area.width / 2)
+	left_area := screen_area
 	ui_push_command(UI_Draw_Rect {
 		color = COLOR_ACCENT_0,
-		rec = left_area
+		rec = right_area
 	})
 	
-	mascot_size := ui_px(left_area.width / 2)
-	mascot_rec := rec_center_in_area({ 0, 0, mascot_size , mascot_size }, left_area)
+	mascot_size := ui_px(right_area.width / 2)
+	mascot_rec := rec_center_in_area({ 0, 0, mascot_size , mascot_size }, right_area)
 	mascot_rec.y += f32(math.cos(rl.GetTime())) * 10
 	ui_push_command(UI_Draw_Texture {
 		rec = mascot_rec,
 		texture = state.mascot, 
 	})
 
-	right_area = rec_pad(right_area, ui_px(16))
+	left_area = rec_pad(left_area, ui_px(16))
 	ui_push_command(UI_Draw_Text {
 		text = "Welcome to Darko!",
 		align = { .Center, .Center },
 		size = ui_font_size() * 2,
 		color = COLOR_ACCENT_0,
-		rec = rec_cut_top(&right_area, ui_default_widget_height() * 2)
+		rec = rec_cut_top(&left_area, ui_default_widget_height() * 2)
 	})
 
-	buttons_area := rec_cut_top(&right_area, ui_default_widget_height())
+	buttons_area := rec_cut_top(&left_area, ui_default_widget_height())
 	new_button_rec := rec_cut_left(&buttons_area, buttons_area.width / 2 - ui_px(8))
 	if ui_button(ui_gen_id(), "New", new_button_rec) {
 		ui_open_popup(POPUP_NEW_PROJECT)
@@ -370,7 +370,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 		ui_push_command(UI_Draw_Text {
 			align = { .Left, .Center },
 			color = COLOR_TEXT_0,
-			rec = rec_cut_bottom(&right_area, ui_default_widget_height()),
+			rec = rec_cut_bottom(&left_area, ui_default_widget_height()),
 			size = ui_font_size(),
 			text = "No recent projects"
 		})
@@ -378,7 +378,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 	else {		
 		for i in 0..<app.recent_projects.len {
 			recent := app.recent_projects.data[i]
-			recent_rec := rec_cut_bottom(&right_area, ui_default_widget_height())
+			recent_rec := rec_cut_bottom(&left_area, ui_default_widget_height())
 			style := UI_BUTTON_STYLE_DEFAULT
 			style.text_align = { .Left, .Center }
 			if ui_path_button(ui_gen_id(i), recent, recent_rec, style = style) {
@@ -396,7 +396,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 		ui_push_command(UI_Draw_Text {
 			align = { .Left, .Center },
 			color = COLOR_TEXT_0,
-			rec = rec_cut_bottom(&right_area, ui_default_widget_height()),
+			rec = rec_cut_bottom(&left_area, ui_default_widget_height()),
 			size = ui_font_size(),
 			text = "Recent projects:"
 		})
