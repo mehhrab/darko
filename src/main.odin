@@ -941,7 +941,7 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 				rl.DrawRectangleGradientV(x, y, w, h, COLOR_BASE_1, COLOR_BASE_4)
 				px, py := rec_get_center_point(kind.rec)
 				draw_sprite_stack(&project.layers, px, py, project.lerped_preview_zoom, project.preview_rotation, project.spacing)
-				rl.DrawTextEx(ui_ctx.font, "PREVIEW", { kind.rec.x + 10, kind.rec.y + 10 }, ui_font_size() * 1.4, 0, { 255, 255, 255, 100 })
+				rl.DrawTextEx(ui_ctx.font, "Preview", { kind.rec.x + 10, kind.rec.y + 10 }, ui_font_size(), 0, { 255, 255, 255, 100 })
 				rl.EndScissorMode()
 				rl.DrawRectangleLinesEx(kind.rec, 1, COLOR_BASE_0)
 			}
