@@ -363,7 +363,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 		}
 		
 		mark_all_layers_dirty(&loaded_project)
-		add_recent_project(strings.clone(path))
+		add_recent_project(path)
 		schedule_state_change(loaded_project)
 	}
 	if app.recent_projects.len == 0 {
@@ -385,7 +385,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 				project: Project_State
 				ok := load_project_state(&project, recent)
 				if ok {
-					add_recent_project(strings.clone(recent))
+					add_recent_project(recent)
 					schedule_state_change(project)
 				}
 				else {
@@ -493,7 +493,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		}
 			
 		mark_all_layers_dirty(&loaded_project)
-		add_recent_project(strings.clone(path))
+		add_recent_project(path)
 		schedule_state_change(loaded_project)
 	}
 
@@ -525,7 +525,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 			return
 		}
 
-		add_recent_project(strings.clone(path))
+		add_recent_project(path)
 		ui_show_notif("Project is saved")
 	}
 
@@ -1385,7 +1385,7 @@ add_recent_project :: proc(path: string) {
 		}
 	}
 
-	sa.append(&app.recent_projects, path)
+	sa.append(&app.recent_projects, strings.clone(path))
 }
 
 update_zoom :: proc(current_zoom: ^f32, strength: f32, min: f32, max: f32) {
