@@ -150,6 +150,11 @@ COLOR_ACCENT_0 :: rl.Color{ 176, 131, 240, 255 }
 COLOR_ACCENT_1 :: rl.Color { 242, 131, 240, 255 }
 COLOR_ERROR_0 :: rl.Color { 255, 101, 125, 255 }
 COLOR_TEXT_0 :: rl.Color { 200, 209, 218, 255 }
+// transparent colors:
+COLOR_ACCENT_0_T0 :: rl.Color { COLOR_ACCENT_0[0], COLOR_ACCENT_0[1], COLOR_ACCENT_0[3], 35 }
+COLOR_ACCENT_0_T1 :: rl.Color { COLOR_ACCENT_0[0], COLOR_ACCENT_0[1], COLOR_ACCENT_0[3], 70 }
+COLOR_ERROR_0_T1 :: rl.Color { COLOR_ERROR_0[0], COLOR_ERROR_0[1], COLOR_ERROR_0[3], 30 }
+COLOR_ERROR_0_T2 :: rl.Color { COLOR_ERROR_0[0], COLOR_ERROR_0[1], COLOR_ERROR_0[3], 70 }
 
 UI_Button_Style :: struct {
 	bg_color: rl.Color,
@@ -179,9 +184,6 @@ UI_BUTTON_STYLE_TRANSPARENT :: UI_Button_Style {
 	font_size = 0,
 }
 
-COLOR_ACCENT_0_T0 :: rl.Color { 190, 141, 255, 45 }
-COLOR_ACCENT_0_T1 :: rl.Color { 190, 141, 255, 90 }
-
 UI_BUTTON_STYLE_ACCENT :: UI_Button_Style {
 	bg_color = rl.BLANK,
 	bg_color_hovered = COLOR_ACCENT_0_T0,
@@ -190,10 +192,6 @@ UI_BUTTON_STYLE_ACCENT :: UI_Button_Style {
 	text_align = { .Center, .Center },
 	font_size = 0,
 }
-
-// TODO: calculate these based on other none transparent colors
-COLOR_ERROR_0_T1 :: rl.Color { 255, 101, 125, 45 }
-COLOR_ERROR_0_T2 :: rl.Color { 255, 101, 125, 90 }
 
 UI_BUTTON_STYLE_RED :: UI_Button_Style {
 	bg_color = rl.BLANK,
