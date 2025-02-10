@@ -908,8 +908,10 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 				rl.DrawRectangleGradientH(x, y, w, h, kind.left_color, kind.right_color)
 			}
 			case UI_Draw_Canvas: {
+				// TODO: just draw these to a render texture
 				project, project_exists := app.state.(Project_State)
-				
+				assert(project_exists)
+
 				rl.BeginScissorMode(
 					i32(kind.panel_rec.x), 
 					i32(kind.panel_rec.y), 
@@ -919,7 +921,9 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 				rl.EndScissorMode()
 			}
 			case UI_Draw_Grid: {
+				// TODO: just draw these to a render texture
 				project, project_exists := app.state.(Project_State)
+				assert(project_exists)
 
 				rl.BeginScissorMode(
 					i32(kind.panel_rec.x), 
@@ -930,8 +934,10 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 				rl.EndScissorMode()
 			}
 			case UI_Draw_Preview: {
-				// FIX this as soon as possible
+				// TODO: just draw these to a render texture
 				project, project_exists := app.state.(Project_State)
+				assert(project_exists)
+				
 				x := i32(math.round(kind.rec.x))
 				y := i32(math.round(kind.rec.y))
 				w := i32(math.round(kind.rec.width))
