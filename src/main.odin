@@ -1176,8 +1176,8 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	state.width = width
 	state.height = height
 	state.layers = make([dynamic]Layer)
-	state.current_color = { 200, 0.5, 0.1 }	
-	state.lerped_zoom = 1
+	state.current_color = { 200, 0.5, 0.1 }		
+	state.lerped_zoom = 0
 	state.lerped_preview_zoom = 1
 	bg_image := rl.GenImageChecked(state.width, state.height, 1, 1, { 198, 208, 245, 255 }, { 131, 139, 167, 255 })
 	defer rl.UnloadImage(bg_image)
@@ -1214,8 +1214,6 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	
 	loaded_state: Project_State
 	
-	loaded_state.dir = strings.clone(dir)
-	
 	loaded_state.zoom = read_f32(loaded_map, "", "zoom", 1)
 	loaded_state.spacing = read_f32(loaded_map, "", "spacing")
 	loaded_state.current_layer = read_int(loaded_map, "", "current_layer", 0)
@@ -1228,7 +1226,11 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	loaded_state.current_color[0] = read_f32(loaded_map, "current_color", "h")
 	loaded_state.current_color[1] = read_f32(loaded_map, "current_color", "s")
 	loaded_state.current_color[2] = read_f32(loaded_map, "current_color", "v")
-
+	
+	loaded_state.dir = strings.clone(dir)
+	loaded_state.lerped_zoom = 0
+	loaded_state.lerped_preview_zoom = 0
+	
 	bg_image := rl.GenImageChecked(loaded_state.width,  loaded_state.height, 1, 1, { 198, 208, 245, 255 }, { 131, 139, 167, 255 })
 	defer rl.UnloadImage(bg_image)
 	loaded_state.bg_texture = rl.LoadTextureFromImage(bg_image)
