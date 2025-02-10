@@ -1070,46 +1070,6 @@ deinit_app :: proc() {
 	}
 }
 
-read_bool :: proc(mapp: ini.Map, section, name: string, default: bool = false) -> (res: bool) {
-	if name in mapp[section] {
-		value, ok := strconv.parse_bool(mapp[section][name])
-		if ok {
-			return value
-		}
-	}
-	return default
-}
-
-read_int :: proc(mapp: ini.Map, section, name: string, default: int = 0) -> (res: int) {
-	if name in mapp[section] {
-		value, ok := strconv.parse_int(mapp[section][name])
-		if ok {
-			return value
-		}
-	}
-	return default
-}
-
-read_f32 :: proc(mapp: ini.Map, section, name: string, default: f32 = 0) -> (res: f32) {
-	if name in mapp[section] {
-		value, ok := strconv.parse_f32(mapp[section][name])
-		if ok {
-			return value
-		}
-	}
-	return default
-} 
-
-read_string :: proc(mapp: ini.Map, section, name: string, default: string = "") -> (res: string) {
-	if name in mapp[section] {
-		value, ok := mapp[section][name]
-		if ok {
-			return value
-		}
-	}
-	return default
-}
-
 load_app_data :: proc(path: string) {
 	file_exists := os2.exists(path)
 	if file_exists == false {
@@ -1124,15 +1084,15 @@ load_app_data :: proc(path: string) {
 
 	fmt.printfln("loaded app map: {}", loaded_map) 
 	
-	app.show_fps = read_bool(loaded_map, "", "show_fps")
-	app.unlock_fps = read_bool(loaded_map, "", "unlock_fps")
-	app.new_project_width = i32(read_int(loaded_map, "", "new_project_width"))
-	app.new_project_height = i32(read_int(loaded_map, "", "new_project_height"))
+	app.show_fps = ini_read_bool(loaded_map, "", "show_fps")
+	app.unlock_fps = ini_read_bool(loaded_map, "", "unlock_fps")
+	app.new_project_width = i32(ini_read_int(loaded_map, "", "new_project_width"))
+	app.new_project_height = i32(ini_read_int(loaded_map, "", "new_project_height"))
 	
 	sa.clear(&app.recent_projects)
 	if "recent_projects" in loaded_map {
 		for i in 0..<len(app.recent_projects.data) {
-			recent := read_string(loaded_map, "recent_projects", fmt.tprint(i))
+			recent := ini_read_string(loaded_map, "recent_projects", fmt.tprint(i))
 			if recent == "" {
 				continue
 			}
@@ -1214,18 +1174,18 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	
 	loaded_state: Project_State
 	
-	loaded_state.zoom = read_f32(loaded_map, "", "zoom", 1)
-	loaded_state.spacing = read_f32(loaded_map, "", "spacing")
-	loaded_state.current_layer = read_int(loaded_map, "", "current_layer", 0)
-	loaded_state.preview_zoom = read_f32(loaded_map, "", "preview_zoom", 1)
-	loaded_state.preview_rotation = read_f32(loaded_map, "", "preview_rotation")
-	loaded_state.preview_rotation_speed = read_f32(loaded_map, "", "preview_rotation_speed")
-	loaded_state.auto_rotate_preview = read_bool(loaded_map, "", "auto_rotate_preview")
-	loaded_state.width = i32(read_int(loaded_map, "", "width"))
-	loaded_state.height = i32(read_int(loaded_map, "", "height"))
-	loaded_state.current_color[0] = read_f32(loaded_map, "current_color", "h")
-	loaded_state.current_color[1] = read_f32(loaded_map, "current_color", "s")
-	loaded_state.current_color[2] = read_f32(loaded_map, "current_color", "v")
+	loaded_state.zoom = ini_read_f32(loaded_map, "", "zoom", 1)
+	loaded_state.spacing = ini_read_f32(loaded_map, "", "spacing")
+	loaded_state.current_layer = ini_read_int(loaded_map, "", "current_layer", 0)
+	loaded_state.preview_zoom = ini_read_f32(loaded_map, "", "preview_zoom", 1)
+	loaded_state.preview_rotation = ini_read_f32(loaded_map, "", "preview_rotation")
+	loaded_state.preview_rotation_speed = ini_read_f32(loaded_map, "", "preview_rotation_speed")
+	loaded_state.auto_rotate_preview = ini_read_bool(loaded_map, "", "auto_rotate_preview")
+	loaded_state.width = i32(ini_read_int(loaded_map, "", "width"))
+	loaded_state.height = i32(ini_read_int(loaded_map, "", "height"))
+	loaded_state.current_color[0] = ini_read_f32(loaded_map, "current_color", "h")
+	loaded_state.current_color[1] = ini_read_f32(loaded_map, "current_color", "s")
+	loaded_state.current_color[2] = ini_read_f32(loaded_map, "current_color", "v")
 	
 	loaded_state.dir = strings.clone(dir)
 	loaded_state.lerped_zoom = 0
@@ -1567,4 +1527,44 @@ rgb_to_hsv :: #force_inline proc(rgb: rl.Color) -> (hsv: HSV) {
 
 hsv_to_rgb :: #force_inline proc(hsv: HSV) -> (rgb: rl.Color) {
 	return rl.ColorFromHSV(hsv[0], hsv[1], hsv[2])
+}
+
+ini_read_bool :: proc(mapp: ini.Map, section, name: string, default: bool = false) -> (res: bool) {
+	if name in mapp[section] {
+		value, ok := strconv.parse_bool(mapp[section][name])
+		if ok {
+			return value
+		}
+	}
+	return default
+}
+
+ini_read_int :: proc(mapp: ini.Map, section, name: string, default: int = 0) -> (res: int) {
+	if name in mapp[section] {
+		value, ok := strconv.parse_int(mapp[section][name])
+		if ok {
+			return value
+		}
+	}
+	return default
+}
+
+ini_read_f32 :: proc(mapp: ini.Map, section, name: string, default: f32 = 0) -> (res: f32) {
+	if name in mapp[section] {
+		value, ok := strconv.parse_f32(mapp[section][name])
+		if ok {
+			return value
+		}
+	}
+	return default
+} 
+
+ini_read_string :: proc(mapp: ini.Map, section, name: string, default: string = "") -> (res: string) {
+	if name in mapp[section] {
+		value, ok := mapp[section][name]
+		if ok {
+			return value
+		}
+	}
+	return default
 }
