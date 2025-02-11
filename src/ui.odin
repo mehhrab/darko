@@ -374,7 +374,6 @@ ui_clear_temp_state :: proc() {
 	sa.clear(&ui_ctx.draw_commands)
 	sa.clear(&ui_ctx.open_popup.draw_commands)
 	sa.clear(&ui_ctx.current_notif.draw_commands)
-	free_all(context.temp_allocator)
 }
 
 ui_draw_notif :: proc() {

@@ -272,7 +272,6 @@ main :: proc() {
 			rl.DrawFPS(rl.GetScreenWidth() - 80, 10)
 		}
 		rl.EndDrawing()
-		ui_clear_temp_state()
 
 		if next_state, ok := app.next_state.?; ok {
 			// cleanup previuos state
@@ -299,7 +298,11 @@ main :: proc() {
 			}
 			app.next_state = nil
 		} 
+
+		ui_clear_temp_state()
+		free_all(context.temp_allocator)
 	}
+	
 	rl.CloseWindow()
 }
 
