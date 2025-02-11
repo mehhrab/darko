@@ -1351,11 +1351,10 @@ add_recent_project :: proc(path: string) {
 		sa.ordered_remove(&app.recent_projects, 0)
 	}
 	// remove duplicate recents
-	if slice.contains(app.recent_projects.data[:], path) {
-		recent_index, found := slice.linear_search(app.recent_projects.data[:], path)
+	if index, found := slice.linear_search(app.recent_projects.data[:], path); found {
 		if found {
-			delete(app.recent_projects.data[recent_index])
-			sa.ordered_remove(&app.recent_projects, recent_index)
+			delete(app.recent_projects.data[index])
+			sa.ordered_remove(&app.recent_projects, index)
 		}
 	}
 
