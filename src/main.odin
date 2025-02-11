@@ -1097,7 +1097,8 @@ load_app_data :: proc(path: string) {
 	
 	sa.clear(&app.recent_projects)
 	if "recent_projects" in loaded_map {
-		for i in 0..<len(app.recent_projects.data) {
+		len := ini_read_int(loaded_map, "recent_projects", "len")
+		for i in 0..<len {
 			recent := ini_read_string(loaded_map, "recent_projects", fmt.tprint(i))
 			if recent == "" {
 				continue
@@ -1120,7 +1121,9 @@ save_app_data :: proc() {
 	ini.write_pair(file.stream, "unlock_fps", fmt.tprint(app.unlock_fps))
 
 	ini.write_section(file.stream, "recent_projects")
-	for recent, i in app.recent_projects.data {
+	ini.write_pair(file.stream, "len", app.recent_projects.len)
+	for i in 0..<app.recent_projects.len {
+		recent := app.recent_projects.data[i]
 		ini.write_pair(file.stream, fmt.tprint(i), recent)
 	}
 }
@@ -1193,7 +1196,10 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	loaded_state.current_color[1] = ini_read_f32(loaded_map, "current_color", "s")
 	loaded_state.current_color[2] = ini_read_f32(loaded_map, "current_color", "v")
 	
-	loaded_state.dir = strings.clone(dir)
+	if loaded_state.dir != dir {
+		delete(loaded_state.dir)
+		loaded_state.dir = strings.clone(dir)
+	}
 	loaded_state.lerped_zoom = 0
 	loaded_state.lerped_preview_zoom = 0
 	
