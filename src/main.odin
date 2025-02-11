@@ -1199,10 +1199,7 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	loaded_state.current_color[1] = ini_read_f32(loaded_map, "current_color", "s")
 	loaded_state.current_color[2] = ini_read_f32(loaded_map, "current_color", "v")
 	
-	if loaded_state.dir != dir {
-		delete(loaded_state.dir)
-		loaded_state.dir = strings.clone(dir)
-	}
+	loaded_state.dir = strings.clone(dir)
 	loaded_state.lerped_zoom = 0
 	loaded_state.lerped_preview_zoom = 0
 	
