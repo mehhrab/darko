@@ -774,7 +774,9 @@ ui_check_box :: proc(id: UI_ID, label: string, checked: ^bool, rec: Rec, style :
 	})
 }
 
-ui_toggle :: proc(id: UI_ID, text: string, checked: ^bool, rec: Rec, style := UI_TOGGLE_STYLE_DEFAULT) {
+ui_toggle :: proc(id: UI_ID, text: string, checked: ^bool, rec: Rec, style := UI_TOGGLE_STYLE_DEFAULT) -> (clicked: bool) {
+	clicked = false
+
 	button_style: UI_Button_Style
 	button_style.font_size = style.font_size
 	button_style.text_align = style.text_align
@@ -792,7 +794,10 @@ ui_toggle :: proc(id: UI_ID, text: string, checked: ^bool, rec: Rec, style := UI
 	}
 	if ui_button(id, text, rec, style = button_style) {
 		checked^ = !checked^
+		clicked = true
 	}
+	
+	return clicked
 }
 	
 
