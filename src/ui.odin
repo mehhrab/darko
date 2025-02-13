@@ -616,22 +616,41 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 	item_width := item_width * ui_ctx.scale
 
 	ui_update_widget(id, rec)
-	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT){
+	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT) {
 		ui_open_popup(text)	
 	}
 
-	padding := f32(10)
+	padding := ui_px(10)
 	item_height := ui_default_widget_height()
-	if ui_begin_popup(text, { rec.x + 10, rec.y + rec.height + padding, item_width, item_height * f32(len(items)) }) {
-		// HACK: add an option for disabling popup backaground
+	popup_rec: Rec
+	// try to keep popup rec inside the screen
+	if rec.x - padding - item_width < 0 {
+		popup_rec = { 
+			rec.x + padding, 
+			rec.y + rec.height + padding, 
+			item_width, 
+			item_height * f32(len(items)) 
+		}
+	}
+	else if rec.x + padding + item_width > f32(rl.GetScreenWidth()) {
+		popup_rec = { 
+			rec.x + rec.width - item_width - padding, 
+			rec.y + rec.height + padding, 
+			item_width, 
+			item_height * f32(len(items))
+		}
+	}
+
+	if ui_begin_popup(text, popup_rec) {
+		// HACK, TODO: add an option for disabling popup backaground
 		ui_ctx.open_popup.open_time = 0
 
-		menu_item_y := rec.y + rec.height + padding
+		menu_item_y := popup_rec.y
 		style := UI_BUTTON_STYLE_DEFAULT
 		style.font_size = ui_font_size()
 		style.text_align = { .Left, .Center }
 		for item, i in items {
-			if ui_button(item.id, item.text, { rec.x + padding, menu_item_y, item_width, item_height }, style = style) {
+			if ui_button(item.id, item.text, { popup_rec.x, menu_item_y, item_width, item_height }, style = style) {
 				clicked_item = item
 			}
 			menu_item_y += item_height
