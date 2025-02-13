@@ -931,7 +931,14 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 					y = kind.rec.y + kind.rec.height - text_size.y
 				}
 
-				rl.DrawTextEx(ui_ctx.font, text, {x, y}, kind.size, 0, kind.color)
+				clip := kind.clip == { 0, 0, 0, 0 } ? kind.rec : kind.clip
+				clip_x := i32(clip.x)
+				clip_y := i32(clip.y)
+				clip_w := i32(clip.width)
+				clip_h := i32(clip.height)
+				rl.BeginScissorMode(clip_x, clip_y, clip_w, clip_h)
+				rl.DrawTextEx(ui_ctx.font, text, { x, y }, kind.size, 0, kind.color)
+				rl.EndScissorMode()
 			}
 			case UI_Draw_Texture: {
 				src_rec := Rec { 0, 0, f32(kind.texture.width), f32(kind.texture.height) }

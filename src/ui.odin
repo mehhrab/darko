@@ -113,6 +113,7 @@ UI_Draw_Text :: struct {
 	text: string,
 	size: f32,
 	rec: Rec,
+	clip: Rec,
 	color: rl.Color,
 	align: UI_Align,
 }
@@ -594,6 +595,7 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := 
 	})
 	ui_push_command(UI_Draw_Text {
 		rec = rec_pad(rec, 10),
+		clip = rec,
 		text = text,
 		size = font_size,
 		color = style.text_color,
