@@ -575,6 +575,12 @@ ui_panel :: proc(id: UI_ID, rec: Rec, style := UI_PANEL_STYLE_DEFAULT) {
 	})
 }
 
+ui_calc_button_width :: proc(text: string) -> (w: f32) {
+	padding := ui_px(10) * 2
+	text_cstring := strings.clone_to_cstring(text, context.temp_allocator)
+	return rl.MeasureTextEx(ui_ctx.font, text_cstring, ui_font_size(), 0)[0] + padding
+}
+
 ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := UI_BUTTON_STYLE_DEFAULT) -> (clicked: bool) {	
 	clicked = false
 	ui_update_widget(id, rec, blocking)
