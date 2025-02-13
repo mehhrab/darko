@@ -82,6 +82,11 @@ UI_Menu_Item :: struct {
 	shortcut: string,
 }
 
+UI_Option :: struct {
+	id: UI_ID,
+	text: string,
+}
+
 UI_Draw_Command :: union {
 	UI_Draw_Rect,
 	UI_Draw_Rect_Outline,
@@ -230,6 +235,16 @@ UI_CHECKBOX_STYLE_DEFAULT :: UI_CHECKBOX_STYLE {
 	check_color = COLOR_ACCENT_0,
 	text_color = COLOR_TEXT_0,
 	font_size = 0,
+}
+
+UI_Option_Style :: struct {
+	option_style: UI_Button_Style,
+	selected_option_style: UI_Button_Style,
+}
+
+UI_OPTION_STYLE_DEFAULT :: UI_Option_Style {
+	option_style = UI_BUTTON_STYLE_TRANSPARENT,
+	selected_option_style = UI_BUTTON_STYLE_ACCENT,
 }
 
 UI_NOTIF_STYLE :: struct {
@@ -885,6 +900,17 @@ ui_slider_i32 :: proc
 	value_changed = ui_slider_f32(id, label, &value_f32, f32(min), f32(max), rec, "%.0f", f32(step), style)
 	value^ = i32(value_f32)
 	return value_changed
+}
+
+ui_option :: proc(id: UI_ID, items: []UI_Option, selceted: ^int, rec: Rec, style := UI_OPTION_STYLE_DEFAULT) {
+	item_w := rec.width / f32(len(items))
+	for item, i in items {
+		item_rec := Rec { rec.x + f32(i) * item_w, rec.y, item_w, rec.height }
+		button_style := i == selceted^ ? style.selected_option_style : style.option_style
+		if ui_button(item.id, item.text, item_rec, style = button_style) {
+			selceted^ = i
+		}
+	}
 }
 
 ui_push_command :: proc(command: UI_Draw_Command) {
