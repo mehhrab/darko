@@ -238,6 +238,29 @@ UI_CHECKBOX_STYLE_DEFAULT :: UI_CHECKBOX_STYLE {
 	font_size = 0,
 }
 
+UI_Toggle_Style :: struct {
+	bg_color: rl.Color,
+	toggled_bg_color: rl.Color,
+	bg_color_hovered: rl.Color,
+	toggled_bg_color_hovered: rl.Color,
+	text_color: rl.Color,
+	toggled_text_color: rl.Color,
+	text_align: UI_Align,
+	// when zero will default to ui_font_size()
+	font_size: f32,
+}
+
+UI_TOGGLE_STYLE_DEFAULT :: UI_Toggle_Style {
+	bg_color = COLOR_BASE_2,
+	toggled_bg_color = COLOR_ACCENT_0,
+	bg_color_hovered = COLOR_BASE_3,
+	toggled_bg_color_hovered = COLOR_ACCENT_1,
+	text_color = COLOR_TEXT_0,
+	toggled_text_color = COLOR_BASE_0,
+	text_align = { .Center, .Center },
+	font_size = 0,
+}
+
 UI_Option_Style :: struct {
 	option_style: UI_Button_Style,
 	selected_option_style: UI_Button_Style,
@@ -287,6 +310,7 @@ ICON_COPY :: "\uf68e"
 ICON_SETTINGS :: "\uf992"
 ICON_X :: "\uf655" 
 ICON_CHECK :: "\uf62b"
+ICON_STAR :: "\uf9cd"
 
 ui_ctx: UI_Ctx
 
@@ -719,7 +743,6 @@ ui_path_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, styl
 	return clicked
 }
 
-
 ui_check_box :: proc(id: UI_ID, label: string, checked: ^bool, rec: Rec, style := UI_CHECKBOX_STYLE_DEFAULT) {
 	font_size := style.font_size == 0 ? ui_font_size() : style.font_size
 	check_box_rec := Rec {
@@ -750,6 +773,28 @@ ui_check_box :: proc(id: UI_ID, label: string, checked: ^bool, rec: Rec, style :
 		text = label,
 	})
 }
+
+ui_toggle :: proc(id: UI_ID, text: string, checked: ^bool, rec: Rec, style := UI_TOGGLE_STYLE_DEFAULT) {
+	button_style: UI_Button_Style
+	button_style.font_size = style.font_size
+	button_style.text_align = style.text_align
+	if checked^ {
+		button_style.text_color = style.toggled_text_color
+		button_style.bg_color = style.toggled_bg_color
+		button_style.bg_color_hovered = style.toggled_bg_color_hovered
+		button_style.bg_color_active = style.toggled_bg_color_hovered
+	}
+	else {
+		button_style.text_color = style.text_color
+		button_style.bg_color = style.bg_color
+		button_style.bg_color_hovered = style.bg_color_hovered
+		button_style.bg_color_active = style.bg_color_hovered
+	}
+	if ui_button(id, text, rec, style = button_style) {
+		checked^ = !checked^
+	}
+}
+	
 
 ui_slider_behaviour_f32 :: proc(
 	id: UI_ID,
