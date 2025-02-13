@@ -461,8 +461,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 			"",
 		},
 	}
-	menu_items_slice := menu_items[:]
-	clicked_item := ui_menu_button(ui_gen_id(), "File", &menu_items_slice, 300, { area.x, area.y, 60, area.height })
+	clicked_item := ui_menu_button(ui_gen_id(), "File", menu_items[:], 300, { area.x, area.y, 60, area.height })
 	
 	if clicked_item.text == NEW_PROJECT {
 		ui_open_popup(POPUP_NEW_PROJECT)

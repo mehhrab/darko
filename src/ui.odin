@@ -610,7 +610,7 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := 
 	return clicked
 }
 
-ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_width: f32, rec: Rec) -> (clicked_item: UI_Menu_Item) {	
+ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_width: f32, rec: Rec) -> (clicked_item: UI_Menu_Item) {	
 	clicked_item = {}
 
 	item_width := item_width * ui_ctx.scale
@@ -622,7 +622,7 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 
 	padding := f32(10)
 	item_height := ui_default_widget_height()
-	if ui_begin_popup(text, { rec.x + 10, rec.y + rec.height + padding, item_width, item_height * f32(len(items^)) }) {
+	if ui_begin_popup(text, { rec.x + 10, rec.y + rec.height + padding, item_width, item_height * f32(len(items)) }) {
 		// HACK: add an option for disabling popup backaground
 		ui_ctx.open_popup.open_time = 0
 
@@ -630,7 +630,7 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: ^[]UI_Menu_Item, item_wid
 		style := UI_BUTTON_STYLE_DEFAULT
 		style.font_size = ui_font_size()
 		style.text_align = { .Left, .Center }
-		for item, i in items^ {
+		for item, i in items {
 			if ui_button(item.id, item.text, { rec.x + padding, menu_item_y, item_width, item_height }, style = style) {
 				clicked_item = item
 			}
