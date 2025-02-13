@@ -423,7 +423,9 @@ project_screen :: proc(state: ^Project_State) {
 	
 	ui_panel(ui_gen_id(), right_panel_area)
 	right_panel_area = rec_pad(right_panel_area, ui_px(16))
-	color_panel(state, &right_panel_area)
+	
+	color_panel_area := rec_cut_top(&right_panel_area, calc_color_picker_height())
+	color_panel(state, color_panel_area)
 
 	rec_delete_top(&right_panel_area, ui_px(16))
 
@@ -662,9 +664,41 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 	}
 }
 
-color_panel :: proc(state: ^Project_State, area: ^Rec) {		
+color_panel :: proc(state: ^Project_State, rec: Rec) {
+	area := rec
+
+	@(static) selected: int
+	options := [?]UI_Option {
+		{ id = ui_gen_id(), text = "Color picker" },
+		{ id = ui_gen_id(), text = "Pallete" }
+	}
+	options_rec := rec_cut_top(&area, ui_default_widget_height())
+	ui_option(ui_gen_id(), options[:], &selected, options_rec)
+
+	if selected == 0 {
+		color_picker(state, area)
+	}
+	else {
+		ui_push_command(UI_Draw_Text {
+			align = { .Center, .Center },
+			color = COLOR_TEXT_0,
+			rec = rec,
+			size = ui_font_size(),
+			text = "color pallets!!!",
+		})
+	}
+}
+
+// used to give color pallete panel the same height as the color picker
+calc_color_picker_height :: proc() -> (h: f32) {
+	return ui_default_widget_height() * 7 + ui_px(8) * 3 
+}
+
+color_picker :: proc(state: ^Project_State, rec: Rec) {		
+	area := rec
+
 	// preview color
-	preview_area := rec_cut_top(area, ui_default_widget_height() * 3)
+	preview_area := rec_cut_top(&area, ui_default_widget_height() * 3)
 	ui_push_command(UI_Draw_Rect {
 		color = hsv_to_rgb(state.current_color),
 		rec = preview_area,
@@ -674,7 +708,7 @@ color_panel :: proc(state: ^Project_State, area: ^Rec) {
 		rec = preview_area,
 		thickness = 1,
 	})
-	rec_delete_top(area, ui_px(8))
+	rec_delete_top(&area, ui_px(8))
 
 	hsv_color := state.current_color
 
@@ -696,7 +730,7 @@ color_panel :: proc(state: ^Project_State, area: ^Rec) {
 	}
 
 	// hue slider
-	hue_rec := rec_cut_top(area, ui_default_widget_height())
+	hue_rec := rec_cut_top(&area, ui_default_widget_height())
 	hue_changed := ui_slider_behaviour_f32(ui_gen_id(), &hsv_color[0], 0, 360, hue_rec)
 	ui_push_command(UI_Draw_Rect {
 		color = COLOR_BASE_0,
@@ -738,10 +772,10 @@ color_panel :: proc(state: ^Project_State, area: ^Rec) {
 
 	draw_grip(hsv_color[0], 0, 360, hue_rec)
 
-	rec_delete_top(area, ui_px(8))
+	rec_delete_top(&area, ui_px(8))
 
 	// saturation slider
-	saturation_rec := rec_cut_top(area, ui_default_widget_height())
+	saturation_rec := rec_cut_top(&area, ui_default_widget_height())
 	saturation_changed := ui_slider_behaviour_f32(ui_gen_id(), &hsv_color[1], 0, 1, saturation_rec)
 	ui_push_command(UI_Draw_Rect {
 		color = COLOR_BASE_0,
@@ -760,10 +794,10 @@ color_panel :: proc(state: ^Project_State, area: ^Rec) {
 	})
 	draw_grip(hsv_color[1], 0, 1, saturation_rec)
 
-	rec_delete_top(area, ui_px(8))
+	rec_delete_top(&area, ui_px(8))
 	
 	// value slider
-	value_rec := rec_cut_top(area, ui_default_widget_height())
+	value_rec := rec_cut_top(&area, ui_default_widget_height())
 	value_changed := ui_slider_behaviour_f32(ui_gen_id(), &hsv_color[2], 0, 1, value_rec)
 	ui_push_command(UI_Draw_Rect {
 		color = COLOR_BASE_0,
