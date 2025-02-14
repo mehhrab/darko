@@ -131,7 +131,7 @@ main :: proc() {
 		}
 	}
 	
-	rl.SetConfigFlags({rl.ConfigFlags.WINDOW_RESIZABLE})
+	rl.SetConfigFlags({ rl.ConfigFlags.WINDOW_RESIZABLE, rl.ConfigFlags.MSAA_4X_HINT })
 	rl.InitWindow(1200, 700, "Darko")
 	rl.SetExitKey(nil)
 	rl.SetTargetFPS(TARGET_FPS)
