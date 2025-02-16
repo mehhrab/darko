@@ -943,6 +943,18 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 				h := i32(math.ceil_f32(kind.rec.height))
 				rl.DrawRectangleGradientH(x, y, w, h, kind.left_color, kind.right_color)
 			}
+			case UI_Clip: {
+				if kind.rec != { } {
+					x := i32(kind.rec.x)
+					y := i32(kind.rec.y)
+					w := i32(kind.rec.width)
+					h := i32(kind.rec.height)
+					rl.BeginScissorMode(x, y, w, h)
+				}
+				else {
+					rl.EndScissorMode()
+				}
+			}
 			case UI_Draw_Canvas: {
 				// TODO: just draw these to a render texture
 				project, project_exists := app.state.(Project_State)

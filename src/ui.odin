@@ -128,6 +128,10 @@ UI_Draw_Gradient_H :: struct {
 	rec: Rec,
 }
 
+UI_Clip :: struct {
+	rec: Rec,
+}
+
 // darko specific commands:
 
 UI_Draw_Canvas :: struct {
