@@ -97,6 +97,7 @@ UI_Draw_Command :: union {
 	UI_Draw_Rect_Outline,
 	UI_Draw_Text,
 	UI_Draw_Gradient_H,
+	UI_Clip,
 	UI_Draw_Texture,
 	UI_Draw_Canvas,
 	UI_Draw_Grid,
