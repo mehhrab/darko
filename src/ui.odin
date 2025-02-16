@@ -737,8 +737,6 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := 
 ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_width: f32, rec: Rec) -> (clicked_item: UI_Menu_Item) {	
 	clicked_item = {}
 
-	item_width := item_width * ui_ctx.scale
-
 	ui_update_widget(id, rec)
 	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT) {
 		ui_open_popup(text)	
