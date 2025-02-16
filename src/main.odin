@@ -162,10 +162,10 @@ main :: proc() {
 		ui_begin()
 
 		if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.EQUAL) {
-			ui_set_scale(ui_ctx.scale + 0.1)
+			ui_set_scale(ui_ctx.scale + 0.2)
 		}
 		if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.MINUS) {
-			ui_set_scale(ui_ctx.scale - 0.1)
+			ui_set_scale(ui_ctx.scale - 0.2)
 		}
 
 		switch &state in app.state {
