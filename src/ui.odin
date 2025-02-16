@@ -648,8 +648,8 @@ ui_begin_list :: proc(
 			width = scroll_bar_rec.width,
 			height = thumb_h
 		}
-		// TODO: this can be removed
-		thumb_rec.y = clamp(thumb_rec.y, scroll_bar_rec.y, scroll_bar_rec.height - thumb_h / 2)
+		// this probably can be removed
+		thumb_rec.y = clamp(thumb_rec.y, scroll_bar_rec.y, scroll_bar_rec.y + scroll_bar_rec.height - thumb_h)
 
 		ui_push_command(UI_Draw_Rect {
 			color = COLOR_BASE_0,
