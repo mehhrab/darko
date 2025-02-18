@@ -624,7 +624,7 @@ ui_begin_list :: proc(
 	max_scroll_y := (items_h * f32(items_count) - rec.height) * -1
 	if has_scroll_bar {
 		if ui_ctx.hovered_panel == id {
-			scroll^ += rl.GetMouseWheelMove() * 4
+			scroll^ += rl.GetMouseWheelMove() * 10
 		}
 		
 		scroll_bar_rec := rec_cut_right(&rec, ui_px(14))
@@ -640,7 +640,7 @@ ui_begin_list :: proc(
 			scroll^ = max_scroll_y
 		}
 		
-		thumb_h := (rec.height) / f32(items_count)
+		thumb_h := rec.height * (rec.height / ((items_h * f32(items_count))))
 		thumb_y := scroll_bar_rec.y + (lerped_scroll^ / max_scroll_y) * (scroll_bar_rec.height) - thumb_h / 2
 		thumb_rec := Rec {
 			x = scroll_bar_rec.x,
