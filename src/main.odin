@@ -1360,7 +1360,7 @@ load_app_data :: proc(path: string) {
 	app.fav_palletes.len = fav_palletes_len
 	for i in 0..<fav_palletes_len {
 		section := fmt.tprint("fav_pallete", i, sep = "")
-		app.fav_palletes.data[i].name = strings.clone(ini_read_string(loaded_map, section, "name"))
+		app.fav_palletes.data[i].name = ini_read_string(loaded_map, section, "name")
 		pallete_count := ini_read_int(loaded_map, section, "len")
 		app.fav_palletes.data[i].colors.len = pallete_count
 		for j in 0..<pallete_count {
@@ -1479,7 +1479,7 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	loaded_state.current_color[1] = ini_read_f32(loaded_map, "current_color", "s")
 	loaded_state.current_color[2] = ini_read_f32(loaded_map, "current_color", "v")
 
-	loaded_state.pallete.name = strings.clone(ini_read_string(loaded_map, "pallete", "name"))
+	loaded_state.pallete.name = ini_read_string(loaded_map, "pallete", "name")
 	pallete_count := ini_read_int(loaded_map, "pallete", "len")
 	loaded_state.pallete.colors.len = pallete_count
 	for i in 0..<pallete_count {
@@ -1873,12 +1873,12 @@ ini_read_f32 :: proc(mapp: ini.Map, section, name: string, default: f32 = 0) -> 
 	return default
 } 
 
-ini_read_string :: proc(mapp: ini.Map, section, name: string, default: string = "") -> (res: string) {
+ini_read_string :: proc(mapp: ini.Map, section, name: string, default: string = "", allocator := context.allocator) -> (res: string) {
 	if name in mapp[section] {
 		value, ok := mapp[section][name]
 		if ok {
-			return value
+			return strings.clone(value, allocator)
 		}
 	}
-	return default
+	return strings.clone(default, allocator)
 }
