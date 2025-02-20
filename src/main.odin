@@ -1320,8 +1320,8 @@ deinit_app :: proc() {
 	for i in 0..<app.fav_palletes.len {
 		delete(app.fav_palletes.data[i].name)
 	}
-	for recent in app.recent_projects.data {
-		delete(recent)
+	for i in 0..<app.recent_projects.len {
+		delete(app.recent_projects.data[i])
 	}
 }
 
@@ -1352,7 +1352,7 @@ load_app_data :: proc(path: string) {
 			if recent == "" {
 				continue
 			}
-			sa.append(&app.recent_projects, strings.clone(recent))
+			sa.append(&app.recent_projects, recent)
 		}
 	}
 
