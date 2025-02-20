@@ -22,12 +22,14 @@ HSV :: distinct [3]f32
 they act as ids. actual ids should probably be used... */
 POPUP_NEW_PROJECT :: "New project"
 POPUP_PREVIEW_SETTINGS :: "Preview settings"
+POPUP_FAV_PALLETES :: "Favorite palletes"
 
 App :: struct {
 	state: Screen_State, 
 	next_state: Maybe(Screen_State),
 	new_project_width, new_project_height: i32,
 	recent_projects: sa.Small_Array(8, string),
+	fav_palletes: sa.Small_Array(24, Pallete),
 	show_fps: bool,
 	unlock_fps: bool,
 }
@@ -62,11 +64,17 @@ Project_State :: struct {
 	undos: [dynamic]Action,
 	redos: [dynamic]Action,
 	dirty_layers: [dynamic]int,
+	pallete: Pallete,
 }
 
 Layer :: struct {
 	image: rl.Image,
 	texture: rl.Texture,
+}
+
+Pallete :: struct {
+	name: string,
+	colors: sa.Small_Array(256, HSV),
 }
 
 // actions: (for undo and redo)
@@ -431,6 +439,7 @@ project_screen :: proc(state: ^Project_State) {
 
 	preview(state, right_panel_area)	
 	preview_settings_popup(state)
+	fav_palletes_popup(state)
 }
 
 menu_bar :: proc(state: ^Project_State, area: Rec) {
@@ -571,7 +580,6 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 		}
 	}
 
-
 	// move up button
 	rec_cut_right(&props_area, ui_px(8))
 	move_up_rec := rec_cut_right(&props_area, ui_default_widget_height())
@@ -671,21 +679,18 @@ color_panel :: proc(state: ^Project_State, rec: Rec) {
 		{ id = ui_gen_id(), text = "Color picker" },
 		{ id = ui_gen_id(), text = "Pallete" }
 	}
+	options_style := UI_OPTION_STYLE_DEFAULT
+	options_style.option_style.text_color = rl.Fade(COLOR_TEXT_0, 0.7)
 	options_rec := rec_cut_top(&area, ui_default_widget_height())
-	ui_option(ui_gen_id(), options[:], &selected, options_rec)
-
+	ui_option(ui_gen_id(), options[:], &selected, options_rec, options_style)
+	
 	if selected == 0 {
 		color_picker(state, area)
 	}
 	else {
-		ui_push_command(UI_Draw_Text {
-			align = { .Center, .Center },
-			color = COLOR_TEXT_0,
-			rec = rec,
-			size = ui_font_size(),
-			text = "color pallets!!!",
-		})
+		color_pallete(state, area)
 	}
+
 }
 
 // used to give color pallete panel the same height as the color picker
@@ -813,6 +818,199 @@ color_picker :: proc(state: ^Project_State, rec: Rec) {
 	if hue_changed || saturation_changed || value_changed  {
 		state.current_color = hsv_color
 	}
+}
+
+color_pallete :: proc(state: ^Project_State, rec: Rec) {
+	area := rec
+
+	buttons_area := rec_cut_top(&area, ui_default_widget_height())
+	
+	// add to favorites button
+	fav_rec := rec_cut_left(&buttons_area, ui_default_widget_height())
+	if ui_button(ui_gen_id(), ICON_STAR, fav_rec) {
+		exit: {
+			if app.fav_palletes.len >= len(app.fav_palletes.data) {
+				ui_show_notif("Favorite palletes is full")
+				break exit
+			}
+			for i in 0..<app.fav_palletes.len {
+				if (app.fav_palletes.data[i].name == state.pallete.name) {
+					ui_show_notif("Pallete with the same name already exists", UI_NOTIF_STYLE_ERROR)
+					break exit
+				}
+			}
+
+			sa.append(&app.fav_palletes, Pallete {
+				colors = state.pallete.colors,
+				name = strings.clone(state.pallete.name)
+			})
+			ui_show_notif("Added to favorites")
+		}
+	}
+
+	rec_cut_left(&buttons_area, ui_px(8))
+	
+	// load pallete button
+	load_rec := rec_cut_right(&buttons_area, ui_calc_button_width("load"))
+	FROM_FILE :: "from file"
+	FROM_FAV :: "from favorites"
+	load_items := [?]UI_Menu_Item {
+		{ id = ui_gen_id(), text = FROM_FILE },
+		{ id = ui_gen_id(), text = FROM_FAV },
+	}
+	clicked_item := ui_menu_button(ui_gen_id(), "Load", load_items[:], ui_px(160), load_rec)
+
+	if clicked_item.text == FROM_FILE {
+		defer ui_close_current_popup()
+
+		path_cstring: cstring
+		defer ntf.FreePathU8(path_cstring)
+		current_dir := strings.clone_to_cstring(state.dir, context.temp_allocator)
+		args := ntf.Open_Dialog_Args {
+			default_path = current_dir,
+			parent_window = {
+				handle = rl.GetWindowHandle(),
+				type = .Windows,
+			}
+		}
+		res := ntf.OpenDialogU8_With(&path_cstring, &args)
+		if res == .Error {
+			ui_show_notif("Failed to load pallete", UI_NOTIF_STYLE_ERROR)
+		}
+		else if res == .Cancel {
+			return
+		}
+
+		path := string(path_cstring)
+		/* sa.clear() isn't enough to clear the palletes since 
+		we do slice.contains() a couple of lines below */  
+		for i in 0..<state.pallete.colors.len {
+			state.pallete.colors.data[i] = {}
+		}
+		sa.clear(&state.pallete.colors)
+
+		image := rl.LoadImage(path_cstring)
+		defer rl.UnloadImage(image)
+		color_count := image.width * image.height
+		for i in 0..<(color_count) {			
+			x := i % image.width
+			y := i32(i / image.width)
+			color := rgb_to_hsv(rl.GetImageColor(image, x, y))
+			if slice.contains(state.pallete.colors.data[:], color) {
+				continue
+			}
+
+			if state.pallete.colors.len >= len(state.pallete.colors.data) {
+				msg := fmt.aprintf("Image color count over the limit. ({})", i)
+				ui_show_notif(msg, UI_NOTIF_STYLE_ERROR)
+				break
+			}
+			sa.append(&state.pallete.colors, color)
+		}
+
+		delete(state.pallete.name)
+		splitted_path := strings.split(path, "\\", context.temp_allocator)
+		state.pallete.name = strings.clone(splitted_path[len(splitted_path) - 1])
+	}
+	else if clicked_item.text == FROM_FAV {
+		ui_close_current_popup()
+		ui_open_popup(POPUP_FAV_PALLETES)
+	}
+
+	// pallete name
+	ui_push_command(UI_Draw_Text {
+		align = { .Center, .Center },
+		color = COLOR_TEXT_0,
+		rec = buttons_area,
+		size = ui_font_size(),
+		text = state.pallete.name,
+	})
+
+	ui_push_command(UI_Draw_Rect {
+		color = COLOR_BASE_0,
+		rec = area,
+	})
+	
+	// pallete list
+	list_rec := rec_pad(area, ui_px(8))
+	pallete_x := list_rec.x
+	pallete_y := list_rec.y
+	pallete_size := ui_default_widget_height()
+	spacing := ui_px(8)
+
+	@(static) scroll, lerped_scroll: f32
+	_, items := ui_begin_list_wrapped(ui_gen_id(), &scroll, &lerped_scroll, ui_default_widget_height(), state.pallete.colors.len, list_rec)
+	for item in items {
+		pallete_id := ui_gen_id(item.i)
+		ui_update_widget(pallete_id, item.rec)
+		ui_push_command(UI_Draw_Rect {
+			color = hsv_to_rgb(state.pallete.colors.data[item.i]),
+			rec = item.rec	
+		})
+		if pallete_id == ui_ctx.hovered_widget && rl.IsMouseButtonReleased(.LEFT) {
+			state.current_color = state.pallete.colors.data[item.i]
+		}
+		if state.current_color == state.pallete.colors.data[item.i] {
+			ui_push_command(UI_Draw_Rect_Outline {
+				color = COLOR_TEXT_0,
+				rec = item.rec,
+				thickness = 2,
+			})
+		}
+		else if pallete_id == ui_ctx.hovered_widget {
+			ui_push_command(UI_Draw_Rect_Outline {
+				color = rl.Fade(COLOR_TEXT_0, 0.5),
+				rec = item.rec,
+				thickness = 2,
+			})
+		}
+	}
+	ui_end_list()
+	ui_push_command(UI_Draw_Rect_Outline {
+		color = COLOR_BASE_0,
+		rec = rec,
+		thickness = 1,
+	})
+}
+
+fav_palletes_popup :: proc(state: ^Project_State) {
+	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
+
+	rec := rec_center_in_area({ 0, 0, ui_px(400), ui_px(200) }, screen_rec)
+	if open, content_rec := ui_begin_popup_title(ui_gen_id(), POPUP_FAV_PALLETES, rec); open {
+		content_rec := rec_pad(content_rec, ui_px(8))
+
+		@(static) scroll, lerped_scroll: f32
+		_, items := ui_begin_list(ui_gen_id(), &scroll, &lerped_scroll, ui_default_widget_height(), app.fav_palletes.len, content_rec)
+		for &item, i in items {
+			pallete := &app.fav_palletes.data[item.i]
+			style := UI_BUTTON_STYLE_DEFAULT
+			style.text_align = { .Left, .Center }
+			if item.i % 2 == 0 {
+				style.bg_color.a = 200
+			}
+
+			if ui_button(ui_gen_id(i), pallete.name, item.rec, style = style) {
+				delete(state.pallete.name)
+				state.pallete.name = strings.clone(pallete.name)
+				sa.clear(&state.pallete.colors)
+				for i in 0..<pallete.colors.len {
+					color := app.fav_palletes.data[item.i].colors.data[i]
+					sa.append(&state.pallete.colors, color)
+				}
+				
+				ui_close_current_popup()
+			}
+
+			ui_push_command(UI_Draw_Rect_Outline {
+				color = COLOR_BASE_0,
+				rec = content_rec,
+				thickness = 1
+			})
+		}
+		ui_end_list()
+	}
+	ui_end_popup()
 }
 
 preview :: proc(state: ^Project_State, rec: Rec) {
@@ -1154,6 +1352,23 @@ load_app_data :: proc(path: string) {
 			sa.append(&app.recent_projects, strings.clone(recent))
 		}
 	}
+
+	fav_palletes_len := ini_read_int(loaded_map, "", "fav_palletes_len")
+	app.fav_palletes.len = fav_palletes_len
+	for i in 0..<fav_palletes_len {
+		section := fmt.tprint("fav_pallete", i, sep = "")
+		app.fav_palletes.data[i].name = strings.clone(ini_read_string(loaded_map, section, "name"))
+		pallete_count := ini_read_int(loaded_map, section, "len")
+		app.fav_palletes.data[i].colors.len = pallete_count
+		for j in 0..<pallete_count {
+			h := ini_read_f32(loaded_map, section, fmt.tprint("h", j, sep = ""))
+			s := ini_read_f32(loaded_map, section, fmt.tprint("s", j, sep = ""))
+			v := ini_read_f32(loaded_map, section, fmt.tprint("v", j, sep = ""))
+			app.fav_palletes.data[i].colors.data[j][0] = h
+			app.fav_palletes.data[i].colors.data[j][1] = s
+			app.fav_palletes.data[i].colors.data[j][2] = v
+		}
+	}
 }
 
 save_app_data :: proc() {
@@ -1167,12 +1382,26 @@ save_app_data :: proc() {
 	ini.write_pair(file.stream, "new_project_height", fmt.tprint(app.new_project_height))
 	ini.write_pair(file.stream, "show_fps", fmt.tprint(app.show_fps))
 	ini.write_pair(file.stream, "unlock_fps", fmt.tprint(app.unlock_fps))
+	ini.write_pair(file.stream, "fav_palletes_len", fmt.tprint(app.fav_palletes.len))
 
 	ini.write_section(file.stream, "recent_projects")
 	ini.write_pair(file.stream, "len", app.recent_projects.len)
 	for i in 0..<app.recent_projects.len {
 		recent := app.recent_projects.data[i]
 		ini.write_pair(file.stream, fmt.tprint(i), recent)
+	}
+
+	for i in 0..<app.fav_palletes.len {
+		pallete := &app.fav_palletes.data[i]
+		ini.write_section(file.stream, fmt.tprint("fav_pallete", i, sep = ""))
+		ini.write_pair(file.stream, "name", pallete.name)
+		ini.write_pair(file.stream, "len", fmt.tprint(pallete.colors.len))
+		for i in 0..<pallete.colors.len {
+			color := pallete.colors.data[i]
+			ini.write_pair(file.stream, fmt.tprint("h", i, sep = ""), fmt.tprint(color[0]))
+			ini.write_pair(file.stream, fmt.tprint("s", i, sep = ""), fmt.tprint(color[1]))
+			ini.write_pair(file.stream, fmt.tprint("v", i, sep = ""), fmt.tprint(color[2]))	
+		}
 	}
 }
 
@@ -1205,6 +1434,8 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	state.undos = make([dynamic]Action)
 	state.redos = make([dynamic]Action)
 	state.dirty_layers = make([dynamic]int)
+	// state.pallete.name = strings.clone("")
+	// state.pallete.path = strings.clone("")
 	
 	layer: Layer
 	init_layer(&layer, width, height)
@@ -1240,10 +1471,23 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	loaded_state.auto_rotate_preview = ini_read_bool(loaded_map, "", "auto_rotate_preview")
 	loaded_state.width = i32(ini_read_int(loaded_map, "", "width"))
 	loaded_state.height = i32(ini_read_int(loaded_map, "", "height"))
+	
 	loaded_state.current_color[0] = ini_read_f32(loaded_map, "current_color", "h")
 	loaded_state.current_color[1] = ini_read_f32(loaded_map, "current_color", "s")
 	loaded_state.current_color[2] = ini_read_f32(loaded_map, "current_color", "v")
-	
+
+	loaded_state.pallete.name = strings.clone(ini_read_string(loaded_map, "pallete", "name"))
+	pallete_count := ini_read_int(loaded_map, "pallete", "len")
+	loaded_state.pallete.colors.len = pallete_count
+	for i in 0..<pallete_count {
+		h := ini_read_f32(loaded_map, "pallete", fmt.tprint("h", i, sep = ""))
+		s := ini_read_f32(loaded_map, "pallete", fmt.tprint("s", i, sep = ""))
+		v := ini_read_f32(loaded_map, "pallete", fmt.tprint("v", i, sep = ""))
+		loaded_state.pallete.colors.data[i][0] = h
+		loaded_state.pallete.colors.data[i][1] = s
+		loaded_state.pallete.colors.data[i][2] = v
+	}
+
 	loaded_state.dir = strings.clone(dir)
 	loaded_state.lerped_zoom = 0
 	loaded_state.lerped_preview_zoom = 0
@@ -1316,6 +1560,16 @@ save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	ini.write_pair(file.stream, "s", fmt.tprint(state.current_color[1]))
 	ini.write_pair(file.stream, "v", fmt.tprint(state.current_color[2]))
 	
+	ini.write_section(file.stream, "pallete")
+	ini.write_pair(file.stream, "name", state.pallete.name)
+	ini.write_pair(file.stream, "len", fmt.tprint(state.pallete.colors.len))
+	for i in 0..<state.pallete.colors.len {
+		color := state.pallete.colors.data[i]
+		ini.write_pair(file.stream, fmt.tprint("h", i, sep = ""), fmt.tprint(color[0]))
+		ini.write_pair(file.stream, fmt.tprint("s", i, sep = ""), fmt.tprint(color[1]))
+		ini.write_pair(file.stream, fmt.tprint("v", i, sep = ""), fmt.tprint(color[2]))	
+	}
+
 	// save layers into one image
 	sprites := rl.GenImageColor(state.width * i32(len(state.layers)), state.height, rl.BLANK)
 	layer_w := f32(state.width)
@@ -1346,6 +1600,10 @@ deinit_project_state :: proc(state: ^Project_State) {
 	delete(state.redos)
 	delete(state.dirty_layers)
 	rl.UnloadTexture(state.bg_texture)
+	delete(state.pallete.name)
+	for i in 0..<app.fav_palletes.len {
+		delete(app.fav_palletes.data[i].name)
+	} 
 }
 
 open_project :: proc(state: ^Project_State) {

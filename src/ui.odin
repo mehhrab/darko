@@ -349,7 +349,8 @@ ui_load_font :: proc(size: i32) {
 	ICON_COPY +
 	ICON_SETTINGS +
 	ICON_X +
-	ICON_CHECK
+	ICON_CHECK +
+	ICON_STAR
 	
 	code_point_count: i32
 	code_points := rl.LoadCodepoints(CHARS + ICONS, &code_point_count)
