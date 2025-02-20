@@ -692,6 +692,104 @@ ui_end_list :: proc() {
 	})
 }
 
+ui_begin_list_wrapped :: proc(
+	id: UI_ID, 
+	scroll: ^f32, 
+	lerped_scroll: ^f32,
+	item_size: f32, 
+	items_count: int, 
+	rec: Rec, 
+	allocator := context.temp_allocator
+) -> (
+	content_rec: Rec, visible_items: []UI_List_Item
+) {
+	rec := rec
+	items_list := make([dynamic]UI_List_Item, allocator = allocator)
+
+	ui_update_panel(id, rec)
+	ui_push_command(UI_Draw_Rect {
+		color = COLOR_BASE_0,
+		rec = rec,
+	})
+	
+	// max_scroll_y := (items_h * f32(items_count) - rec.height) * -1
+	row_count := math.ceil((item_size + ui_px(8)) * f32(items_count) / (rec.width - ui_px(14)))
+	has_scroll_bar := rec.height < ((item_size + ui_px(8))) * row_count  
+	max_scroll_y := rec.height - ((item_size + ui_px(8)) * row_count)
+	if max_scroll_y > 0 {
+		max_scroll_y = 0
+	}
+	if has_scroll_bar {
+		if ui_ctx.hovered_panel == id {
+			scroll^ += rl.GetMouseWheelMove() * 10
+		}
+		
+		scroll_bar_rec := rec_cut_right(&rec, ui_px(14))
+		ui_update_widget(id, scroll_bar_rec)
+			
+		if ui_ctx.active_widget == id && rl.IsMouseButtonDown(.LEFT) {
+			scroll^ = 0 + (rl.GetMousePosition().y - rec.y) * (max_scroll_y - 0) / rec.height
+		}
+		if scroll^ > 0 {
+			scroll^ = 0
+		}
+		if scroll^ < max_scroll_y {
+			scroll^ = max_scroll_y
+		}
+		
+		thumb_h := rec.height * (rec.height / (((item_size + ui_px(8)) * row_count)))
+		thumb_h = clamp(thumb_h, ui_px(8), rec.height)
+		thumb_y := scroll_bar_rec.y + (lerped_scroll^ / max_scroll_y) * (scroll_bar_rec.height) - thumb_h / 2
+		thumb_rec := Rec {
+			x = scroll_bar_rec.x,
+			y = thumb_y,
+			width = scroll_bar_rec.width,
+			height = thumb_h
+		}
+		// this probably can be removed
+		thumb_rec.y = clamp(thumb_rec.y, scroll_bar_rec.y, scroll_bar_rec.y + scroll_bar_rec.height - thumb_h)
+
+		ui_push_command(UI_Draw_Rect {
+			color = COLOR_BASE_0,
+			rec = scroll_bar_rec,
+		})
+		ui_push_command(UI_Draw_Rect {
+			color = COLOR_BASE_2,
+			rec = rec_pad_ex(thumb_rec, 2, 2, 2, 2),
+		})
+	}
+	else {
+		scroll^ = 0
+	}
+	
+	// TODO: we could just start the loop from first visible element
+	x, y := f32(0), f32(0)
+	for i in 0..<items_count {
+		item_rec := Rec { 
+			rec.x + x, 
+			rec.y + y + lerped_scroll^, 
+			item_size, 
+			item_size 
+		}
+		if rl.CheckCollisionRecs(item_rec, rec) {
+			append(&items_list, UI_List_Item { i = i, rec = item_rec })
+		}
+		x += item_size + ui_px(8)
+		if x + item_size > rec.width {
+			x = 0
+			y += item_size + ui_px(8)
+		}
+	}
+	
+	ui_push_command(UI_Clip {
+		rec = rec
+	})
+	
+	lerped_scroll^ = rl.Lerp(lerped_scroll^, scroll^, rl.GetFrameTime() * 12)
+
+	return rec, items_list[:]
+}
+
 ui_panel :: proc(id: UI_ID, rec: Rec, style := UI_PANEL_STYLE_DEFAULT) {
 	ui_update_panel(id, rec)
 	ui_push_command(UI_Draw_Rect {
