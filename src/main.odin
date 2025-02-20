@@ -163,8 +163,8 @@ main :: proc() {
 		app.state = welcome_state
 	}
 
-	defer save_app_data()
 	defer deinit_app()
+	defer save_app_data()
 
 	for rl.WindowShouldClose() == false {
 		ui_begin()
