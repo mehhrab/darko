@@ -1317,6 +1317,9 @@ deinit_app :: proc() {
 		}
 	}
 
+	for i in 0..<app.fav_palletes.len {
+		delete(app.fav_palletes.data[i].name)
+	}
 	for recent in app.recent_projects.data {
 		delete(recent)
 	}
@@ -1601,9 +1604,6 @@ deinit_project_state :: proc(state: ^Project_State) {
 	delete(state.dirty_layers)
 	rl.UnloadTexture(state.bg_texture)
 	delete(state.pallete.name)
-	for i in 0..<app.fav_palletes.len {
-		delete(app.fav_palletes.data[i].name)
-	} 
 }
 
 open_project :: proc(state: ^Project_State) {
