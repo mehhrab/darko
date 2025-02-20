@@ -2,6 +2,6 @@
 *.pdb
 *.sublime-project
 *.sublime-workspace
-src/data.json
 /.vscode
 /build
+src/data.ini
