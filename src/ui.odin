@@ -23,12 +23,10 @@ UI_Ctx :: struct {
 	slider_text: strings.Builder,
 	draw_commands: Draw_Commands,
 	
+	popup_scope: string,
+	open_popups: sa.Small_Array(8, UI_Popup),
 	// HACK: we can only have one active notif
 	current_notif: UI_Notif,
-	// current popup scope
-	popup_scope: string,
-	// HACK: we can only have one active popup
-	open_popups: sa.Small_Array(8, UI_Popup),
 
 	// style:
 
