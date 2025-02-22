@@ -28,7 +28,7 @@ UI_Ctx :: struct {
 	// current popup scope
 	popup_scope: string,
 	// HACK: we can only have one active popup
-	open_popup: UI_Popup,
+	open_popups: sa.Small_Array(8, UI_Popup),
 
 	// style:
 
@@ -64,7 +64,7 @@ UI_Align_Vertical :: enum {
 UI_Popup :: struct {
 	name: string,
 	show_header: bool,
-	open_time: f32,
+	darker_window: bool,
 	rec: Rec,
 	draw_commands: Draw_Commands,
 }
@@ -367,16 +367,16 @@ ui_load_font :: proc(size: i32) {
 }
 
 ui_begin :: proc() {
+	top_popup := ui_get_top_popup()
+	mouse_in_top_popup := top_popup != nil && ui_is_mouse_in_rec(top_popup.rec)
 	if ui_is_any_popup_open() &&
 		rl.IsMouseButtonReleased(.LEFT) &&
-		ui_is_mouse_in_rec(ui_ctx.open_popup.rec) == false &&
+		mouse_in_top_popup == false &&
 		ui_ctx.active_widget == 0 &&
 		ui_ctx.active_panel == 0 {
 		ui_close_current_popup()
 	}
-	if ui_is_any_popup_open() {
-		ui_ctx.open_popup.open_time += 0.01
-	}
+
 	if ui_ctx.current_notif.text != "" {
 		ui_ctx.current_notif.time += 0.01
 	}
@@ -403,26 +403,53 @@ ui_gen_id :: proc(i := 0, loc := #caller_location) -> UI_ID {
     return id
 }
 
+// this is ugly but gets the job done.
 ui_get_draw_commmands :: proc() -> (commands: []UI_Draw_Command) {
-	dc := ui_ctx.draw_commands
-	pdc := ui_ctx.open_popup.draw_commands
-	ndc := ui_ctx.current_notif.draw_commands
-	res, err := make_slice([]UI_Draw_Command, dc.len + pdc.len + ndc.len, context.temp_allocator)
-	for i in 0..<dc.len {
-		res[i] = dc.data[:][i]
+	len := ui_ctx.draw_commands.len + ui_ctx.current_notif.draw_commands.len 
+	popup_with_darker_window := -1
+	for i in 0..<ui_ctx.open_popups.len {
+		if ui_ctx.open_popups.data[i].darker_window {
+			popup_with_darker_window = i
+		}
 	}
-	for i in 0..<pdc.len {
-		res[dc.len + i] = pdc.data[:][i]
+	if popup_with_darker_window != -1 {
+		len += 1
 	}
-	for i in 0..<ndc.len {
-		res[dc.len + pdc.len + i] = ndc.data[:][i]
+	for i in 0..<ui_ctx.open_popups.len {
+		len += ui_ctx.open_popups.data[i].draw_commands.len
 	}
-	return res 
+	
+	commands = make_slice([]UI_Draw_Command, len, context.temp_allocator)
+	
+	append_draw_commands :: proc(host: ^[]UI_Draw_Command, commands: ^Draw_Commands, index: ^int) {
+		for i in 0..<commands.len {
+			host[index^ + i] = commands.data[i] 
+		}
+		index^ += commands.len
+	}
+
+	index := 0
+	append_draw_commands(&commands, &ui_ctx.draw_commands, &index)
+	for i in 0..<ui_ctx.open_popups.len {
+		if popup_with_darker_window == i {
+			commands[index] = UI_Draw_Rect {
+				color = { 0, 0, 0, 100 },
+				rec = { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) },
+			}
+			index += 1
+		}
+		append_draw_commands(&commands, &ui_ctx.open_popups.data[i].draw_commands, &index)
+	}
+	append_draw_commands(&commands, &ui_ctx.current_notif.draw_commands, &index)
+	
+	return commands
 }
 
 ui_clear_temp_state :: proc() {
 	sa.clear(&ui_ctx.draw_commands)
-	sa.clear(&ui_ctx.open_popup.draw_commands)
+	for i in 0..<ui_ctx.open_popups.len {
+		sa.clear(&ui_ctx.open_popups.data[i].draw_commands)
+	}
 	sa.clear(&ui_ctx.current_notif.draw_commands)
 }
 
@@ -471,9 +498,12 @@ ui_draw_notif :: proc() {
 	}	
 }
 
-ui_open_popup :: proc(name: string) {
-	ui_ctx.open_popup.name = name
-	ui_ctx.open_popup.open_time = 0
+ui_open_popup :: proc(name: string, darker_window := true) {
+	popup := UI_Popup {
+		name = name,
+		darker_window = darker_window,
+	}
+	sa.append(&ui_ctx.open_popups, popup)
 	ui_ctx.hovered_widget = 0
 	ui_ctx.active_widget = 0
 }
@@ -481,33 +511,39 @@ ui_open_popup :: proc(name: string) {
 ui_close_current_popup :: proc() {
 	ui_ctx.hovered_widget = 0
 	ui_ctx.active_widget = 0
-	ui_ctx.open_popup.name = ""
-	ui_ctx.open_popup.rec = {}
-	ui_ctx.open_popup.show_header = false
-	sa.clear(&ui_ctx.open_popup.draw_commands)
+	last_index := ui_ctx.open_popups.len - 1
+	sa.clear(&ui_ctx.open_popups.data[last_index].draw_commands)
+	sa.ordered_remove(&ui_ctx.open_popups, last_index)
+}
+
+ui_close_all_popups :: proc() {
+	popups_len := ui_ctx.open_popups.len
+	for i in 0..<popups_len {
+		ui_close_current_popup()
+	}
 }
 
 // NOTE: name is also used as the id
 ui_begin_popup :: proc(name: string, rec: Rec) -> (open: bool) {
 	ui_ctx.popup_scope = name
-
-	if name == ui_ctx.open_popup.name {
-		ui_push_popup_draw()
-		ui_ctx.open_popup.rec = rec
+	popup := ui_find_popup(name)
+	if popup != nil && name == popup.name {
+		ui_push_popup_draw(popup)
+		popup.rec = rec
 	}
 	 
-	return name == ui_ctx.open_popup.name
+	return popup != nil && name == popup.name
 }
 
 ui_begin_popup_title :: proc(id: UI_ID, name: string, rec: Rec) -> (open: bool, content_rec: Rec) {
 	ui_ctx.popup_scope = name
-
-	if name == ui_ctx.open_popup.name {
-		ui_push_popup_draw()
-		ui_ctx.open_popup.show_header = true
+	popup := ui_find_popup(name)
+	if popup != nil && name == popup.name {
+		ui_push_popup_draw(popup)
+		popup.show_header = true
 		area := rec
 		header_area := rec_extend_top(&area, ui_default_widget_height() + ui_px(8)) 
-		ui_ctx.open_popup.rec = area
+		popup.rec = area
 		x_rec := rec_pad(rec_take_right(&header_area, header_area.height), ui_px(8))
 		style := UI_BUTTON_STYLE_TRANSPARENT
 		style.text_color = COLOR_BASE_0
@@ -515,50 +551,68 @@ ui_begin_popup_title :: proc(id: UI_ID, name: string, rec: Rec) -> (open: bool, 
 			ui_close_current_popup()
 		}
 	}
-	return name == ui_ctx.open_popup.name, { rec.x, rec.y, rec.width, rec.height }
+	return popup != nil && name == popup.name, { rec.x, rec.y, rec.width, rec.height }
 }
 
-ui_push_popup_draw :: proc() {
+ui_push_popup_draw :: proc(popup: ^UI_Popup) {
 	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
-	opacity := ui_ctx.open_popup.open_time * 40 * 8
-	if opacity >= 40 {
-		opacity = 40
-	}
-	sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
-		color =  { 0, 0, 0, u8((opacity / 255) * 255) },
-		rec = screen_rec,
+
+	// outline
+	sa.inject_at(&popup.draw_commands, UI_Draw_Rect {
+		color = COLOR_BASE_0,
+		rec = rec_pad(popup.rec, -1),
 	}, 0)
-	sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
-		color = COLOR_BASE_0,
-		rec = rec_pad(ui_ctx.open_popup.rec, -1),
-	}, 1)
-	sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
-		color = COLOR_BASE_0,
-		rec = rec_pad(ui_ctx.open_popup.rec, -1),
-	}, 2)
-	sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Rect {
+	
+	// background
+	sa.inject_at(&popup.draw_commands, UI_Draw_Rect {
 		color = COLOR_BASE_1,
-		rec = ui_ctx.open_popup.rec,
-	}, 3)
-	if ui_ctx.open_popup.show_header {
+		rec = popup.rec,
+	}, 1)
+
+	// header
+	if popup.show_header {
 		header_height := ui_default_widget_height() + ui_px(8)
-		sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Gradient_H {
+		sa.inject_at(&popup.draw_commands, UI_Draw_Gradient_H {
 			right_color = COLOR_ACCENT_0,
 			left_color = COLOR_ACCENT_1,
-			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, header_height },
-		}, 4)
-		sa.inject_at(&ui_ctx.open_popup.draw_commands, UI_Draw_Text {
+			rec = { popup.rec.x, popup.rec.y, popup.rec.width, header_height },
+		}, 2)
+		sa.inject_at(&popup.draw_commands, UI_Draw_Text {
 			color = COLOR_BASE_0,
-			rec = { ui_ctx.open_popup.rec.x, ui_ctx.open_popup.rec.y, ui_ctx.open_popup.rec.width, header_height },
-			text = ui_ctx.open_popup.name,
+			rec = { popup.rec.x, popup.rec.y, popup.rec.width, header_height },
+			text = popup.name,
 			align = { .Center, .Center },
 			size = ui_font_size(),
-		}, 5)
+		}, 3)
 	}
 }
 
 ui_end_popup :: proc() {
 	ui_ctx.popup_scope = ""
+}
+
+ui_find_popup :: proc(name: string) -> (res: ^UI_Popup) {
+	res = nil
+
+	if ui_ctx.open_popups.len > 0 {
+		for i in 0..<ui_ctx.open_popups.len {
+			if name == ui_ctx.open_popups.data[i].name {
+				res = &ui_ctx.open_popups.data[i]
+				break
+			}
+		}
+	}
+	
+	return res
+}
+
+ui_get_top_popup :: proc() -> (res: ^UI_Popup) {
+	if ui_ctx.open_popups.len > 0 {
+		return &ui_ctx.open_popups.data[ui_ctx.open_popups.len - 1]
+	}
+	else {
+		return nil
+	}
 }
 
 ui_show_notif :: proc(text: string, style := UI_NOTIF_STYLE_ACCENT) {
@@ -570,7 +624,8 @@ ui_show_notif :: proc(text: string, style := UI_NOTIF_STYLE_ACCENT) {
 }
 
 ui_update_widget :: proc(id: UI_ID, rec: Rec, blocking := true) {
-	if ui_ctx.open_popup.name != ui_ctx.popup_scope && ui_is_any_popup_open() {
+	top_popup := ui_get_top_popup()
+	if top_popup != nil && top_popup.name != ui_ctx.popup_scope {
 		return
 	}
 	hovered := ui_is_mouse_in_rec(rec)
@@ -586,7 +641,8 @@ ui_update_widget :: proc(id: UI_ID, rec: Rec, blocking := true) {
 }
 
 ui_update_panel :: proc(id: UI_ID, rec: Rec) {
-	if ui_ctx.open_popup.name != ui_ctx.popup_scope && ui_is_any_popup_open() {
+	top_popup := ui_get_top_popup()
+	if top_popup != nil && top_popup.name != ui_ctx.popup_scope {
 		return
 	}
 	hovered := ui_is_mouse_in_rec(rec)
@@ -838,7 +894,7 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 
 	ui_update_widget(id, rec)
 	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT) {
-		ui_open_popup(text)	
+		ui_open_popup(text, false)	
 	}
 
 	padding := ui_px(10)
@@ -863,8 +919,7 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 	}
 
 	if ui_begin_popup(text, popup_rec) {
-		// HACK, TODO: add an option for disabling popup backaground
-		ui_ctx.open_popup.open_time = 0
+		ui_find_popup(text)
 
 		menu_item_y := popup_rec.y
 		style := UI_BUTTON_STYLE_DEFAULT
@@ -1189,7 +1244,10 @@ ui_option :: proc(id: UI_ID, items: []UI_Option, selceted: ^int, rec: Rec, style
 
 ui_push_command :: proc(command: UI_Draw_Command) {
 	if ui_ctx.popup_scope != "" {
-		sa.append(&ui_ctx.open_popup.draw_commands, command)
+		popup := ui_find_popup(ui_ctx.popup_scope)
+		if popup != nil {
+			sa.append(&popup.draw_commands, command)
+		}
 	}
 	else {
 		sa.append(&ui_ctx.draw_commands, command)
@@ -1214,7 +1272,7 @@ ui_calc_popup_height :: proc(item_count: i32, item_h, seprator_h, padding: f32) 
 }
 
 ui_is_any_popup_open :: #force_inline proc() -> (res: bool) {
-	return ui_ctx.open_popup.name != ""
+	return ui_ctx.open_popups.len > 0
 }
 
 // not sure if px is the right name...

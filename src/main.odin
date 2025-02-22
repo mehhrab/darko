@@ -473,11 +473,12 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 	clicked_item := ui_menu_button(ui_gen_id(), "File", menu_items[:], ui_px(300), { area.x, area.y, 60, area.height })
 	
 	if clicked_item.text == NEW_PROJECT {
+		ui_close_current_popup()
 		ui_open_popup(POPUP_NEW_PROJECT)
 	}
 	
 	if clicked_item.text == OPEN_PROJECT {
-		defer ui_close_current_popup()
+		ui_close_current_popup()
 
 		path_cstring: cstring
 		defer ntf.FreePathU8(path_cstring)
@@ -511,7 +512,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 	}
 
 	if clicked_item.text == SAVE_PROJECT {
-		defer ui_close_current_popup()
+		ui_close_current_popup()
 
 		path_cstring: cstring
 		defer ntf.FreePathU8(path_cstring)
@@ -543,7 +544,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 	}
 
 	if clicked_item.text == OPEN_WELCOME_SCREEN {
-		defer ui_close_current_popup()
+		ui_close_current_popup()
 
 		welcome_state := Welcome_State {}
 		init_welcome_state(&welcome_state)
@@ -861,7 +862,7 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 	clicked_item := ui_menu_button(ui_gen_id(), "Load", load_items[:], ui_px(160), load_rec)
 
 	if clicked_item.text == FROM_FILE {
-		defer ui_close_current_popup()
+		ui_close_current_popup()
 
 		path_cstring: cstring
 		defer ntf.FreePathU8(path_cstring)
@@ -1062,7 +1063,7 @@ new_file_popup :: proc(state: ^Screen_State) {
 			project: Project_State
 			init_project_state(&project, app.new_project_width, app.new_project_height)
 			schedule_state_change(project)
-			ui_close_current_popup()
+			ui_close_all_popups()
 		
 			ui_show_notif(ICON_CHECK + " Project is created")
 		}	
