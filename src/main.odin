@@ -643,32 +643,47 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 
 	// draw layers
 	@(static) lerped_layer_y: f32
-	lerped_layer_y = rl.Lerp(lerped_layer_y, f32(state.current_layer), rl.GetFrameTime() * 10)
+	lerped_layer_y = rl.Lerp(lerped_layer_y, f32(state.current_layer), rl.GetFrameTime() * 18)
+
 	for i in 0..<len(state.layers) {
 		layer_rec := canvas_rec
-		layer_rec.y -= (canvas_h + ui_px(16)) * (f32(i) - lerped_layer_y)
-
+		layer_rec.y -= (canvas_h + ui_px(16) * state.zoom) * (f32(i) - lerped_layer_y)		
 		if i == state.current_layer {
 			ui_push_command(UI_Draw_Canvas {
 				rec = layer_rec,
 			})
-			if state.zoom > 0.9 {
+			if state.zoom > 1.2 {
 				ui_push_command(UI_Draw_Grid {
 					rec = layer_rec,
 				})
 			}
+			else {
+				// draw a hand pointing at the current layer
+				ui_push_command(UI_Draw_Text {
+					align = { .Center, .Center },
+					color = COLOR_TEXT_0,
+					rec = { layer_rec.x - ui_px(32), layer_rec.y + layer_rec.height / 2, 0, 0 },
+					size = ui_font_size() * 2,
+					text = ICON_HAND,
+				})
+			}
+			ui_push_command(UI_Draw_Rect_Outline {
+				color = COLOR_BASE_4,
+				rec = layer_rec,
+				thickness = 2,
+			})
 		}
 		else {
 			ui_push_command(UI_Draw_Texture {
 				texture = state.layers[i].texture,
 				rec = layer_rec,
 			})
+			ui_push_command(UI_Draw_Rect_Outline {
+				color = COLOR_BASE_1,
+				rec = layer_rec,
+				thickness = 2,
+			})
 		}
-		ui_push_command(UI_Draw_Rect_Outline {
-			color = COLOR_BASE_3,
-			rec = layer_rec,
-			thickness = 2,
-		})
 	}
 
 	if ui_is_mouse_in_rec(area) && ui_is_being_interacted() == false {

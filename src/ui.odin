@@ -317,6 +317,7 @@ ICON_SETTINGS :: "\uf992"
 ICON_X :: "\uf655" 
 ICON_CHECK :: "\uf62b"
 ICON_STAR :: "\uf9cd"
+ICON_HAND :: "\uf7c6"
 
 ui_ctx: UI_Ctx
 
@@ -347,7 +348,8 @@ ui_load_font :: proc(size: i32) {
 	ICON_SETTINGS +
 	ICON_X +
 	ICON_CHECK +
-	ICON_STAR
+	ICON_STAR +
+	ICON_HAND
 	
 	code_point_count: i32
 	code_points := rl.LoadCodepoints(CHARS + ICONS, &code_point_count)
