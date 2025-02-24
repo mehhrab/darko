@@ -618,6 +618,13 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 canvas :: proc(state: ^Project_State, rec: Rec) {
 	area := rec
 
+	ui_push_command(UI_Clip {
+		rec = rec
+	})
+	defer ui_push_command(UI_Clip {
+		rec = {}
+	})
+
 	state.lerped_zoom = rl.Lerp(state.lerped_zoom, state.zoom, 20 * rl.GetFrameTime())
 	// work around for lerp never (taking too long) reaching it's desteniton 
 	if math.abs(state.zoom - state.lerped_zoom) < 0.01 {
@@ -630,23 +637,40 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 	
 	cursor_icon := ""
 	if ui_is_being_interacted() == false {
-		update_zoom(&state.zoom, 0.3, 0.1, 100)
+		update_zoom(&state.zoom, 0.4, 0.1, 100)
 		cursor_icon = update_tools(state, canvas_rec)
 	}
-	
-	ui_push_command(UI_Draw_Canvas {
-		rec = canvas_rec,
-		panel_rec = area,
-	})
-	ui_push_command(UI_Draw_Grid {
-		rec = canvas_rec,
-		panel_rec = area,
-	})
-	ui_push_command(UI_Draw_Rect_Outline {
-		rec = area,
-		color = COLOR_BASE_0,
-		thickness = 1
-	})
+
+	// draw layers
+	@(static) lerped_layer_y: f32
+	lerped_layer_y = rl.Lerp(lerped_layer_y, f32(state.current_layer), rl.GetFrameTime() * 10)
+	for i in 0..<len(state.layers) {
+		layer_rec := canvas_rec
+		layer_rec.y -= (canvas_h + ui_px(16)) * (f32(i) - lerped_layer_y)
+
+		if i == state.current_layer {
+			ui_push_command(UI_Draw_Canvas {
+				rec = layer_rec,
+			})
+			if state.zoom > 0.9 {
+				ui_push_command(UI_Draw_Grid {
+					rec = layer_rec,
+				})
+			}
+		}
+		else {
+			ui_push_command(UI_Draw_Texture {
+				texture = state.layers[i].texture,
+				rec = layer_rec,
+			})
+		}
+		ui_push_command(UI_Draw_Rect_Outline {
+			color = COLOR_BASE_3,
+			rec = layer_rec,
+			thickness = 2,
+		})
+	}
+
 	if ui_is_mouse_in_rec(area) && ui_is_being_interacted() == false {
 		if cursor_icon == "" {
 			cursor_icon = ICON_PEN
@@ -1144,41 +1168,35 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 			}
 			case UI_Clip: {
 				if kind.rec != { } {
-					x := i32(kind.rec.x)
-					y := i32(kind.rec.y)
-					w := i32(kind.rec.width)
-					h := i32(kind.rec.height)
+					rec := kind.rec
+					if ui_ctx.clip_stack.len > 0 {
+						rec = rec_intersect(rec, ui_ctx.clip_stack.data[ui_ctx.clip_stack.len - 1])
+					}
+					sa.append(&ui_ctx.clip_stack, rec)
+					x := i32(rec.x)
+					y := i32(rec.y)
+					w := i32(rec.width)
+					h := i32(rec.height)
 					rl.BeginScissorMode(x, y, w, h)
 				}
 				else {
 					rl.EndScissorMode()
+					if ui_ctx.clip_stack.len > 0 {
+						sa.pop_back(&ui_ctx.clip_stack)
+					}
 				}
 			}
 			case UI_Draw_Canvas: {
 				// TODO: just draw these to a render texture
 				project, project_exists := app.state.(Project_State)
 				assert(project_exists)
-
-				rl.BeginScissorMode(
-					i32(kind.panel_rec.x), 
-					i32(kind.panel_rec.y), 
-					i32(kind.panel_rec.width), 
-					i32(kind.panel_rec.height))
 				draw_canvas(&project, kind.rec)
-				rl.EndScissorMode()
 			}
 			case UI_Draw_Grid: {
 				// TODO: just draw these to a render texture
 				project, project_exists := app.state.(Project_State)
 				assert(project_exists)
-
-				rl.BeginScissorMode(
-					i32(kind.panel_rec.x), 
-					i32(kind.panel_rec.y), 
-					i32(kind.panel_rec.width), 
-					i32(kind.panel_rec.height))
 				draw_grid(project.width, project.height, kind.rec)
-				rl.EndScissorMode()
 			}
 			case UI_Draw_Preview: {
 				// TODO: just draw these to a render texture
@@ -1811,8 +1829,8 @@ dfs :: proc(image: ^rl.Image, x, y: i32, prev_color, new_color: rl.Color) {
 
 draw_canvas :: proc(state: ^Project_State, area: Rec) {
 	src_rec := Rec { 0, 0, f32(state.width), f32(state.height) }
-	rl.DrawTexturePro(state.bg_texture, src_rec, area, { 0, 0 }, 0, rl.WHITE)
-	if len(state.layers) > 1 && state.current_layer > 0{
+	// rl.DrawTexturePro(state.bg_texture, src_rec, area, { 0, 0 }, 0, rl.WHITE)
+	if len(state.layers) > 1 && state.current_layer > 0 {
 		previous_layer := state.layers[state.current_layer - 1].texture
 		rl.DrawTexturePro(previous_layer, src_rec, area, { 0, 0 }, 0, { 255, 255, 255, 100 })
 	}
@@ -1826,12 +1844,12 @@ draw_grid :: proc(slice_w, slice_h: i32, rec: Rec) {
 	// HACK: (+ 0.1)
 	x := rec.x
 	for x < rec.x + rec.width + 0.1 {
-		rl.DrawLineV({ x, rec.y }, { x, rec.y + rec.height }, rl.BLACK)
+		rl.DrawLineV({ x, rec.y }, { x, rec.y + rec.height }, COLOR_BASE_1)
 		x += x_step
 	}
 	y := rec.y
 	for y < rec.y + rec.height + 0.1 {
-		rl.DrawLineV({ rec.x, y }, { rec.x + rec.width, y }, rl.BLACK)
+		rl.DrawLineV({ rec.x, y }, { rec.x + rec.width, y }, COLOR_BASE_1)
 		y += y_step
 	}
 }

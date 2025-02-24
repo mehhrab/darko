@@ -22,7 +22,8 @@ UI_Ctx :: struct {
 	slider_text_buffer: [32]byte,
 	slider_text: strings.Builder,
 	draw_commands: Draw_Commands,
-	
+	clip_stack: sa.Small_Array(16, Rec),
+
 	popup_scope: string,
 	open_popups: sa.Small_Array(8, UI_Popup),
 	// HACK: we can only have one active notif
@@ -140,12 +141,10 @@ UI_Clip :: struct {
 
 UI_Draw_Canvas :: struct {
 	rec: Rec,
-	panel_rec: Rec,
 }
 
 UI_Draw_Grid :: struct {
 	rec: Rec,
-	panel_rec: Rec,
 }
 
 UI_Draw_Preview :: struct {
@@ -873,6 +872,12 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := 
 	else if ui_ctx.hovered_widget == id {
 		color = style.bg_color_hovered
 	}
+	ui_push_command(UI_Clip {
+		rec = rec,
+	})
+	defer ui_push_command(UI_Clip {
+		rec = {},
+	})
 	ui_push_command(UI_Draw_Rect {
 		rec = rec,
 		color = color
