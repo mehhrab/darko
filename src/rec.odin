@@ -5,6 +5,17 @@ import rl "vendor:raylib"
 
 Rec :: rl.Rectangle
 
+// taken from https://github.com/odin-lang/Odin/blob/master/vendor/microui/microui.odin#L297C1-L305C2
+rec_intersect :: proc(rec1, rec2: Rec) -> (res: Rec) {
+	x1 := max(rec1.x, rec2.x)
+	y1 := max(rec1.y, rec2.y)
+	x2 := min(rec1.x + rec1.width, rec2.x + rec2.width)
+	y2 := min(rec1.y + rec1.height, rec2.y + rec2.height)
+	if x2 < x1 { x2 = x1 }
+	if y2 < y1 { y2 = y1 }
+	return Rec {x1, y1, x2 - x1, y2 - y1}
+}
+
 rec_pad :: proc(rec: Rec, padding: f32) -> (res: Rec) {
 	rec := rec
 	rec.x += padding
