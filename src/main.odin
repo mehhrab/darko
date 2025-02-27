@@ -354,10 +354,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 	
 	open_button_rec := rec_cut_left(&buttons_area, buttons_area.width - ui_px(8))
 	if ui_button(ui_gen_id(), "Open", open_button_rec) {
-		path_cstring: cstring
-		defer ntf.FreePathU8(path_cstring)
-		args: ntf.Open_Dialog_Args
-		res := ntf.PickFolderU8(&path_cstring, "")
+		path, res := pick_folder_dialog("", context.temp_allocator)
 		if res == .Error {
 			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
 		}
@@ -366,7 +363,6 @@ welcome_screen :: proc(state: ^Welcome_State) {
 		}
 
 		loaded_project: Project_State
-		path := string(path_cstring)		
 		loaded := load_project_state(&loaded_project, path)
 		if loaded == false {
 			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
@@ -480,17 +476,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 	if clicked_item.text == OPEN_PROJECT {
 		ui_close_current_popup()
 
-		path_cstring: cstring
-		defer ntf.FreePathU8(path_cstring)
-		current_dir := strings.clone_to_cstring(state.dir, context.temp_allocator)
-		args := ntf.Pick_Folder_Args {
-			default_path = current_dir,
-			parent_window = {
-				handle = rl.GetWindowHandle(),
-				type = .Windows,
-			}
-		}
-		res := ntf.PickFolderU8_With(&path_cstring, &args)
+		path, res := pick_folder_dialog(state.dir, context.temp_allocator)
 		if res == .Error {
 			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
 		}
@@ -499,7 +485,6 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		}
 
 		loaded_project: Project_State
-		path := string(path_cstring)		
 		loaded := load_project_state(&loaded_project, path)
 		if loaded == false {
 			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
@@ -513,18 +498,8 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 
 	if clicked_item.text == SAVE_PROJECT {
 		ui_close_current_popup()
-
-		path_cstring: cstring
-		defer ntf.FreePathU8(path_cstring)
-		current_dir := strings.clone_to_cstring(state.dir, context.temp_allocator)
-		args := ntf.Pick_Folder_Args {
-			default_path = current_dir,
-			parent_window = {
-				handle = rl.GetWindowHandle(),
-				type = .Windows,
-			}
-		}
-		res := ntf.PickFolderU8_With(&path_cstring, &args)
+		
+		path, res := pick_folder_dialog(state.dir, context.temp_allocator)
 		if res == .Error {
 			ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
 		}
@@ -532,7 +507,6 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 			return
 		}
 
-		path := string(path_cstring)
 		saved := save_project_state(state, path)
 		if saved == false {
 			ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
@@ -1915,4 +1889,23 @@ ini_read_string :: proc(mapp: ini.Map, section, name: string, default: string = 
 		}
 	}
 	return strings.clone(default, allocator)
+}
+
+pick_folder_dialog :: proc(default_path := "", allocator := context.allocator) -> (path: string, res: ntf.Result) {
+	default_path_cstring := strings.clone_to_cstring(default_path)
+	defer delete(default_path_cstring)
+	path_cstring: cstring
+	defer ntf.FreePathU8(path_cstring)
+
+	args := ntf.Pick_Folder_Args {
+		default_path = default_path_cstring,
+		parent_window = {
+			handle = rl.GetWindowHandle(),
+			type = .Windows,
+		}
+	}
+	pick_res := ntf.PickFolderU8_With(&path_cstring, &args)
+	path_res := strings.clone_from_cstring(path_cstring, allocator)
+	
+	return path_res, pick_res
 }
