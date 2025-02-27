@@ -877,25 +877,15 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 	if clicked_item.text == FROM_FILE {
 		ui_close_current_popup()
 
-		path_cstring: cstring
-		defer ntf.FreePathU8(path_cstring)
-		current_dir := strings.clone_to_cstring(state.dir, context.temp_allocator)
-		args := ntf.Open_Dialog_Args {
-			default_path = current_dir,
-			parent_window = {
-				handle = rl.GetWindowHandle(),
-				type = .Windows,
-			}
-		}
-		res := ntf.OpenDialogU8_With(&path_cstring, &args)
+		path, res := pick_file_dilaog("", context.temp_allocator)
 		if res == .Error {
 			ui_show_notif("Failed to load pallete", UI_NOTIF_STYLE_ERROR)
 		}
 		else if res == .Cancel {
 			return
 		}
+		path_cstring := strings.clone_to_cstring(path, context.temp_allocator)
 
-		path := string(path_cstring)
 		/* sa.clear() isn't enough to clear the palletes since 
 		we do slice.contains() a couple of lines below */  
 		for i in 0..<state.pallete.colors.len {
@@ -1889,6 +1879,23 @@ ini_read_string :: proc(mapp: ini.Map, section, name: string, default: string = 
 		}
 	}
 	return strings.clone(default, allocator)
+}
+
+pick_file_dilaog :: proc(default_path := "", allocator := context.allocator) -> (path: string, res: ntf.Result) {
+	path_cstring: cstring
+	defer ntf.FreePathU8(path_cstring)
+	default_path_cstring := strings.clone_to_cstring(default_path, context.temp_allocator)
+	args := ntf.Open_Dialog_Args {
+		default_path = default_path_cstring,
+		parent_window = {
+			handle = rl.GetWindowHandle(),
+			type = .Windows,
+		}
+	}
+	
+	res = ntf.OpenDialogU8_With(&path_cstring, &args)
+	path = strings.clone_from_cstring(path_cstring, allocator)
+	return path, res
 }
 
 pick_folder_dialog :: proc(default_path := "", allocator := context.allocator) -> (path: string, res: ntf.Result) {
