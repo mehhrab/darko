@@ -18,9 +18,10 @@ UI_Ctx :: struct {
 	active_widget: UI_ID,
 	hovered_panel: UI_ID,
 	active_panel: UI_ID,
-	active_textbox: UI_ID,
+	text_mode_slider: UI_ID,
 	slider_text_buffer: [32]byte,
 	slider_text: strings.Builder,
+	slider_caret_x: i32,
 	draw_commands: Draw_Commands,
 	clip_stack: sa.Small_Array(16, Rec),
 
@@ -380,8 +381,8 @@ ui_begin :: proc() {
 		ui_ctx.current_notif.time += 0.01
 	}
 
-	if rl.IsMouseButtonReleased(.LEFT) || rl.IsMouseButtonReleased(.RIGHT) {
-		ui_ctx.active_textbox = 0
+	if ui_ctx.text_mode_slider != ui_ctx.hovered_widget && rl.IsMouseButtonReleased(.LEFT) || rl.IsMouseButtonReleased(.RIGHT) {
+		ui_ctx.text_mode_slider = 0
 	}
 	
 	ui_ctx.hovered_widget = 0
@@ -1098,100 +1099,35 @@ ui_slider_f32 :: proc(
 	value_changed: bool,
 ) {
 	ui_update_widget(id, rec)
-
-	if ui_ctx.active_textbox != id {
-		// when right clicked write the value to slider_text_buffer and goto textmode
-		if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.RIGHT) {
-			ui_ctx.active_textbox = id
-			strings.builder_reset(&ui_ctx.slider_text)
-			strings.write_string(&ui_ctx.slider_text, fmt.tprintf(format, value^))
-		}
-		else {
-			value_changed = ui_slider_behaviour_f32(id, value, min, max, rec, step)
-		}
-	}
-	else {
-		// clear textbox if right or left clicked
-		if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && (rl.IsMouseButtonReleased(.RIGHT)) {
-			strings.builder_reset(&ui_ctx.slider_text)
-			ui_ctx.active_textbox = 0
-		}
-
-		// exit text mode when escape key is pressed
-		if rl.IsKeyPressed(.ESCAPE) {
-			strings.builder_reset(&ui_ctx.slider_text)
-			ui_ctx.active_textbox = 0
-		}
-
-		// when left clicked and in apply buffer to value pointer
-		if ui_ctx.hovered_widget == id && rl.IsMouseButtonReleased(.LEFT) {
-			number, ok := strconv.parse_f32(strings.to_string(ui_ctx.slider_text))
-			if ok {
-				value^ = number
-			}
-		}
-
-		char := rl.GetCharPressed()
-		switch char {
-			case '0'..='9', '.': {
-				strings.write_byte(&ui_ctx.slider_text, byte(char))
-			}
-		}
-		if rl.IsKeyPressed(.BACKSPACE) {
-			if strings.builder_len(ui_ctx.slider_text) > 0 {
-				index := strings.builder_len(ui_ctx.slider_text) - 1
-				ordered_remove(&ui_ctx.slider_text.buf, index)
-			}
-		}
-		if rl.IsKeyPressedRepeat(.BACKSPACE) {
-			if strings.builder_len(ui_ctx.slider_text) > 0 {
-				index := strings.builder_len(ui_ctx.slider_text) - 1
-				ordered_remove(&ui_ctx.slider_text.buf, index)
-			}
-		}
-		if rl.IsKeyPressed(.ENTER) {
-			number, ok := strconv.parse_f32(strings.to_string(ui_ctx.slider_text))
-			if ok {
-				value^ = number
-			}
-			strings.builder_reset(&ui_ctx.slider_text)
-			ui_ctx.active_textbox = 0
-		}
-	}
-
-	progress_rec := rec_pad(rec, 1)
+	
 	font_size := style.font_size == 0 ? ui_font_size() : style.font_size
-
+	
 	ui_push_command(UI_Draw_Rect {
 		rec = rec,
 		color = style.bg_color,
 	})
-
-	if ui_ctx.active_textbox == id {
-		// draw textbox
-		ui_push_command(UI_Draw_Text {
-			align = { .Left, .Center },
-			color = style.text_color,
-			rec = rec_pad(rec, ui_px(8)),
-			size = font_size,
-			text = strings.to_string(ui_ctx.slider_text),
-		})
+	
+	if ui_ctx.text_mode_slider != id {
+		// when right clicked write the value to slider_text_buffer and goto text mode
+		if ui_ctx.hovered_widget == id && rl.IsMouseButtonReleased(.RIGHT) {
+			ui_ctx.text_mode_slider = id
+			strings.builder_reset(&ui_ctx.slider_text)
+			strings.write_string(&ui_ctx.slider_text, fmt.tprintf(format, value^))
+			ui_ctx.slider_caret_x = i32(len(ui_ctx.slider_text.buf))
+		}
+		else {
+			value_changed = ui_slider_behaviour_f32(id, value, min, max, rec, step)
+		}
 		
-		ui_push_command(UI_Draw_Rect_Outline {
-			color = style.progress_color,
-			rec = rec,
-			thickness = 1,
-		})
-	}
-	else {
 		// draw slider
+		progress_rec := rec_pad(rec, 1)
 		progress_width := (value^ - min) * (progress_rec.width) / (max - min)
 		progress_rec.width = progress_width
 		ui_push_command(UI_Draw_Rect {
 			rec = progress_rec,
 			color = style.progress_color,	
 		})
-		
+
 		ui_push_command(UI_Draw_Text {
 			rec = rec_pad(rec, 10),
 			text = label,
@@ -1201,13 +1137,6 @@ ui_slider_f32 :: proc(
 		})
 		text := fmt.aprintf(format, value^, allocator = context.temp_allocator)
 		ui_push_command(UI_Draw_Text {
-			rec = rec_pad({ rec.x + 2, rec.y + 2, rec.width, rec.height }, 10),
-			text = text,
-			size = font_size,
-			color = style.bg_color,
-			align = { .Right, .Center },
-		})
-		ui_push_command(UI_Draw_Text {
 			rec = rec_pad(rec, 10),
 			text = text,
 			size = font_size,
@@ -1215,6 +1144,75 @@ ui_slider_f32 :: proc(
 			align = { .Right, .Center },	
 		})
 	}
+	else {
+		if rl.IsKeyPressed(.ESCAPE) {
+			strings.builder_reset(&ui_ctx.slider_text)
+			ui_ctx.text_mode_slider = 0
+		}
+
+		if rl.IsKeyPressed(.LEFT) || rl.IsKeyPressedRepeat(.LEFT) {
+			ui_ctx.slider_caret_x -= 1
+		}
+		if rl.IsKeyPressed(.RIGHT) || rl.IsKeyPressedRepeat(.RIGHT) {
+			ui_ctx.slider_caret_x += 1
+		}
+
+		char := rl.GetCharPressed()
+		switch char {
+			case '0'..='9', '.': {
+				inject_at(&ui_ctx.slider_text.buf, ui_ctx.slider_caret_x, byte(char))
+				ui_ctx.slider_caret_x += 1
+			}
+		}
+		if rl.IsKeyPressed(.BACKSPACE) || rl.IsKeyPressedRepeat(.BACKSPACE) {
+			if strings.builder_len(ui_ctx.slider_text) > 0 {
+				if ui_ctx.slider_caret_x != 0 {
+					ordered_remove(&ui_ctx.slider_text.buf, ui_ctx.slider_caret_x - 1)
+					ui_ctx.slider_caret_x -= 1
+				}
+			}
+		}
+		if rl.IsKeyPressed(.ENTER) {
+			number, ok := strconv.parse_f32(strings.to_string(ui_ctx.slider_text))
+			if ok {
+				value^ = number
+			}
+			strings.builder_reset(&ui_ctx.slider_text)
+			ui_ctx.text_mode_slider = 0
+		}
+		
+		// draw textbox
+		ui_ctx.slider_caret_x = clamp(ui_ctx.slider_caret_x, 0, i32(strings.builder_len(ui_ctx.slider_text)))
+		text_before_caret := strings.to_string(ui_ctx.slider_text)[0:ui_ctx.slider_caret_x]
+		text_before_caret_cstring := strings.clone_to_cstring(text_before_caret, context.temp_allocator)
+		text_before_caret_w := rl.MeasureTextEx(ui_ctx.font, text_before_caret_cstring, ui_font_size(), 0)[0]
+		caret_h := rec.height * 0.7
+
+		ui_push_command(UI_Draw_Text {
+			align = { .Left, .Center },
+			color = style.text_color,
+			rec = rec_pad(rec, ui_px(8)),
+			size = font_size,
+			text = strings.to_string(ui_ctx.slider_text),
+		})
+
+		ui_push_command(UI_Draw_Rect {
+			color = COLOR_ACCENT_0,
+			rec = { 
+				rec.x + ui_px(8) + text_before_caret_w, 
+				rec.y + rec.height / 2 - caret_h / 2, 
+				ui_px(2), 
+				caret_h 
+			}
+		})
+
+		ui_push_command(UI_Draw_Rect_Outline {
+			color = style.progress_color,
+			rec = rec,
+			thickness = 1,
+		})
+	}
+
 	return value_changed
 }
 
