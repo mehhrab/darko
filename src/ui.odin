@@ -1157,6 +1157,21 @@ ui_slider_f32 :: proc(
 			ui_ctx.slider_caret_x += 1
 		}
 
+		if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.C) {
+			text_cstring := strings.to_cstring(&ui_ctx.slider_text)
+			rl.SetClipboardText(text_cstring)
+		}
+
+		if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.V) {
+			text := strings.clone_from_cstring(rl.GetClipboardText(), context.temp_allocator)
+			if number, ok := strconv.parse_f32(text); ok {
+				value^ = number
+			}
+			strings.builder_reset(&ui_ctx.slider_text)
+			strings.write_string(&ui_ctx.slider_text, text)
+			ui_ctx.slider_caret_x = i32(len(ui_ctx.slider_text.buf))
+		}
+
 		char := rl.GetCharPressed()
 		switch char {
 			case '0'..='9', '.': {
@@ -1173,8 +1188,8 @@ ui_slider_f32 :: proc(
 			}
 		}
 		if rl.IsKeyPressed(.ENTER) {
-			number, ok := strconv.parse_f32(strings.to_string(ui_ctx.slider_text))
-			if ok {
+			text := strings.to_string(ui_ctx.slider_text)
+			if number, ok := strconv.parse_f32(text); ok {
 				value^ = number
 			}
 			strings.builder_reset(&ui_ctx.slider_text)
