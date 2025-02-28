@@ -963,27 +963,33 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 
 ui_path_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := UI_BUTTON_STYLE_DEFAULT) -> (clicked: bool) {	
 	clicked = false
+	
 	ui_update_widget(id, rec, blocking)
-	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT){
-		clicked = true
-	}
 	font_size := style.font_size == 0 ? ui_font_size() : style.font_size
-	color := style.bg_color
+
+	clicked = ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT)
+	bg_color := style.bg_color
 	if ui_ctx.active_widget == id {
-		color = style.bg_color_active
+		bg_color = style.bg_color_active
 	}
 	else if ui_ctx.hovered_widget == id {
-		color = style.bg_color_hovered
+		bg_color = style.bg_color_hovered
 	}
 	ui_push_command(UI_Draw_Rect {
 		rec = rec,
-		color = color
+		color = bg_color
 	})
 	bslash_index := strings.last_index(text, "\\")
 	text_cstring := strings.clone_to_cstring(text[:bslash_index + 1], context.temp_allocator)
 	path_width := rl.MeasureTextEx(ui_ctx.font, text_cstring, font_size, 0)[0]
 	path_color := style.text_color
 	path_color.a = 100
+	ui_push_command(UI_Clip {
+		rec = rec
+	})
+	defer ui_push_command(UI_Clip {
+		rec = {}
+	})
 	ui_push_command(UI_Draw_Text {
 		rec = rec_pad(rec, 10),
 		text = text[:bslash_index + 1],
@@ -998,6 +1004,7 @@ ui_path_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, styl
 		color = style.text_color,
 		align = style.text_align,
 	})
+
 	return clicked
 }
 
