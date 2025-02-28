@@ -373,6 +373,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 		add_recent_project(loaded_project.dir)
 		schedule_state_change(loaded_project)
 	}
+
 	if app.recent_projects.len == 0 {
 		ui_push_command(UI_Draw_Text {
 			align = { .Left, .Center },

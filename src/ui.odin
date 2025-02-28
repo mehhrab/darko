@@ -847,6 +847,30 @@ ui_begin_list_wrapped :: proc(
 	return rec, items_list[:]
 }
 
+ui_tooltip :: proc(id: UI_ID, widget_rec: Rec, text: string) {
+	if ui_ctx.hovered_widget == id {
+		w := ui_calc_button_width(text)
+		x := clamp(widget_rec.x + widget_rec.width / 2 - w / 2, 0, f32(rl.GetScreenWidth()))
+		rec := Rec { x, widget_rec.y + widget_rec.height + ui_px(2), w, ui_default_widget_height() }
+		ui_push_command(UI_Draw_Rect {
+			color = COLOR_BASE_0,
+			rec = rec,
+		})
+		ui_push_command(UI_Draw_Rect_Outline {
+			color = COLOR_BASE_2,
+			thickness = 1,
+			rec = rec,
+		})
+		ui_push_command(UI_Draw_Text {
+			align = { .Center, .Center },
+			color = COLOR_TEXT_0,
+			rec = rec,
+			size = ui_font_size(),
+			text = text
+		})
+	}
+}
+
 ui_panel :: proc(id: UI_ID, rec: Rec, style := UI_PANEL_STYLE_DEFAULT) {
 	ui_update_panel(id, rec)
 	ui_push_command(UI_Draw_Rect {
