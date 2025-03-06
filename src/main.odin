@@ -336,6 +336,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 	})
 
 	left_area = rec_pad(left_area, ui_px(16))
+	ui_begin_clip(left_area)
 	ui_push_command(UI_Draw_Text {
 		text = "Welcome to Darko!",
 		align = { .Center, .Center },
@@ -409,6 +410,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 			text = "Recent projects:"
 		})
 	}
+	ui_end_clip()
 }
 
 project_screen :: proc(state: ^Project_State) {
@@ -593,12 +595,7 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 canvas :: proc(state: ^Project_State, rec: Rec) {
 	area := rec
 
-	ui_push_command(UI_Clip {
-		rec = rec
-	})
-	defer ui_push_command(UI_Clip {
-		rec = {}
-	})
+	ui_begin_clip(rec)
 
 	state.lerped_zoom = rl.Lerp(state.lerped_zoom, state.zoom, 20 * rl.GetFrameTime())
 	// work around for lerp never (taking too long) reaching it's desteniton 
@@ -684,6 +681,8 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 	else {
 		rl.ShowCursor()
 	}
+
+	ui_end_clip()
 }
 
 color_panel :: proc(state: ^Project_State, rec: Rec) {
@@ -1026,6 +1025,7 @@ preview :: proc(state: ^Project_State, rec: Rec) {
 		update_zoom(&state.preview_zoom, 2, 1, 100)
 	}
 	state.lerped_preview_zoom = rl.Lerp(state.lerped_preview_zoom, state.preview_zoom, 20 * rl.GetFrameTime())
+
 	// work around for lerp never (taking too long) reaching it's desteniton 
 	if math.abs(state.preview_zoom - state.lerped_preview_zoom) < 0.01 {
 		state.lerped_preview_zoom = state.preview_zoom
@@ -1036,9 +1036,12 @@ preview :: proc(state: ^Project_State, rec: Rec) {
 	else if state.auto_rotate_preview {
 		state.preview_rotation -= state.preview_rotation_speed * rl.GetFrameTime()
 	}
+
+	ui_begin_clip(area)
 	ui_push_command(UI_Draw_Preview {
 		rec = area,
 	})
+
 	settings_rec := Rec {
 		area.x + area.width - ui_default_widget_height() - ui_px(8),
 		area.y + ui_px(8),
@@ -1048,6 +1051,7 @@ preview :: proc(state: ^Project_State, rec: Rec) {
 	if ui_button(ui_gen_id(), ICON_SETTINGS, settings_rec, false, style = UI_BUTTON_STYLE_TRANSPARENT) {
 		ui_open_popup(POPUP_PREVIEW_SETTINGS)
 	}
+	ui_end_clip()
 }
 
 new_file_popup :: proc(state: ^Screen_State) {
@@ -1095,6 +1099,7 @@ preview_settings_popup :: proc(state: ^Project_State) {
 }
 
 // backend code:
+
 
 process_commands :: proc(commands: []UI_Draw_Command) {
 	for command in commands
@@ -1147,23 +1152,15 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 				rl.DrawRectangleGradientH(x, y, w, h, kind.left_color, kind.right_color)
 			}
 			case UI_Clip: {
-				if kind.rec != { } {
-					rec := kind.rec
-					if ui_ctx.clip_stack.len > 0 {
-						rec = rec_intersect(rec, ui_ctx.clip_stack.data[ui_ctx.clip_stack.len - 1])
-					}
-					sa.append(&ui_ctx.clip_stack, rec)
-					x := i32(rec.x)
-					y := i32(rec.y)
-					w := i32(rec.width)
-					h := i32(rec.height)
+				if kind.rec != {} {
+					x := i32(math.round(kind.rec.x))
+					y := i32(math.round(kind.rec.y))
+					w := i32(math.round(kind.rec.width))
+					h := i32(math.round(kind.rec.height))
 					rl.BeginScissorMode(x, y, w, h)
 				}
 				else {
 					rl.EndScissorMode()
-					if ui_ctx.clip_stack.len > 0 {
-						sa.pop_back(&ui_ctx.clip_stack)
-					}
 				}
 			}
 			case UI_Draw_Canvas: {
@@ -1188,12 +1185,10 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 				w := i32(math.round(kind.rec.width))
 				h := i32(math.round(kind.rec.height))
 				
-				rl.BeginScissorMode(x, y, w, h)
 				rl.DrawRectangleGradientV(x, y, w, h, COLOR_BASE_1, COLOR_BASE_4)
 				px, py := rec_get_center_point(kind.rec)
 				draw_sprite_stack(&project.layers, px, py, project.lerped_preview_zoom, project.preview_rotation, project.spacing)
 				rl.DrawTextEx(ui_ctx.font, "Preview", { kind.rec.x + 10, kind.rec.y + 10 }, ui_font_size(), 0, { 255, 255, 255, 100 })
-				rl.EndScissorMode()
 				rl.DrawRectangleLinesEx(kind.rec, 1, COLOR_BASE_0)
 			}
 		}

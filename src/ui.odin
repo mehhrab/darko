@@ -670,8 +670,9 @@ ui_begin_list :: proc(
 ) {
 	rec := rec
 	items_list := make([dynamic]UI_List_Item, allocator = allocator)
-
+	
 	ui_update_panel(id, rec)
+	
 	ui_push_command(UI_Draw_Rect {
 		color = COLOR_BASE_0,
 		rec = rec,
@@ -686,7 +687,7 @@ ui_begin_list :: proc(
 		
 		scroll_bar_rec := rec_cut_right(&rec, ui_px(14))
 		ui_update_widget(id, scroll_bar_rec)
-			
+		
 		if ui_ctx.active_widget == id && rl.IsMouseButtonDown(.LEFT) {
 			scroll^ = 0 + (rl.GetMousePosition().y - rec.y) * (max_scroll_y - 0) / rec.height
 		}
@@ -707,7 +708,7 @@ ui_begin_list :: proc(
 		}
 		// this probably can be removed
 		thumb_rec.y = clamp(thumb_rec.y, scroll_bar_rec.y, scroll_bar_rec.y + scroll_bar_rec.height - thumb_h)
-
+		
 		ui_push_command(UI_Draw_Rect {
 			color = COLOR_BASE_0,
 			rec = scroll_bar_rec,
@@ -721,6 +722,8 @@ ui_begin_list :: proc(
 		scroll^ = 0
 	}
 	
+	lerped_scroll^ = rl.Lerp(lerped_scroll^, scroll^, rl.GetFrameTime() * 12)
+	
 	// TODO: we could just start the loop from first visible element
 	for i in 0..<items_count {
 		item_rec := Rec { 
@@ -732,21 +735,15 @@ ui_begin_list :: proc(
 		if rl.CheckCollisionRecs(item_rec, rec) {
 			append(&items_list, UI_List_Item { i = i, rec = item_rec })
 		}
-	}
-	
-	ui_push_command(UI_Clip {
-		rec = rec
-	})
-	
-	lerped_scroll^ = rl.Lerp(lerped_scroll^, scroll^, rl.GetFrameTime() * 12)
+	}	
 
+	ui_begin_clip(rec)
+	
 	return rec, items_list[:]
 }
 
 ui_end_list :: proc() {
-	ui_push_command(UI_Clip {
-		rec = {}
-	})
+	ui_end_clip()
 }
 
 ui_begin_list_wrapped :: proc(
@@ -838,9 +835,7 @@ ui_begin_list_wrapped :: proc(
 		}
 	}
 	
-	ui_push_command(UI_Clip {
-		rec = rec
-	})
+	ui_begin_clip(rec)
 	
 	lerped_scroll^ = rl.Lerp(lerped_scroll^, scroll^, rl.GetFrameTime() * 12)
 
@@ -899,12 +894,8 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := 
 	else if ui_ctx.hovered_widget == id {
 		color = style.bg_color_hovered
 	}
-	ui_push_command(UI_Clip {
-		rec = rec,
-	})
-	defer ui_push_command(UI_Clip {
-		rec = {},
-	})
+
+	ui_begin_clip(rec)
 	ui_push_command(UI_Draw_Rect {
 		rec = rec,
 		color = color
@@ -916,6 +907,8 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := 
 		color = style.text_color,
 		align = style.text_align,
 	})
+	ui_end_clip()
+
 	return clicked
 }
 
@@ -1008,12 +1001,8 @@ ui_path_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, styl
 	path_width := rl.MeasureTextEx(ui_ctx.font, text_cstring, font_size, 0)[0]
 	path_color := style.text_color
 	path_color.a = 100
-	ui_push_command(UI_Clip {
-		rec = rec
-	})
-	defer ui_push_command(UI_Clip {
-		rec = {}
-	})
+
+	ui_begin_clip(rec)
 	ui_push_command(UI_Draw_Text {
 		rec = rec_pad(rec, 10),
 		text = text[:bslash_index + 1],
@@ -1028,6 +1017,7 @@ ui_path_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, styl
 		color = style.text_color,
 		align = style.text_align,
 	})
+	ui_end_clip()
 
 	return clicked
 }
@@ -1087,8 +1077,7 @@ ui_toggle :: proc(id: UI_ID, text: string, checked: ^bool, rec: Rec, style := UI
 	}
 	
 	return clicked
-}
-	
+}	
 
 ui_slider_behaviour_f32 :: proc(
 	id: UI_ID,
@@ -1300,6 +1289,23 @@ ui_push_command :: proc(command: UI_Draw_Command) {
 	}
 	else {
 		sa.append(&ui_ctx.draw_commands, command)
+	}
+}
+
+ui_begin_clip :: proc(rec: Rec) {
+	rec := rec
+	if ui_ctx.clip_stack.len > 0 {
+		last_rec := ui_ctx.clip_stack.data[ui_ctx.clip_stack.len - 1]
+		rec = rec_intersect(last_rec, rec)
+	}
+	sa.append(&ui_ctx.clip_stack, rec )
+	ui_push_command(UI_Clip { rec = rec })
+}
+
+ui_end_clip :: proc() {
+	ui_push_command(UI_Clip { })
+	if ui_ctx.clip_stack.len > 0 {
+		sa.pop_back(&ui_ctx.clip_stack)
 	}
 }
 
