@@ -1374,6 +1374,7 @@ load_app_data :: proc(path: string) {
 }
 
 save_app_data :: proc() {
+	os2.remove("data.ini")
 	file, create_err := os2.create("data.ini")
 	defer os2.close(file)
 	if create_err != nil {
