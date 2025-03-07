@@ -632,6 +632,13 @@ ui_update_widget :: proc(id: UI_ID, rec: Rec, blocking := true) {
 	if top_popup != nil && top_popup.id != ui_ctx.popup_scope {
 		return
 	}
+	
+	rec := rec
+	if ui_ctx.clip_stack.len > 0 {
+		clip := ui_ctx.clip_stack.data[ui_ctx.clip_stack.len - 1]
+		rec = rec_intersect(rec, clip)
+	}
+
 	hovered := ui_is_mouse_in_rec(rec)
 	if hovered && (blocking == false || (ui_ctx.active_widget == 0 || ui_ctx.active_widget == id)) {
 		ui_ctx.hovered_widget = id
