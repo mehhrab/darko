@@ -305,8 +305,9 @@ main :: proc() {
 				}
 			}
 			app.next_state = nil
+			rl.ShowCursor()
 		} 
-
+		
 		ui_clear_temp_state()
 		free_all(context.temp_allocator)
 	}
