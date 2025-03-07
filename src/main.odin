@@ -318,7 +318,7 @@ main :: proc() {
 // ui code:
 
 welcome_screen :: proc(state: ^Welcome_State) {
-	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
+	screen_rec := ui_get_screen_rec()
 	screen_area := screen_rec
 	
 	right_area := rec_cut_right(&screen_area, screen_area.width / 2)
@@ -415,7 +415,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 }
 
 project_screen :: proc(state: ^Project_State) {
-	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
+	screen_rec := ui_get_screen_rec()
 	menu_bar_area := rec_cut_top(&screen_rec, ui_default_widget_height())
 	menu_bar(state, menu_bar_area)
 
@@ -979,7 +979,7 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 }
 
 fav_palletes_popup :: proc(state: ^Project_State) {
-	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
+	screen_rec := ui_get_screen_rec()
 
 	rec := rec_center_in_area({ 0, 0, ui_px(400), ui_px(200) }, screen_rec)
 	if open, content_rec := ui_begin_popup_title(popup_fav_palletes, "Favorite palletes", rec); open {
@@ -1056,7 +1056,7 @@ preview :: proc(state: ^Project_State, rec: Rec) {
 }
 
 new_file_popup :: proc(state: ^Screen_State) {
-	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
+	screen_rec := ui_get_screen_rec()
 	
 	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
 	popup_rec := rec_center_in_area({ 0, 0, ui_px(400), popup_h }, screen_rec)
@@ -1081,7 +1081,7 @@ new_file_popup :: proc(state: ^Screen_State) {
 }
 
 preview_settings_popup :: proc(state: ^Project_State) {
-	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
+	screen_rec := ui_get_screen_rec()
 	
 	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
 	popup_area := rec_center_in_area({ 0, 0, ui_px(300), popup_h }, screen_rec)

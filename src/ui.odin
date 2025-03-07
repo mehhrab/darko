@@ -1365,3 +1365,7 @@ ui_set_scale :: proc(scale: f32) {
 	ui_ctx.scale = scale
 	ui_load_font(i32(ui_font_size() * 2))
 }
+
+ui_get_screen_rec :: proc() -> (rec: Rec) {
+	return { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
+}
