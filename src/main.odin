@@ -18,11 +18,11 @@ import "core:strconv"
 
 TARGET_FPS :: 60
 HSV :: distinct [3]f32
-/* to open a popup you have to know it's name
-they act as ids. actual ids should probably be used... */
-POPUP_NEW_PROJECT :: "New project"
-POPUP_PREVIEW_SETTINGS :: "Preview settings"
-POPUP_FAV_PALLETES :: "Favorite palletes"
+
+// popup ids used for opening them
+popup_new_project := ui_gen_id()
+popup_preview_settings := ui_gen_id()
+popup_fav_palletes := ui_gen_id()
 
 App :: struct {
 	state: Screen_State, 
@@ -348,7 +348,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 	buttons_area := rec_cut_top(&left_area, ui_default_widget_height())
 	new_button_rec := rec_cut_left(&buttons_area, buttons_area.width / 2 - ui_px(8))
 	if ui_button(ui_gen_id(), "New", new_button_rec) {
-		ui_open_popup(POPUP_NEW_PROJECT)
+		ui_open_popup(popup_new_project)
 	}
 	
 	rec_cut_left(&buttons_area, ui_px(8))
@@ -473,7 +473,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 	
 	if clicked_item.text == NEW_PROJECT {
 		ui_close_current_popup()
-		ui_open_popup(POPUP_NEW_PROJECT)
+		ui_open_popup(popup_new_project)
 	}
 	
 	if clicked_item.text == OPEN_PROJECT {
@@ -918,7 +918,7 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 	}
 	else if clicked_item.text == FROM_FAV {
 		ui_close_current_popup()
-		ui_open_popup(POPUP_FAV_PALLETES)
+		ui_open_popup(popup_fav_palletes)
 	}
 
 	// pallete name
@@ -981,7 +981,7 @@ fav_palletes_popup :: proc(state: ^Project_State) {
 	screen_rec := Rec { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) }
 
 	rec := rec_center_in_area({ 0, 0, ui_px(400), ui_px(200) }, screen_rec)
-	if open, content_rec := ui_begin_popup_title(ui_gen_id(), POPUP_FAV_PALLETES, rec); open {
+	if open, content_rec := ui_begin_popup_title(popup_fav_palletes, "Favorite palletes", rec); open {
 		content_rec := rec_pad(content_rec, ui_px(8))
 
 		@(static) scroll, lerped_scroll: f32
@@ -1049,7 +1049,7 @@ preview :: proc(state: ^Project_State, rec: Rec) {
 		ui_default_widget_height(),
 	}
 	if ui_button(ui_gen_id(), ICON_SETTINGS, settings_rec, false, style = UI_BUTTON_STYLE_TRANSPARENT) {
-		ui_open_popup(POPUP_PREVIEW_SETTINGS)
+		ui_open_popup(popup_preview_settings)
 	}
 	ui_end_clip()
 }
@@ -1059,7 +1059,7 @@ new_file_popup :: proc(state: ^Screen_State) {
 	
 	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
 	popup_rec := rec_center_in_area({ 0, 0, ui_px(400), popup_h }, screen_rec)
-	if open, rec := ui_begin_popup_title(ui_gen_id(), POPUP_NEW_PROJECT, popup_rec); open {
+	if open, rec := ui_begin_popup_title(popup_new_project, "New project", popup_rec); open {
 		area := rec_pad(rec, ui_px(16))
 		ui_slider_i32(ui_gen_id(), "Width", &app.new_project_width, 2, 30, rec_cut_top(&area, ui_default_widget_height()))
 		rec_delete_top(&area, ui_px(8))
@@ -1084,7 +1084,7 @@ preview_settings_popup :: proc(state: ^Project_State) {
 	
 	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
 	popup_area := rec_center_in_area({ 0, 0, ui_px(300), popup_h }, screen_rec)
-	if open, rec := ui_begin_popup_title(ui_gen_id(), POPUP_PREVIEW_SETTINGS, popup_area); open {
+	if open, rec := ui_begin_popup_title(popup_preview_settings, "Preview settings", popup_area); open {
 		area := rec_pad(rec, ui_px(16))
 		auto_rotate_rec := rec_cut_top(&area, ui_default_widget_height())
 		ui_check_box(ui_gen_id(),"Auto rotate", &state.auto_rotate_preview, auto_rotate_rec)
@@ -1099,7 +1099,6 @@ preview_settings_popup :: proc(state: ^Project_State) {
 }
 
 // backend code:
-
 
 process_commands :: proc(commands: []UI_Draw_Command) {
 	for command in commands

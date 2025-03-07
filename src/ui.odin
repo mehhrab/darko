@@ -25,7 +25,7 @@ UI_Ctx :: struct {
 	draw_commands: Draw_Commands,
 	clip_stack: sa.Small_Array(16, Rec),
 
-	popup_scope: string,
+	popup_scope: UI_ID,
 	open_popups: sa.Small_Array(8, UI_Popup),
 	// HACK: we can only have one active notif
 	current_notif: UI_Notif,
@@ -62,6 +62,7 @@ UI_Align_Vertical :: enum {
 }
 
 UI_Popup :: struct {
+	id: UI_ID,
 	name: string,
 	show_header: bool,
 	darker_window: bool,
@@ -498,9 +499,9 @@ ui_draw_notif :: proc() {
 	}	
 }
 
-ui_open_popup :: proc(name: string, darker_window := true) {
+ui_open_popup :: proc(id: UI_ID, darker_window := true) {
 	popup := UI_Popup {
-		name = name,
+		id = id,
 		darker_window = darker_window,
 	}
 	sa.append(&ui_ctx.open_popups, popup)
@@ -523,35 +524,38 @@ ui_close_all_popups :: proc() {
 	}
 }
 
-// NOTE: name is also used as the id
-ui_begin_popup :: proc(name: string, rec: Rec) -> (open: bool) {
-	ui_ctx.popup_scope = name
-	popup := ui_find_popup(name)
-	if popup != nil && name == popup.name {
+// TODO: return opened popup
+ui_begin_popup :: proc(id: UI_ID, name: string, rec: Rec) -> (open: bool) {
+	ui_ctx.popup_scope = id
+	popup := ui_find_popup(id)
+	if popup != nil && id == popup.id {
 		ui_push_popup_draw(popup)
 		popup.rec = rec
 	}
 	 
-	return popup != nil && name == popup.name
+	return popup != nil && id == popup.id
 }
 
+// TODO: return opened popup
+// TODO: popups with titles aren't correctly centered on the y axis
 ui_begin_popup_title :: proc(id: UI_ID, name: string, rec: Rec) -> (open: bool, content_rec: Rec) {
-	ui_ctx.popup_scope = name
-	popup := ui_find_popup(name)
-	if popup != nil && name == popup.name {
-		ui_push_popup_draw(popup)
+	ui_ctx.popup_scope = id
+	popup := ui_find_popup(id)
+	if popup != nil && id == popup.id {
 		popup.show_header = true
+		popup.name = name
 		area := rec
 		header_area := rec_extend_top(&area, ui_default_widget_height() + ui_px(8)) 
 		popup.rec = area
-		x_rec := rec_pad(rec_take_right(&header_area, header_area.height), ui_px(8))
+		close_rec := rec_pad(rec_take_right(&header_area, header_area.height), ui_px(8))
 		style := UI_BUTTON_STYLE_TRANSPARENT
 		style.text_color = COLOR_BASE_0
-		if ui_button(id, ICON_X, x_rec, style = style) {
+		if ui_button(id, ICON_X, close_rec, style = style) {
 			ui_close_current_popup()
 		}
+		ui_push_popup_draw(popup)
 	}
-	return popup != nil && name == popup.name, { rec.x, rec.y, rec.width, rec.height }
+	return popup != nil && id == popup.id, { rec.x, rec.y, rec.width, rec.height }
 }
 
 ui_push_popup_draw :: proc(popup: ^UI_Popup) {
@@ -588,15 +592,15 @@ ui_push_popup_draw :: proc(popup: ^UI_Popup) {
 }
 
 ui_end_popup :: proc() {
-	ui_ctx.popup_scope = ""
+	ui_ctx.popup_scope = 0
 }
 
-ui_find_popup :: proc(name: string) -> (res: ^UI_Popup) {
+ui_find_popup :: proc(id: UI_ID) -> (res: ^UI_Popup) {
 	res = nil
 
 	if ui_ctx.open_popups.len > 0 {
 		for i in 0..<ui_ctx.open_popups.len {
-			if name == ui_ctx.open_popups.data[i].name {
+			if id == ui_ctx.open_popups.data[i].id {
 				res = &ui_ctx.open_popups.data[i]
 				break
 			}
@@ -625,7 +629,7 @@ ui_show_notif :: proc(text: string, style := UI_NOTIF_STYLE_ACCENT) {
 
 ui_update_widget :: proc(id: UI_ID, rec: Rec, blocking := true) {
 	top_popup := ui_get_top_popup()
-	if top_popup != nil && top_popup.name != ui_ctx.popup_scope {
+	if top_popup != nil && top_popup.id != ui_ctx.popup_scope {
 		return
 	}
 	hovered := ui_is_mouse_in_rec(rec)
@@ -642,7 +646,7 @@ ui_update_widget :: proc(id: UI_ID, rec: Rec, blocking := true) {
 
 ui_update_panel :: proc(id: UI_ID, rec: Rec) {
 	top_popup := ui_get_top_popup()
-	if top_popup != nil && top_popup.name != ui_ctx.popup_scope {
+	if top_popup != nil && top_popup.id != ui_ctx.popup_scope {
 		return
 	}
 	hovered := ui_is_mouse_in_rec(rec)
@@ -917,7 +921,7 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 
 	ui_update_widget(id, rec)
 	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT) {
-		ui_open_popup(text, false)	
+		ui_open_popup(id, false)	
 	}
 
 	padding := ui_px(10)
@@ -941,8 +945,8 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 		}
 	}
 
-	if ui_begin_popup(text, popup_rec) {
-		ui_find_popup(text)
+	if ui_begin_popup(id, text, popup_rec) {
+		ui_find_popup(id)
 
 		menu_item_y := popup_rec.y
 		style := UI_BUTTON_STYLE_DEFAULT
@@ -1281,7 +1285,7 @@ ui_option :: proc(id: UI_ID, items: []UI_Option, selceted: ^int, rec: Rec, style
 }
 
 ui_push_command :: proc(command: UI_Draw_Command) {
-	if ui_ctx.popup_scope != "" {
+	if ui_ctx.popup_scope != 0 {
 		popup := ui_find_popup(ui_ctx.popup_scope)
 		if popup != nil {
 			sa.append(&popup.draw_commands, command)
