@@ -9,7 +9,7 @@ import vmem "core:mem/virtual"
 import "core:math"
 import "core:strings"
 import "core:c"
-import "core:os/os2"
+import os "core:os/os2"
 import "core:slice"
 import sa "core:container/small_array"
 import ntf "../lib/ntf"
@@ -150,7 +150,7 @@ main :: proc() {
 	ui_init_ctx()
 	defer ui_deinit_ctx()
 	
-	if os2.exists("data.ini") {
+	if os.exists("data.ini") {
 		load_app_data("data.ini")
 		welcome_state := Welcome_State {}
 		init_welcome_state(&welcome_state)
@@ -1320,7 +1320,7 @@ deinit_app :: proc() {
 }
 
 load_app_data :: proc(path: string) {
-	file_exists := os2.exists(path)
+	file_exists := os.exists(path)
 	if file_exists == false {
 		return
 	}
@@ -1369,9 +1369,9 @@ load_app_data :: proc(path: string) {
 }
 
 save_app_data :: proc() {
-	os2.remove("data.ini")
-	file, create_err := os2.create("data.ini")
-	defer os2.close(file)
+	os.remove("data.ini")
+	file, create_err := os.create("data.ini")
+	defer os.close(file)
 	if create_err != nil {
 		return
 	}
@@ -1444,8 +1444,8 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 /* some duplicate code from init_project_state() not sure what's the alternative
 TODO: return an error value instead of a bool */
 load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
-	data_exists := os2.exists(fmt.tprintf("{}{}", dir, "\\project.ini"))
-	sprites_exists := os2.exists(fmt.tprintf("{}{}", dir, "\\sprites.png"))
+	data_exists := os.exists(fmt.tprintf("{}{}", dir, "\\project.ini"))
+	sprites_exists := os.exists(fmt.tprintf("{}{}", dir, "\\sprites.png"))
 	if (data_exists || sprites_exists) == false {
 		return false
 	}
@@ -1526,19 +1526,19 @@ save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	}
 
 	// clear the directory
-	remove_err := os2.remove_all(dir)
-	if remove_err != os2.ERROR_NONE {
+	remove_err := os.remove_all(dir)
+	if remove_err != os.ERROR_NONE {
 		fmt.printfln("{}", remove_err)
 		return false
 	}
-	make_dir_err := os2.make_directory(dir)
-	if make_dir_err != os2.ERROR_NONE {
+	make_dir_err := os.make_directory(dir)
+	if make_dir_err != os.ERROR_NONE {
 		fmt.printfln("{}", make_dir_err)
 		return false
 	}
 
-	file, create_err := os2.create(fmt.tprintf("{}\\project.ini", dir))
-	defer os2.close(file)
+	file, create_err := os.create(fmt.tprintf("{}\\project.ini", dir))
+	defer os.close(file)
 	if create_err != nil {
 		return
 	}
