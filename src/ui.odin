@@ -1292,6 +1292,11 @@ ui_option :: proc(id: UI_ID, items: []UI_Option, selceted: ^int, rec: Rec, style
 	}
 }
 
+ui_text :: proc(text: string, rec: Rec, align := UI_Align { .Left, .Center }, color := COLOR_TEXT_0, size := f32(0)) {
+	size := size == 0 ? ui_font_size() : size
+	ui_push_command(UI_Draw_Text { text = text, rec = rec, align = align, color = color, size = size })
+}
+
 ui_push_command :: proc(command: UI_Draw_Command) {
 	if ui_ctx.popup_scope != 0 {
 		popup := ui_find_popup(ui_ctx.popup_scope)
