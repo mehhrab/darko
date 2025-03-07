@@ -512,8 +512,9 @@ ui_open_popup :: proc(id: UI_ID, darker_window := true) {
 ui_close_current_popup :: proc() {
 	ui_ctx.hovered_widget = 0
 	ui_ctx.active_widget = 0
+	ui_ctx.hovered_panel = 0
+	ui_ctx.active_panel = 0
 	last_index := ui_ctx.open_popups.len - 1
-	sa.clear(&ui_ctx.open_popups.data[last_index].draw_commands)
 	sa.ordered_remove(&ui_ctx.open_popups, last_index)
 }
 
