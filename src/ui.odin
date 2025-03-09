@@ -1301,6 +1301,10 @@ ui_draw_rec :: proc(color: rl.Color, rec: Rec) {
 	ui_push_command(UI_Draw_Rect { color = color, rec = rec })
 }
 
+ui_draw_rec_outline :: proc(color: rl.Color, thickness: f32, rec: Rec) {
+	ui_push_command(UI_Draw_Rect_Outline { color = color, rec = rec, thickness = thickness })
+}
+
 ui_push_command :: proc(command: UI_Draw_Command) {
 	if ui_ctx.popup_scope != 0 {
 		popup := ui_find_popup(ui_ctx.popup_scope)

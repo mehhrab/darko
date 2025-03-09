@@ -612,22 +612,14 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 				hand_rec := Rec { layer_rec.x - ui_px(32), layer_rec.y + layer_rec.height / 2, 0, 0 }
 				ui_draw_text(ICON_HAND, hand_rec, { .Center, .Center }, size = ui_font_size() * 2)
 			}
-			ui_push_command(UI_Draw_Rect_Outline {
-				color = COLOR_BASE_4,
-				rec = layer_rec,
-				thickness = 2,
-			})
+			ui_draw_rec_outline(COLOR_BASE_4, 2, layer_rec)
 		}
 		else {
 			ui_push_command(UI_Draw_Texture {
 				texture = state.layers[i].texture,
 				rec = layer_rec,
 			})
-			ui_push_command(UI_Draw_Rect_Outline {
-				color = COLOR_BASE_1,
-				rec = layer_rec,
-				thickness = 2,
-			})
+			ui_draw_rec_outline(COLOR_BASE_1, 2, layer_rec)
 		}
 	}
 
@@ -686,11 +678,7 @@ color_picker :: proc(state: ^Project_State, rec: Rec) {
 	// preview color
 	preview_area := rec_cut_top(&area, ui_default_widget_height() * 3)
 	ui_draw_rec(hsv_to_rgb(state.current_color), preview_area)
-	ui_push_command(UI_Draw_Rect_Outline {
-		color = COLOR_BASE_0,
-		rec = preview_area,
-		thickness = 1,
-	})
+	ui_draw_rec_outline(COLOR_BASE_0, ui_px(1), preview_area)
 	rec_delete_top(&area, ui_px(8))
 
 	hsv_color := state.current_color
@@ -700,16 +688,8 @@ color_picker :: proc(state: ^Project_State, rec: Rec) {
 		grip_width := ui_px(10)
 		grip_x := (value - min) * (rec.width) / (max - min) - grip_width / 2
 		g_rec := Rec { rec.x + grip_x, rec.y, grip_width, rec.height }
-		ui_push_command(UI_Draw_Rect_Outline {
-			color = rl.BLACK,
-			thickness = 3,
-			rec = rec_pad(g_rec, -1),
-		})
-		ui_push_command(UI_Draw_Rect_Outline {
-			color = rl.WHITE,
-			thickness = 1,
-			rec = g_rec,
-		})
+		ui_draw_rec_outline(rl.BLACK, 3, rec_pad(g_rec, -1))
+		ui_draw_rec_outline(rl.WHITE, 1, g_rec)
 	}
 
 	// hue slider
@@ -902,26 +882,14 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 			state.current_color = state.pallete.colors.data[item.i]
 		}
 		if state.current_color == state.pallete.colors.data[item.i] {
-			ui_push_command(UI_Draw_Rect_Outline {
-				color = COLOR_TEXT_0,
-				rec = item.rec,
-				thickness = 2,
-			})
+			ui_draw_rec_outline(COLOR_TEXT_0, 2, item.rec)
 		}
 		else if pallete_id == ui_ctx.hovered_widget {
-			ui_push_command(UI_Draw_Rect_Outline {
-				color = rl.Fade(COLOR_TEXT_0, 0.5),
-				rec = item.rec,
-				thickness = 2,
-			})
+			ui_draw_rec_outline(rl.Fade(COLOR_TEXT_0, 0.5), 2, item.rec)
 		}
 	}
 	ui_end_list()
-	ui_push_command(UI_Draw_Rect_Outline {
-		color = COLOR_BASE_0,
-		rec = rec,
-		thickness = 1,
-	})
+	ui_draw_rec_outline(COLOR_BASE_0, 1, rec)
 }
 
 fav_palletes_popup :: proc(state: ^Project_State) {
@@ -953,11 +921,7 @@ fav_palletes_popup :: proc(state: ^Project_State) {
 				ui_close_current_popup()
 			}
 
-			ui_push_command(UI_Draw_Rect_Outline {
-				color = COLOR_BASE_0,
-				rec = content_rec,
-				thickness = 1
-			})
+			ui_draw_rec_outline(COLOR_BASE_0, 1, content_rec)
 		}
 		ui_end_list()
 	}
