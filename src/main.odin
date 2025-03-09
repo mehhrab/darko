@@ -337,7 +337,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 	ui_begin_clip(left_area)
 
 	text_rec := rec_cut_top(&left_area, ui_default_widget_height() * 2)
-	ui_text("Welcome to Darko", text_rec, { .Center, .Center }, COLOR_ACCENT_0, ui_font_size() * 2)
+	ui_draw_text("Welcome to Darko", text_rec, { .Center, .Center }, COLOR_ACCENT_0, ui_font_size() * 2)
 
 	buttons_area := rec_cut_top(&left_area, ui_default_widget_height())
 	new_button_rec := rec_cut_left(&buttons_area, buttons_area.width / 2 - ui_px(8))
@@ -371,7 +371,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 
 	if app.recent_projects.len == 0 {
 		no_recent_rec := rec_cut_bottom(&left_area, ui_default_widget_height())
-		ui_text("No recent projects", no_recent_rec)
+		ui_draw_text("No recent projects", no_recent_rec)
 	}
 	else {		
 		for i in 0..<app.recent_projects.len {
@@ -393,7 +393,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 		}
 
 		recent_rec := rec_cut_bottom(&left_area, ui_default_widget_height())
-		ui_text("Recent projects:", recent_rec)
+		ui_draw_text("Recent projects:", recent_rec)
 	}
 	ui_end_clip()
 }
@@ -521,7 +521,7 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 	// draw current layer index and layer count
 	current_layer := state.current_layer + 1
 	layer_count := len(state.layers)
-	ui_text(fmt.tprintf("layer {}/{}", current_layer, layer_count), props_area)
+	ui_draw_text(fmt.tprintf("layer {}/{}", current_layer, layer_count), props_area)
 
 	// delete button
 	delete_rec := rec_cut_right(&props_area, ui_default_widget_height())
@@ -610,7 +610,7 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 			}
 			else {
 				hand_rec := Rec { layer_rec.x - ui_px(32), layer_rec.y + layer_rec.height / 2, 0, 0 }
-				ui_text(ICON_HAND, hand_rec, { .Center, .Center }, size = ui_font_size() * 2)
+				ui_draw_text(ICON_HAND, hand_rec, { .Center, .Center }, size = ui_font_size() * 2)
 			}
 			ui_push_command(UI_Draw_Rect_Outline {
 				color = COLOR_BASE_4,
@@ -641,10 +641,10 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 		cursor_size := ui_font_size() * 2
 
 		shadow_rec := Rec { mpos.x + 1, mpos.y - cursor_size + 5 + 1, 100, 100 }
-		ui_text(cursor_icon, shadow_rec, { .Left, .Top }, rl.BLACK, cursor_size)
+		ui_draw_text(cursor_icon, shadow_rec, { .Left, .Top }, rl.BLACK, cursor_size)
 		
 		cursor_rec := Rec { mpos.x, mpos.y - cursor_size + 5, 100, 100 }
-		ui_text(cursor_icon, cursor_rec, { .Left, .Top }, rl.WHITE, cursor_size)
+		ui_draw_text(cursor_icon, cursor_rec, { .Left, .Top }, rl.WHITE, cursor_size)
 	}
 	else {
 		rl.ShowCursor()
@@ -880,7 +880,7 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 		ui_open_popup(popup_fav_palletes)
 	}
 
-	ui_text(state.pallete.name, buttons_area, { .Center, .Center })
+	ui_draw_text(state.pallete.name, buttons_area, { .Center, .Center })
 
 	ui_draw_rec(COLOR_BASE_0, area)
 	
