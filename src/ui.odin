@@ -1297,6 +1297,10 @@ ui_text :: proc(text: string, rec: Rec, align := UI_Align { .Left, .Center }, co
 	ui_push_command(UI_Draw_Text { text = text, rec = rec, align = align, color = color, size = size })
 }
 
+ui_draw_rec :: proc(color: rl.Color, rec: Rec) {
+	ui_push_command(UI_Draw_Rect { color = color, rec = rec })
+}
+
 ui_push_command :: proc(command: UI_Draw_Command) {
 	if ui_ctx.popup_scope != 0 {
 		popup := ui_find_popup(ui_ctx.popup_scope)

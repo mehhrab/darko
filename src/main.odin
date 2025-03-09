@@ -323,10 +323,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 	
 	right_area := rec_cut_right(&screen_area, screen_area.width / 2)
 	left_area := screen_area
-	ui_push_command(UI_Draw_Rect {
-		color = COLOR_ACCENT_0,
-		rec = right_area
-	})
+	ui_draw_rec(COLOR_ACCENT_0, right_area)
 	
 	mascot_size := ui_px(right_area.width / 2)
 	mascot_rec := rec_center_in_area({ 0, 0, mascot_size , mascot_size }, right_area)
@@ -688,10 +685,7 @@ color_picker :: proc(state: ^Project_State, rec: Rec) {
 
 	// preview color
 	preview_area := rec_cut_top(&area, ui_default_widget_height() * 3)
-	ui_push_command(UI_Draw_Rect {
-		color = hsv_to_rgb(state.current_color),
-		rec = preview_area,
-	})
+	ui_draw_rec(hsv_to_rgb(state.current_color), preview_area)
 	ui_push_command(UI_Draw_Rect_Outline {
 		color = COLOR_BASE_0,
 		rec = preview_area,
@@ -721,10 +715,8 @@ color_picker :: proc(state: ^Project_State, rec: Rec) {
 	// hue slider
 	hue_rec := rec_cut_top(&area, ui_default_widget_height())
 	hue_changed := ui_slider_behaviour_f32(ui_gen_id(), &hsv_color[0], 0, 360, hue_rec)
-	ui_push_command(UI_Draw_Rect {
-		color = COLOR_BASE_0,
-		rec = hue_rec,
-	})
+	ui_draw_rec(COLOR_BASE_0, hue_rec)
+
 	hue_rec = rec_pad(hue_rec, 1)
 	hue_area := hue_rec
 	segment_width := hue_rec.width / 6
@@ -766,10 +758,8 @@ color_picker :: proc(state: ^Project_State, rec: Rec) {
 	// saturation slider
 	saturation_rec := rec_cut_top(&area, ui_default_widget_height())
 	saturation_changed := ui_slider_behaviour_f32(ui_gen_id(), &hsv_color[1], 0, 1, saturation_rec)
-	ui_push_command(UI_Draw_Rect {
-		color = COLOR_BASE_0,
-		rec = saturation_rec,
-	})
+	ui_draw_rec(COLOR_BASE_0, saturation_rec)
+
 	saturation_rec = rec_pad(saturation_rec, 1)
 	sat_color := hsv_color
 	sat_color[1] = 1
@@ -788,10 +778,8 @@ color_picker :: proc(state: ^Project_State, rec: Rec) {
 	// value slider
 	value_rec := rec_cut_top(&area, ui_default_widget_height())
 	value_changed := ui_slider_behaviour_f32(ui_gen_id(), &hsv_color[2], 0, 1, value_rec)
-	ui_push_command(UI_Draw_Rect {
-		color = COLOR_BASE_0,
-		rec = value_rec,
-	})
+	ui_draw_rec(COLOR_BASE_0, value_rec)
+
 	value_rec = rec_pad(value_rec, 1)
 	ui_push_command(UI_Draw_Gradient_H {
 		left_color = rl.BLACK,
@@ -894,10 +882,7 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 
 	ui_text(state.pallete.name, buttons_area, { .Center, .Center })
 
-	ui_push_command(UI_Draw_Rect {
-		color = COLOR_BASE_0,
-		rec = area,
-	})
+	ui_draw_rec(COLOR_BASE_0, area)
 	
 	// pallete list
 	list_rec := rec_pad(area, ui_px(8))
@@ -911,10 +896,8 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 	for item in items {
 		pallete_id := ui_gen_id(item.i)
 		ui_update_widget(pallete_id, item.rec)
-		ui_push_command(UI_Draw_Rect {
-			color = hsv_to_rgb(state.pallete.colors.data[item.i]),
-			rec = item.rec	
-		})
+		ui_draw_rec(hsv_to_rgb(state.pallete.colors.data[item.i]), item.rec)
+		
 		if pallete_id == ui_ctx.hovered_widget && rl.IsMouseButtonReleased(.LEFT) {
 			state.current_color = state.pallete.colors.data[item.i]
 		}
