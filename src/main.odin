@@ -901,23 +901,34 @@ fav_palletes_popup :: proc(state: ^Project_State) {
 
 		@(static) scroll, lerped_scroll: f32
 		_, items := ui_begin_list(ui_gen_id(), &scroll, &lerped_scroll, ui_default_widget_height(), app.fav_palletes.len, content_rec)
-		for &item, i in items {
-			pallete := &app.fav_palletes.data[item.i]
-			style := UI_BUTTON_STYLE_DEFAULT
-			style.text_align = { .Left, .Center }
-			if item.i % 2 == 0 {
-				style.bg_color.a = 200
+		for &item, i in items {			
+			item_rec := item.rec
+			if ui_is_mouse_in_rec(item_rec) {
+				delete_style := UI_BUTTON_STYLE_DEFAULT
+				delete_style.bg_color = COLOR_ERROR_0
+				delete_style.bg_color_hovered = COLOR_ERROR_0
+				delete_style.bg_color_active = COLOR_ERROR_0
+				delete_style.text_color = COLOR_BASE_0
+				delete_rec := rec_cut_right(&item_rec, ui_default_widget_height())
+				if ui_button(ui_gen_id(item.i), ICON_TRASH, delete_rec, style = delete_style) {
+					delete(app.fav_palletes.data[item.i].name)
+					sa.ordered_remove(&app.fav_palletes, item.i)
+				}
 			}
-
-			if ui_button(ui_gen_id(i), pallete.name, item.rec, style = style) {
+			current_pallete := &app.fav_palletes.data[item.i]
+			item_style := UI_BUTTON_STYLE_DEFAULT
+			item_style.text_align = { .Left, .Center }
+			if item.i % 2 == 0 {
+				item_style.bg_color.a = 200
+			}
+			if ui_button(ui_gen_id(item.i), current_pallete.name, item_rec, style = item_style) {
 				delete(state.pallete.name)
-				state.pallete.name = strings.clone(pallete.name)
+				state.pallete.name = strings.clone(current_pallete.name)
 				sa.clear(&state.pallete.colors)
-				for i in 0..<pallete.colors.len {
+				for i in 0..<current_pallete.colors.len {
 					color := app.fav_palletes.data[item.i].colors.data[i]
 					sa.append(&state.pallete.colors, color)
 				}
-				
 				ui_close_current_popup()
 			}
 
