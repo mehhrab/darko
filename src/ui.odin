@@ -1176,7 +1176,8 @@ ui_slider_f32 :: proc(
 			align = { .Right, .Center },	
 		})
 	}
-	else {
+	// TODO: get this logic outta here
+	if ui_ctx.text_mode_slider == id {
 		if rl.IsKeyPressed(.ESCAPE) {
 			strings.builder_reset(&ui_ctx.slider_text)
 			ui_ctx.text_mode_slider = 0
