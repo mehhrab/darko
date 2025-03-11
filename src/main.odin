@@ -54,6 +54,7 @@ Project_State :: struct {
 	layers: [dynamic]Layer,
 	lerped_zoom: f32,
 	image_changed: bool,
+	copied_image: Maybe(rl.Image),
 	bg_texture: rl.Texture,
 	preview_zoom: f32,
 	lerped_preview_zoom: f32,
@@ -231,6 +232,30 @@ main :: proc() {
 							action_preform(&state, action)
 							append(&state.undos, action)
 						}	
+					}
+
+					// copy
+					if rl.IsKeyPressed(.C) {
+						if copied_image, exists := state.copied_image.?; exists {
+							rl.UnloadImage(copied_image)
+						}
+						image := rl.ImageCopy(get_current_layer(&state).image)
+						state.copied_image = image
+					}
+
+					// paste
+					if rl.IsKeyPressed(.V) {
+						if copied_image, exists := state.copied_image.?; exists {
+							action_do(&state, Action_Image_Change { 
+								before_image = rl.ImageCopy(get_current_layer(&state).image),
+								after_image = rl.ImageCopy(copied_image),
+								layer_index = state.current_layer,
+							})
+							image_rec := Rec { 0, 0, f32(state.width), f32(state.height) }
+							rl.ImageClearBackground(&state.layers[state.current_layer].image, rl.BLANK)
+							rl.ImageDraw(&state.layers[state.current_layer].image, copied_image, image_rec, image_rec, rl.WHITE) 
+							mark_dirty_layers(&state, state.current_layer)
+						}
 					}
 				}
 
