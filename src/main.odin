@@ -374,24 +374,26 @@ welcome_screen :: proc(state: ^Welcome_State) {
 	
 	open_button_rec := rec_cut_left(&buttons_area, buttons_area.width - ui_px(8))
 	if ui_button(ui_gen_id(), "Open", open_button_rec) {
-		path, res := pick_folder_dialog("", context.temp_allocator)
-		if res == .Error {
-			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+		open_scope: {
+			path, res := pick_folder_dialog("", context.temp_allocator)
+			if res == .Error {
+				ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+			}
+			else if res == .Cancel {
+				break open_scope
+			}
+	
+			loaded_project: Project_State
+			loaded := load_project_state(&loaded_project, path)
+			if loaded == false {
+				ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+				break open_scope
+			}
+			
+			mark_all_layers_dirty(&loaded_project)
+			add_recent_project(loaded_project.dir)
+			schedule_state_change(loaded_project)
 		}
-		else if res == .Cancel {
-			return
-		}
-
-		loaded_project: Project_State
-		loaded := load_project_state(&loaded_project, path)
-		if loaded == false {
-			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-			return
-		}
-		
-		mark_all_layers_dirty(&loaded_project)
-		add_recent_project(loaded_project.dir)
-		schedule_state_change(loaded_project)
 	}
 
 	if app.recent_projects.len == 0 {
@@ -485,49 +487,53 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		ui_close_current_popup()
 		ui_open_popup(popup_new_project)
 	}
-	
+		
 	if clicked_item.text == OPEN_PROJECT {
-		ui_close_current_popup()
-
-		path, res := pick_folder_dialog(state.dir, context.temp_allocator)
-		if res == .Error {
-			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+		open_scope: {
+			ui_close_current_popup()
+	
+			path, res := pick_folder_dialog(state.dir, context.temp_allocator)
+			if res == .Error {
+				ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+			}
+			else if res == .Cancel {
+				break open_scope
+			}
+	
+			loaded_project: Project_State
+			loaded := load_project_state(&loaded_project, path)
+			if loaded == false {
+				ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+				break open_scope
+			}
+				
+			mark_all_layers_dirty(&loaded_project)
+			add_recent_project(loaded_project.dir)
+			schedule_state_change(loaded_project)
 		}
-		else if res == .Cancel {
-			return
-		}
-
-		loaded_project: Project_State
-		loaded := load_project_state(&loaded_project, path)
-		if loaded == false {
-			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-			return
-		}
-			
-		mark_all_layers_dirty(&loaded_project)
-		add_recent_project(loaded_project.dir)
-		schedule_state_change(loaded_project)
 	}
 
 	if clicked_item.text == SAVE_PROJECT {
-		ui_close_current_popup()
-		
-		path, res := pick_folder_dialog(state.dir, context.temp_allocator)
-		if res == .Error {
-			ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+		save_scope: {
+			ui_close_current_popup()
+			
+			path, res := pick_folder_dialog(state.dir, context.temp_allocator)
+			if res == .Error {
+				ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+			}
+			else if res == .Cancel {
+				break save_scope
+			}
+	
+			saved := save_project_state(state, path)
+			if saved == false {
+				ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+				break save_scope
+			}
+	
+			add_recent_project(state.dir)
+			ui_show_notif("Project is saved")
 		}
-		else if res == .Cancel {
-			return
-		}
-
-		saved := save_project_state(state, path)
-		if saved == false {
-			ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
-			return
-		}
-
-		add_recent_project(state.dir)
-		ui_show_notif("Project is saved")
 	}
 
 	if clicked_item.text == OPEN_WELCOME_SCREEN {
@@ -806,15 +812,15 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 	// add to favorites button
 	fav_rec := rec_cut_left(&buttons_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_STAR, fav_rec) {
-		exit: {
+		fav_scope: {
 			if app.fav_palletes.len >= len(app.fav_palletes.data) {
 				ui_show_notif("Favorite palletes is full")
-				break exit
+				break fav_scope
 			}
 			for i in 0..<app.fav_palletes.len {
 				if (app.fav_palletes.data[i].name == state.pallete.name) {
 					ui_show_notif("Pallete with the same name already exists", UI_NOTIF_STYLE_ERROR)
-					break exit
+					break fav_scope
 				}
 			}
 
@@ -839,46 +845,48 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 	clicked_item := ui_menu_button(ui_gen_id(), "Load", load_items[:], ui_px(160), load_rec)
 
 	if clicked_item.text == FROM_FILE {
-		ui_close_current_popup()
-
-		path, res := pick_file_dilaog("", context.temp_allocator)
-		if res == .Error {
-			ui_show_notif("Failed to load pallete", UI_NOTIF_STYLE_ERROR)
-		}
-		else if res == .Cancel {
-			return
-		}
-		path_cstring := strings.clone_to_cstring(path, context.temp_allocator)
-
-		/* sa.clear() isn't enough to clear the palletes since 
-		we do slice.contains() a couple of lines below */  
-		for i in 0..<state.pallete.colors.len {
-			state.pallete.colors.data[i] = {}
-		}
-		sa.clear(&state.pallete.colors)
-
-		image := rl.LoadImage(path_cstring)
-		defer rl.UnloadImage(image)
-		color_count := image.width * image.height
-		for i in 0..<(color_count) {			
-			x := i % image.width
-			y := i32(i / image.width)
-			color := rgb_to_hsv(rl.GetImageColor(image, x, y))
-			if slice.contains(state.pallete.colors.data[:], color) {
-				continue
+		from_file_scope: {
+			ui_close_current_popup()
+	
+			path, res := pick_file_dilaog("", context.temp_allocator)
+			if res == .Error {
+				ui_show_notif("Failed to load pallete", UI_NOTIF_STYLE_ERROR)
 			}
-
-			if state.pallete.colors.len >= len(state.pallete.colors.data) {
-				msg := fmt.aprintf("Image color count over the limit. ({})", i)
-				ui_show_notif(msg, UI_NOTIF_STYLE_ERROR)
-				break
+			else if res == .Cancel {
+				break from_file_scope
 			}
-			sa.append(&state.pallete.colors, color)
+			path_cstring := strings.clone_to_cstring(path, context.temp_allocator)
+	
+			/* sa.clear() isn't enough to clear the palletes since 
+			we do slice.contains() a couple of lines below */  
+			for i in 0..<state.pallete.colors.len {
+				state.pallete.colors.data[i] = {}
+			}
+			sa.clear(&state.pallete.colors)
+	
+			image := rl.LoadImage(path_cstring)
+			defer rl.UnloadImage(image)
+			color_count := image.width * image.height
+			for i in 0..<(color_count) {			
+				x := i % image.width
+				y := i32(i / image.width)
+				color := rgb_to_hsv(rl.GetImageColor(image, x, y))
+				if slice.contains(state.pallete.colors.data[:], color) {
+					continue
+				}
+	
+				if state.pallete.colors.len >= len(state.pallete.colors.data) {
+					msg := fmt.aprintf("Image color count over the limit. ({})", i)
+					ui_show_notif(msg, UI_NOTIF_STYLE_ERROR)
+					break
+				}
+				sa.append(&state.pallete.colors, color)
+			}
+	
+			delete(state.pallete.name)
+			splitted_path := strings.split(path, "\\", context.temp_allocator)
+			state.pallete.name = strings.clone(splitted_path[len(splitted_path) - 1])
 		}
-
-		delete(state.pallete.name)
-		splitted_path := strings.split(path, "\\", context.temp_allocator)
-		state.pallete.name = strings.clone(splitted_path[len(splitted_path) - 1])
 	}
 	else if clicked_item.text == FROM_FAV {
 		ui_close_current_popup()
