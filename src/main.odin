@@ -1543,6 +1543,9 @@ deinit_project_state :: proc(state: ^Project_State) {
 	}
 	delete(state.redos)
 	delete(state.dirty_layers)
+	if copied_image, exists := state.copied_image.?; exists {
+		rl.UnloadImage(copied_image)
+	}
 	rl.UnloadTexture(state.bg_texture)
 	delete(state.pallete.name)
 }
