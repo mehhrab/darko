@@ -179,8 +179,6 @@ main :: proc() {
 
 		switch &state in app.state {
 			case Project_State: {
-				project_screen(&state)
-
 				if ui_is_any_popup_open() == false {
 					// create new layer above the current
 					if rl.IsKeyPressed(.SPACE) {
@@ -270,6 +268,8 @@ main :: proc() {
 					}
 					clear(&state.dirty_layers)
 				}
+
+				project_screen(&state)
 			}
 			case Welcome_State: {
 				welcome_screen(&state)
