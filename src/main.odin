@@ -1191,7 +1191,7 @@ action_unpreform :: proc(state: ^Project_State, action: Action) {
 		case Action_Image_Change: {
 			image := rl.ImageCopy(kind.before_image)
 			state.layers[kind.layer_index].image = image
-			mark_dirty_layers(state, state.current_layer)
+			mark_dirty_layers(state, kind.layer_index)
 		}
 		case Action_Create_Layer: {
 			deinit_layer(&state.layers[kind.layer_index])
