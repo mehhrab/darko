@@ -51,6 +51,7 @@ Project_State :: struct {
 	width: i32,
 	height: i32,
 	current_layer: int,
+	lerped_current_layer: f32,
 	layers: [dynamic]Layer,
 	lerped_zoom: f32,
 	image_changed: bool,
@@ -623,13 +624,11 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 		cursor_icon = update_tools(state, canvas_rec)
 	}
 
-	// draw layers
-	@(static) lerped_layer_y: f32
-	lerped_layer_y = rl.Lerp(lerped_layer_y, f32(state.current_layer), rl.GetFrameTime() * 18)
+	state.lerped_current_layer = rl.Lerp(state.lerped_current_layer, f32(state.current_layer), rl.GetFrameTime() * 18)
 
 	for i in 0..<len(state.layers) {
 		layer_rec := canvas_rec
-		layer_rec.y -= (canvas_h + ui_px(16) * state.zoom) * (f32(i) - lerped_layer_y)		
+		layer_rec.y -= (canvas_h + ui_px(16) * state.zoom) * (f32(i) - state.lerped_current_layer)		
 		if i == state.current_layer {
 			ui_push_command(UI_Draw_Canvas {
 				rec = layer_rec,
@@ -1441,6 +1440,7 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	}
 
 	loaded_state.dir = strings.clone(dir)
+	loaded_state.lerped_current_layer = f32(loaded_state.current_layer)
 	loaded_state.lerped_zoom = 0
 	loaded_state.lerped_preview_zoom = 0
 	
