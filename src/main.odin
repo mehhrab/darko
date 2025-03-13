@@ -181,79 +181,96 @@ main :: proc() {
 		switch &state in app.state {
 			case Project_State: {
 				if ui_is_any_popup_open() == false {
-					// create new layer above the current
-					if rl.IsKeyPressed(.SPACE) {
-						action_do(&state, Action_Create_Layer {
-							current_layer_index = state.current_layer,
-							layer_index = state.current_layer + 1
-						})
-					}
-
-					// create new layer at the top
-					if rl.IsKeyPressed(.S) {
-						action_do(&state, Action_Create_Layer {
-							current_layer_index = state.current_layer,
-							layer_index = len(state.layers)
-						})
-					}
-
-					// move current layer up
-					if rl.IsKeyPressed(.UP) {
-						state.current_layer += 1
-						if state.current_layer >= len(state.layers) {
-							state.current_layer = 0
+					if rl.IsKeyDown(.LEFT_CONTROL) {
+						// move layer
+						if rl.IsKeyPressed(.LEFT) {
+							move_layer(&state, state.current_layer, -1, 0)
 						}
-					}
-
-					// move current layer down
-					if rl.IsKeyPressed(.DOWN) {
-						state.current_layer -= 1
-						if state.current_layer < 0 {
-							state.current_layer = len(state.layers) - 1
+						else if rl.IsKeyPressed(.RIGHT) {
+							move_layer(&state, state.current_layer, 1, 0)
 						}
-					}
-
-					// undo
-					if rl.IsKeyPressed(.Z) {
-						if len(state.undos) > 0 {
-							fmt.printfln("undo")
-							action := pop(&state.undos)
-							action_unpreform(&state, action)
-							append(&state.redos, action)
-						}	
-					}
-
-					// redo
-					if rl.IsKeyPressed(.Y) {
-						if len(state.redos) > 0 {
-							fmt.printfln("redo")
-							action := pop(&state.redos)
-							action_preform(&state, action)
-							append(&state.undos, action)
-						}	
-					}
-
-					// copy
-					if rl.IsKeyPressed(.C) {
-						if copied_image, exists := state.copied_image.?; exists {
-							rl.UnloadImage(copied_image)
+						else if rl.IsKeyPressed(.UP) {
+							move_layer(&state, state.current_layer, 0, -1)
 						}
-						image := rl.ImageCopy(get_current_layer(&state).image)
-						state.copied_image = image
+						else if rl.IsKeyPressed(.DOWN) {
+							move_layer(&state, state.current_layer, 0, 1)
+						}						
 					}
-
-					// paste
-					if rl.IsKeyPressed(.V) {
-						if copied_image, exists := state.copied_image.?; exists {
-							action_do(&state, Action_Image_Change { 
-								before_image = rl.ImageCopy(get_current_layer(&state).image),
-								after_image = rl.ImageCopy(copied_image),
-								layer_index = state.current_layer,
+					else {						
+						// create new layer above the current
+						if rl.IsKeyPressed(.SPACE) {
+							action_do(&state, Action_Create_Layer {
+								current_layer_index = state.current_layer,
+								layer_index = state.current_layer + 1
 							})
-							image_rec := Rec { 0, 0, f32(state.width), f32(state.height) }
-							rl.ImageClearBackground(&state.layers[state.current_layer].image, rl.BLANK)
-							rl.ImageDraw(&state.layers[state.current_layer].image, copied_image, image_rec, image_rec, rl.WHITE) 
-							mark_dirty_layers(&state, state.current_layer)
+						}
+	
+						// create new layer at the top
+						if rl.IsKeyPressed(.S) {
+							action_do(&state, Action_Create_Layer {
+								current_layer_index = state.current_layer,
+								layer_index = len(state.layers)
+							})
+						}
+	
+						// move current layer up
+						if rl.IsKeyPressed(.UP) {
+							state.current_layer += 1
+							if state.current_layer >= len(state.layers) {
+								state.current_layer = 0
+							}
+						}
+	
+						// move current layer down
+						if rl.IsKeyPressed(.DOWN) {
+							state.current_layer -= 1
+							if state.current_layer < 0 {
+								state.current_layer = len(state.layers) - 1
+							}
+						}
+	
+						// undo
+						if rl.IsKeyPressed(.Z) {
+							if len(state.undos) > 0 {
+								fmt.printfln("undo")
+								action := pop(&state.undos)
+								action_unpreform(&state, action)
+								append(&state.redos, action)
+							}	
+						}
+	
+						// redo
+						if rl.IsKeyPressed(.Y) {
+							if len(state.redos) > 0 {
+								fmt.printfln("redo")
+								action := pop(&state.redos)
+								action_preform(&state, action)
+								append(&state.undos, action)
+							}	
+						}
+	
+						// copy
+						if rl.IsKeyPressed(.C) {
+							if copied_image, exists := state.copied_image.?; exists {
+								rl.UnloadImage(copied_image)
+							}
+							image := rl.ImageCopy(get_current_layer(&state).image)
+							state.copied_image = image
+						}
+	
+						// paste
+						if rl.IsKeyPressed(.V) {
+							if copied_image, exists := state.copied_image.?; exists {
+								action_do(&state, Action_Image_Change { 
+									before_image = rl.ImageCopy(get_current_layer(&state).image),
+									after_image = rl.ImageCopy(copied_image),
+									layer_index = state.current_layer,
+								})
+								image_rec := Rec { 0, 0, f32(state.width), f32(state.height) }
+								rl.ImageClearBackground(&state.layers[state.current_layer].image, rl.BLANK)
+								rl.ImageDraw(&state.layers[state.current_layer].image, copied_image, image_rec, image_rec, rl.WHITE) 
+								mark_dirty_layers(&state, state.current_layer)
+							}
 						}
 					}
 				}
@@ -1759,6 +1776,26 @@ dfs :: proc(image: ^rl.Image, x, y: i32, prev_color, new_color: rl.Color) {
 	if y + 1 < image^.height {
 		dfs(image, x, y + 1, prev_color, new_color)
 	}
+}
+
+move_layer :: proc(state: ^Project_State, layer_index, x, y: int) {
+	before_image := rl.ImageCopy(state.layers[layer_index].image)
+	after_image := rl.ImageCopy(before_image)
+	move_image(state, &after_image, x, y)
+	action_do(state, Action_Image_Change { 
+		before_image = before_image, 
+		after_image = after_image, 
+		layer_index = layer_index 
+	})
+}
+
+move_image :: proc(state: ^Project_State, image: ^rl.Image, x, y: int) {
+	image_rec := Rec { 0, 0, f32(state.width), f32(state.height) }
+	dest_rec := Rec { f32(x), f32(y), f32(state.width), f32(state.height) }
+	prev_image := rl.ImageCopy(image^)
+	defer rl.UnloadImage(prev_image)
+	rl.ImageClearBackground(image, rl.BLANK)
+	rl.ImageDraw(image, prev_image, image_rec, dest_rec, rl.WHITE)
 }
 
 draw_canvas :: proc(state: ^Project_State, area: Rec) {
