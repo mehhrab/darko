@@ -205,7 +205,6 @@ main :: proc() {
 						break open_scope
 					}
 						
-					mark_all_layers_dirty(&loaded_project)
 					add_recent_project(loaded_project.dir)
 					schedule_state_change(loaded_project)
 				}
@@ -442,7 +441,6 @@ welcome_screen :: proc(state: ^Welcome_State) {
 				break open_scope
 			}
 			
-			mark_all_layers_dirty(&loaded_project)
 			add_recent_project(loaded_project.dir)
 			schedule_state_change(loaded_project)
 		}
@@ -559,7 +557,6 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 				break open_scope
 			}
 				
-			mark_all_layers_dirty(&loaded_project)
 			add_recent_project(loaded_project.dir)
 			schedule_state_change(loaded_project)
 		}
@@ -1451,7 +1448,6 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	layer: Layer
 	init_layer(&layer, width, height)
 	append(&state.layers, layer)
-	mark_all_layers_dirty(state)
 }
 
 /* some duplicate code from init_project_state() not sure what's the alternative
