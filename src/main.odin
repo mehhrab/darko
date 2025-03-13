@@ -205,7 +205,6 @@ main :: proc() {
 						break open_scope
 					}
 						
-					add_recent_project(loaded_project.dir)
 					schedule_state_change(loaded_project)
 				}
 			}
@@ -441,7 +440,6 @@ welcome_screen :: proc(state: ^Welcome_State) {
 				break open_scope
 			}
 			
-			add_recent_project(loaded_project.dir)
 			schedule_state_change(loaded_project)
 		}
 	}
@@ -460,7 +458,6 @@ welcome_screen :: proc(state: ^Welcome_State) {
 				project: Project_State
 				ok := load_project_state(&project, recent)
 				if ok {
-					add_recent_project(project.dir)
 					schedule_state_change(project)
 				}
 				else {
@@ -557,7 +554,6 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 				break open_scope
 			}
 				
-			add_recent_project(loaded_project.dir)
 			schedule_state_change(loaded_project)
 		}
 	}
@@ -1616,6 +1612,7 @@ deinit_project_state :: proc(state: ^Project_State) {
 
 open_project :: proc(state: ^Project_State) {
 	rl.SetWindowTitle(fmt.ctprintf("Darko   {}", state.dir))
+	add_recent_project(state.dir)
 	app.state = state^
 	ui_show_notif(ICON_CHECK + " Project is opened")
 }
