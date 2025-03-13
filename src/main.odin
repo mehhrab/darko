@@ -662,11 +662,19 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 			ui_draw_rec_outline(COLOR_BASE_4, 2, layer_rec)
 		}
 		else {
+			// when clicked on another layer move to that layer
+			mouse_inside := ui_is_mouse_in_rec(layer_rec) && ui_is_any_popup_open() == false 
+			if mouse_inside {
+				cursor_icon = ICON_STAR
+				if rl.IsMouseButtonPressed(.LEFT) {
+					state.current_layer = i
+				}
+			}
 			ui_push_command(UI_Draw_Texture {
 				texture = state.layers[i].texture,
 				rec = layer_rec,
 			})
-			ui_draw_rec_outline(COLOR_BASE_1, 2, layer_rec)
+			ui_draw_rec_outline(mouse_inside ? COLOR_BASE_3 : COLOR_BASE_1, 2, layer_rec)
 		}
 	}
 
