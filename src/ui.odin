@@ -523,7 +523,9 @@ ui_close_current_popup :: proc() {
 	ui_ctx.hovered_panel = 0
 	ui_ctx.active_panel = 0
 	last_index := ui_ctx.open_popups.len - 1
-	sa.ordered_remove(&ui_ctx.open_popups, last_index)
+	if last_index >= 0 {
+		sa.ordered_remove(&ui_ctx.open_popups, last_index)
+	}
 }
 
 ui_close_all_popups :: proc() {
