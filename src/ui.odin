@@ -500,6 +500,14 @@ ui_draw_notif :: proc() {
 }
 
 ui_open_popup :: proc(id: UI_ID, darker_window := true) {
+	// if the popup already exists, remove it
+	for i in 0..<ui_ctx.open_popups.len {
+		if ui_ctx.open_popups.data[i].id == id {
+			sa.ordered_remove(&ui_ctx.open_popups, i)
+			break
+		}
+	}
+
 	popup := UI_Popup {
 		id = id,
 		darker_window = darker_window,
