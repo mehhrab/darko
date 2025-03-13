@@ -178,6 +178,40 @@ main :: proc() {
 			ui_set_scale(ui_ctx.scale - 0.2)
 		}
 
+		// update these shortcuts when no textbox is active
+		if ui_ctx.text_mode_slider == 0 {
+			// new project
+			if rl.IsKeyPressed(.N) {
+				ui_open_popup(popup_new_project)
+			}
+
+			// open project
+			if rl.IsKeyPressed(.O) {
+				open_scope: {
+					ui_close_all_popups()
+					
+					path, res := pick_folder_dialog("", context.temp_allocator)
+					if res == .Error {
+						ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+					}
+					else if res == .Cancel {
+						break open_scope
+					}
+			
+					loaded_project: Project_State
+					loaded := load_project_state(&loaded_project, path)
+					if loaded == false {
+						ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+						break open_scope
+					}
+						
+					mark_all_layers_dirty(&loaded_project)
+					add_recent_project(loaded_project.dir)
+					schedule_state_change(loaded_project)
+				}
+			}
+		}
+
 		switch &state in app.state {
 			case Project_State: {
 				if ui_is_any_popup_open() == false {
