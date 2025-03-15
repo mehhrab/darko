@@ -170,171 +170,11 @@ main :: proc() {
 
 	for rl.WindowShouldClose() == false {
 		ui_begin()
-
-		if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.EQUAL) {
-			ui_set_scale(ui_ctx.scale + 0.2)
-		}
-		if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.MINUS) {
-			ui_set_scale(ui_ctx.scale - 0.2)
-		}
-
-		// update these shortcuts when no textbox is active
-		if ui_ctx.text_mode_slider == 0 {
-			// new project
-			if rl.IsKeyPressed(.N) {
-				ui_open_popup(popup_new_project)
-			}
-
-			// open project
-			if rl.IsKeyPressed(.O) {
-				open_scope: {
-					ui_close_all_popups()
-					
-					path, res := pick_folder_dialog("", context.temp_allocator)
-					if res == .Error {
-						ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-					}
-					else if res == .Cancel {
-						break open_scope
-					}
-			
-					loaded_project: Project_State
-					loaded := load_project_state(&loaded_project, path)
-					if loaded == false {
-						ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-						break open_scope
-					}
-						
-					schedule_state_change(loaded_project)
-				}
-			}
-		}
-
+		app_shortcuts()
 		switch &state in app.state {
 			case Project_State: {
-				if ui_is_any_popup_open() == false {
-					if rl.IsKeyDown(.LEFT_CONTROL) {
-						// move layer
-						if rl.IsKeyPressed(.LEFT) {
-							move_layer(&state, state.current_layer, -1, 0)
-						}
-						else if rl.IsKeyPressed(.RIGHT) {
-							move_layer(&state, state.current_layer, 1, 0)
-						}
-						else if rl.IsKeyPressed(.UP) {
-							move_layer(&state, state.current_layer, 0, -1)
-						}
-						else if rl.IsKeyPressed(.DOWN) {
-							move_layer(&state, state.current_layer, 0, 1)
-						}
-
-						// create new layer at the top
-						if rl.IsKeyPressed(.SPACE) {
-							action_do(&state, Action_Create_Layer {
-								current_layer_index = state.current_layer,
-								layer_index = len(state.layers)
-							})
-						}		
-					}
-					else {			
-						// save project
-						if rl.IsKeyPressed(.S) {
-							save_scope: {								
-								saved := false
-								if state.dir == "" {
-									path, res := pick_folder_dialog(state.dir, context.temp_allocator)
-									if res == .Error {
-										ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
-									}
-									else if res == .Cancel {
-										break save_scope
-									}
-							
-									saved = save_project_state(&state, path)
-									ui_show_notif("Project is saved")
-								}
-								else {
-									saved = save_project_state(&state, state.dir)
-								}
-
-								if saved == false {
-									ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
-									break save_scope
-								}
-						
-								add_recent_project(state.dir)
-							}								
-						}			
-						
-						// create new layer above the current
-						if rl.IsKeyPressed(.SPACE) {
-							action_do(&state, Action_Create_Layer {
-								current_layer_index = state.current_layer,
-								layer_index = state.current_layer + 1
-							})
-						}
-	
-						// move current layer up
-						if rl.IsKeyPressed(.UP) {
-							state.current_layer += 1
-							if state.current_layer >= len(state.layers) {
-								state.current_layer = 0
-							}
-						}
-	
-						// move current layer down
-						if rl.IsKeyPressed(.DOWN) {
-							state.current_layer -= 1
-							if state.current_layer < 0 {
-								state.current_layer = len(state.layers) - 1
-							}
-						}
-	
-						// undo
-						if rl.IsKeyPressed(.Z) {
-							if len(state.undos) > 0 {
-								fmt.printfln("undo")
-								action := pop(&state.undos)
-								action_unpreform(&state, action)
-								append(&state.redos, action)
-							}	
-						}
-	
-						// redo
-						if rl.IsKeyPressed(.Y) {
-							if len(state.redos) > 0 {
-								fmt.printfln("redo")
-								action := pop(&state.redos)
-								action_preform(&state, action)
-								append(&state.undos, action)
-							}	
-						}
-	
-						// copy
-						if rl.IsKeyPressed(.C) {
-							if copied_image, exists := state.copied_image.?; exists {
-								rl.UnloadImage(copied_image)
-							}
-							image := rl.ImageCopy(get_current_layer(&state).image)
-							state.copied_image = image
-						}
-	
-						// paste
-						if rl.IsKeyPressed(.V) {
-							if copied_image, exists := state.copied_image.?; exists {
-								action_do(&state, Action_Image_Change { 
-									before_image = rl.ImageCopy(get_current_layer(&state).image),
-									after_image = rl.ImageCopy(copied_image),
-									layer_index = state.current_layer,
-								})
-								image_rec := Rec { 0, 0, f32(state.width), f32(state.height) }
-								rl.ImageClearBackground(&state.layers[state.current_layer].image, rl.BLANK)
-								rl.ImageDraw(&state.layers[state.current_layer].image, copied_image, image_rec, image_rec, rl.WHITE) 
-								mark_dirty_layers(&state, state.current_layer)
-							}
-						}
-					}
-				}
+				project_shortcuts(&state)				
+				project_screen(&state)
 
 				// update the textures for dirty layers
 				if len(state.dirty_layers) > 0 {
@@ -347,8 +187,6 @@ main :: proc() {
 					}
 					clear(&state.dirty_layers)
 				}
-
-				project_screen(&state)
 			}
 			case Welcome_State: {
 				welcome_screen(&state)
@@ -358,22 +196,6 @@ main :: proc() {
 			}
 		}
 		new_file_popup(&app.state)
-
-		// toggle unlock_fps
-		if rl.IsKeyPressed(.F1) {
-			app.unlock_fps = !app.unlock_fps
-			if app.unlock_fps {
-				rl.SetTargetFPS(-1)
-			}
-			else {
-				rl.SetTargetFPS(TARGET_FPS)
-			}
-		}
-		// toggle show_fps
-		if rl.IsKeyPressed(.F2) {
-			app.show_fps = !app.show_fps
-		}
-
 		ui_end()
 
 		// draw
@@ -414,8 +236,7 @@ main :: proc() {
 		
 		ui_clear_temp_state()
 		free_all(context.temp_allocator)
-	}
-	
+	}	
 	rl.CloseWindow()
 }
 
@@ -1224,6 +1045,191 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 				draw_sprite_stack(&project.layers, px, py, project.lerped_preview_zoom, project.preview_rotation, project.spacing)
 				rl.DrawTextEx(ui_ctx.font, "Preview", { kind.rec.x + 10, kind.rec.y + 10 }, ui_font_size(), 0, { 255, 255, 255, 100 })
 				rl.DrawRectangleLinesEx(kind.rec, 1, COLOR_BASE_0)
+			}
+		}
+	}
+}
+
+app_shortcuts :: proc() {
+	// toggle unlock_fps
+	if rl.IsKeyPressed(.F1) {
+		app.unlock_fps = !app.unlock_fps
+		if app.unlock_fps {
+			rl.SetTargetFPS(-1)
+		}
+		else {
+			rl.SetTargetFPS(TARGET_FPS)
+		}
+	}
+
+	// toggle show_fps
+	if rl.IsKeyPressed(.F2) {
+		app.show_fps = !app.show_fps
+	}
+
+	// zoom in ui
+	if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.EQUAL) {
+		ui_set_scale(ui_ctx.scale + 0.2)
+	}
+	// zoom out ui
+	if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.MINUS) {
+		ui_set_scale(ui_ctx.scale - 0.2)
+	}
+
+	// update these shortcuts when no textbox is active
+	if ui_ctx.text_mode_slider == 0 {
+		// new project
+		if rl.IsKeyPressed(.N) {
+			ui_open_popup(popup_new_project)
+		}
+
+		// open project
+		if rl.IsKeyPressed(.O) {
+			open_scope: {
+				ui_close_all_popups()
+				
+				path, res := pick_folder_dialog("", context.temp_allocator)
+				if res == .Error {
+					ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+				}
+				else if res == .Cancel {
+					break open_scope
+				}
+		
+				loaded_project: Project_State
+				loaded := load_project_state(&loaded_project, path)
+				if loaded == false {
+					ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+					break open_scope
+				}
+					
+				schedule_state_change(loaded_project)
+			}
+		}
+	}
+}
+
+project_shortcuts :: proc(state: ^Project_State) {
+	if ui_is_any_popup_open() == false {
+		if rl.IsKeyDown(.LEFT_CONTROL) {
+			// move layer
+			if rl.IsKeyPressed(.LEFT) {
+				move_layer(state, state.current_layer, -1, 0)
+			}
+			else if rl.IsKeyPressed(.RIGHT) {
+				move_layer(state, state.current_layer, 1, 0)
+			}
+			else if rl.IsKeyPressed(.UP) {
+				move_layer(state, state.current_layer, 0, -1)
+			}
+			else if rl.IsKeyPressed(.DOWN) {
+				move_layer(state, state.current_layer, 0, 1)
+			}
+
+			// create new layer at the top
+			if rl.IsKeyPressed(.SPACE) {
+				action_do(state, Action_Create_Layer {
+					current_layer_index = state.current_layer,
+					layer_index = len(state.layers)
+				})
+			}		
+		}
+		else {			
+			// save project
+			if rl.IsKeyPressed(.S) {
+				save_scope: {								
+					saved := false
+					if state.dir == "" {
+						path, res := pick_folder_dialog(state.dir, context.temp_allocator)
+						if res == .Error {
+							ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+						}
+						else if res == .Cancel {
+							break save_scope
+						}
+				
+						saved = save_project_state(state, path)
+						ui_show_notif("Project is saved")
+					}
+					else {
+						saved = save_project_state(state, state.dir)
+					}
+
+					if saved == false {
+						ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+						break save_scope
+					}
+			
+					add_recent_project(state.dir)
+				}								
+			}			
+			
+			// create new layer above the current
+			if rl.IsKeyPressed(.SPACE) {
+				action_do(state, Action_Create_Layer {
+					current_layer_index = state.current_layer,
+					layer_index = state.current_layer + 1
+				})
+			}
+
+			// move current layer up
+			if rl.IsKeyPressed(.UP) {
+				state.current_layer += 1
+				if state.current_layer >= len(state.layers) {
+					state.current_layer = 0
+				}
+			}
+
+			// move current layer down
+			if rl.IsKeyPressed(.DOWN) {
+				state.current_layer -= 1
+				if state.current_layer < 0 {
+					state.current_layer = len(state.layers) - 1
+				}
+			}
+
+			// undo
+			if rl.IsKeyPressed(.Z) {
+				if len(state.undos) > 0 {
+					fmt.printfln("undo")
+					action := pop(&state.undos)
+					action_unpreform(state, action)
+					append(&state.redos, action)
+				}	
+			}
+
+			// redo
+			if rl.IsKeyPressed(.Y) {
+				if len(state.redos) > 0 {
+					fmt.printfln("redo")
+					action := pop(&state.redos)
+					action_preform(state, action)
+					append(&state.undos, action)
+				}	
+			}
+
+			// copy
+			if rl.IsKeyPressed(.C) {
+				if copied_image, exists := state.copied_image.?; exists {
+					rl.UnloadImage(copied_image)
+				}
+				image := rl.ImageCopy(get_current_layer(state).image)
+				state.copied_image = image
+			}
+
+			// paste
+			if rl.IsKeyPressed(.V) {
+				if copied_image, exists := state.copied_image.?; exists {
+					action_do(state, Action_Image_Change { 
+						before_image = rl.ImageCopy(get_current_layer(state).image),
+						after_image = rl.ImageCopy(copied_image),
+						layer_index = state.current_layer,
+					})
+					image_rec := Rec { 0, 0, f32(state.width), f32(state.height) }
+					rl.ImageClearBackground(&state.layers[state.current_layer].image, rl.BLANK)
+					rl.ImageDraw(&state.layers[state.current_layer].image, copied_image, image_rec, image_rec, rl.WHITE) 
+					mark_dirty_layers(state, state.current_layer)
+				}
 			}
 		}
 	}
