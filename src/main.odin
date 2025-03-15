@@ -1640,8 +1640,11 @@ deinit_project_state :: proc(state: ^Project_State) {
 }
 
 open_project :: proc(state: ^Project_State) {
+	// new projects don't have a dir
+	if state.dir != "" {
+		add_recent_project(state.dir)
+	}
 	rl.SetWindowTitle(fmt.ctprintf("Darko   {}", state.dir))
-	add_recent_project(state.dir)
 	app.state = state^
 	ui_show_notif(ICON_CHECK + " Project is opened")
 }
@@ -1687,6 +1690,7 @@ add_recent_project :: proc(path: string) {
 		delete(app.recent_projects.data[0])
 		sa.ordered_remove(&app.recent_projects, 0)
 	}
+
 	// remove duplicate recents
 	if index, found := slice.linear_search(app.recent_projects.data[:], path); found {
 		if found {
