@@ -226,22 +226,51 @@ main :: proc() {
 						}
 						else if rl.IsKeyPressed(.DOWN) {
 							move_layer(&state, state.current_layer, 0, 1)
-						}						
+						}
+
+						// create new layer at the top
+						if rl.IsKeyPressed(.SPACE) {
+							action_do(&state, Action_Create_Layer {
+								current_layer_index = state.current_layer,
+								layer_index = len(state.layers)
+							})
+						}		
 					}
-					else {						
+					else {			
+						// save project
+						if rl.IsKeyPressed(.S) {
+							save_scope: {								
+								saved := false
+								if state.dir == "" {
+									path, res := pick_folder_dialog(state.dir, context.temp_allocator)
+									if res == .Error {
+										ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+									}
+									else if res == .Cancel {
+										break save_scope
+									}
+							
+									saved = save_project_state(&state, path)
+									ui_show_notif("Project is saved")
+								}
+								else {
+									saved = save_project_state(&state, state.dir)
+								}
+
+								if saved == false {
+									ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+									break save_scope
+								}
+						
+								add_recent_project(state.dir)
+							}								
+						}			
+						
 						// create new layer above the current
 						if rl.IsKeyPressed(.SPACE) {
 							action_do(&state, Action_Create_Layer {
 								current_layer_index = state.current_layer,
 								layer_index = state.current_layer + 1
-							})
-						}
-	
-						// create new layer at the top
-						if rl.IsKeyPressed(.S) {
-							action_do(&state, Action_Create_Layer {
-								current_layer_index = state.current_layer,
-								layer_index = len(state.layers)
 							})
 						}
 	
