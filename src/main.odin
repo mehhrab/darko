@@ -773,8 +773,7 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 			}
 	
 			delete(state.pallete.name)
-			splitted_path := strings.split(path, "\\", context.temp_allocator)
-			state.pallete.name = strings.clone(splitted_path[len(splitted_path) - 1])
+			state.pallete.name = get_file_name_from_path(path)
 		}
 	}
 	else if clicked_item.text == FROM_FAV {
@@ -1989,4 +1988,20 @@ pick_folder_dialog :: proc(default_path := "", allocator := context.allocator) -
 	path_res := strings.clone_from_cstring(path_cstring, allocator)
 	
 	return path_res, pick_res
+}
+
+get_file_name_from_path :: proc(path: string, allocator := context.allocator) -> (res: string) {
+	if strings.contains_any(path, "/") {
+		splitted_path := strings.split(path, "/")
+		defer delete(splitted_path)
+		return strings.clone(splitted_path[len(splitted_path) - 1])
+	}
+	else if strings.contains_any(path, "\\") {
+		splitted_path := strings.split(path, "\\")
+		defer delete(splitted_path)
+		return strings.clone(splitted_path[len(splitted_path) - 1])
+	}
+	else {
+		return strings.clone(path, allocator)
+	}
 }
