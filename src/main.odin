@@ -1,5 +1,5 @@
 /* application code 
-frontend gui, backend code, ect */
+frontend, backend code etc */
 package darko
 
 import "core:fmt"
@@ -79,7 +79,7 @@ Pallete :: struct {
 	colors: sa.Small_Array(256, HSV),
 }
 
-// actions: (for undo and redo)
+// undo redo actions
 
 Action :: union {
 	Action_Image_Change,
@@ -191,9 +191,6 @@ main :: proc() {
 			case Welcome_State: {
 				welcome_screen(&state)
 			}
-			case: {
-				panic("what")
-			}
 		}
 		new_file_popup(&app.state)
 		ui_end()
@@ -217,6 +214,7 @@ main :: proc() {
 					deinit_welcome_state(&state)
 				}
 			}
+
 			// switch to the new state
 			switch &state in next_state {
 				case Project_State: {
@@ -240,7 +238,7 @@ main :: proc() {
 	rl.CloseWindow()
 }
 
-// ui code:
+// ui code
 
 welcome_screen :: proc(state: ^Welcome_State) {
 	screen_rec := ui_get_screen_rec()
@@ -317,7 +315,7 @@ welcome_screen :: proc(state: ^Welcome_State) {
 		}
 
 		recent_rec := rec_cut_bottom(&left_area, ui_default_widget_height())
-		ui_draw_text("Recent projects:", recent_rec)
+		ui_draw_text("Recent projects", recent_rec)
 	}
 	ui_end_clip()
 }
@@ -352,31 +350,15 @@ project_screen :: proc(state: ^Project_State) {
 
 menu_bar :: proc(state: ^Project_State, area: Rec) {
 	ui_panel(ui_gen_id(), area, { bg_color = COLOR_BASE_2 })
-	NEW_PROJECT :: "new project" 
-	OPEN_PROJECT :: "open project" 
-	SAVE_PROJECT :: "save project" 
-	OPEN_WELCOME_SCREEN :: "open welcome screen" 
+	NEW_PROJECT :: "New project" 
+	OPEN_PROJECT :: "Open project" 
+	SAVE_PROJECT :: "Save project" 
+	OPEN_WELCOME_SCREEN :: "Go to welcome screen" 
 	menu_items := [?]UI_Menu_Item {
-		UI_Menu_Item { 
-			ui_gen_id(),
-			NEW_PROJECT,
-			"",
-		},
-		UI_Menu_Item { 
-			ui_gen_id(),
-			OPEN_PROJECT,
-			"",
-		},
-		UI_Menu_Item { 
-			ui_gen_id(),
-			SAVE_PROJECT,
-			"",
-		},
-		UI_Menu_Item { 
-			ui_gen_id(),
-			OPEN_WELCOME_SCREEN,
-			"",
-		},
+		UI_Menu_Item { ui_gen_id(), NEW_PROJECT, "N" },
+		UI_Menu_Item { ui_gen_id(), OPEN_PROJECT, "O" },
+		UI_Menu_Item { ui_gen_id(), SAVE_PROJECT, "S" },
+		UI_Menu_Item { ui_gen_id(), OPEN_WELCOME_SCREEN, "W" },
 	}
 	clicked_item := ui_menu_button(ui_gen_id(), "File", menu_items[:], ui_px(300), { area.x, area.y, 60, area.height })
 	
@@ -384,8 +366,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 		ui_close_current_popup()
 		ui_open_popup(popup_new_project)
 	}
-		
-	if clicked_item.text == OPEN_PROJECT {
+	else if clicked_item.text == OPEN_PROJECT {
 		open_scope: {
 			ui_close_current_popup()
 	
@@ -407,8 +388,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 			schedule_state_change(loaded_project)
 		}
 	}
-
-	if clicked_item.text == SAVE_PROJECT {
+	else if clicked_item.text == SAVE_PROJECT {
 		save_scope: {
 			ui_close_current_popup()
 			
@@ -430,8 +410,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 			ui_show_notif("Project is saved")
 		}
 	}
-
-	if clicked_item.text == OPEN_WELCOME_SCREEN {
+	else if clicked_item.text == OPEN_WELCOME_SCREEN {
 		ui_close_current_popup()
 
 		welcome_state := Welcome_State {}
@@ -447,7 +426,7 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 	// draw current layer index and layer count
 	current_layer := state.current_layer + 1
 	layer_count := len(state.layers)
-	ui_draw_text(fmt.tprintf("layer {}/{}", current_layer, layer_count), props_area)
+	ui_draw_text(fmt.tprintf("Layer {}/{}", current_layer, layer_count), props_area)
 
 	// delete button
 	delete_rec := rec_cut_right(&props_area, ui_default_widget_height())
@@ -459,7 +438,6 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 			action_do(state, Action_Delete_Layer {
 				layer_index = state.current_layer,
 			})
-
 		}
 	}
 
@@ -596,7 +574,6 @@ color_panel :: proc(state: ^Project_State, rec: Rec) {
 	else {
 		color_pallete(state, area)
 	}
-
 }
 
 // used to give color pallete panel the same height as the color picker
@@ -664,7 +641,6 @@ color_picker :: proc(state: ^Project_State, rec: Rec) {
 	})
 
 	draw_grip(hsv_color[0], 0, 360, hue_rec)
-
 	rec_delete_top(&area, ui_px(8))
 
 	// saturation slider
@@ -683,8 +659,8 @@ color_picker :: proc(state: ^Project_State, rec: Rec) {
 		right_color = right_color,
 		rec = saturation_rec,
 	})
-	draw_grip(hsv_color[1], 0, 1, saturation_rec)
 
+	draw_grip(hsv_color[1], 0, 1, saturation_rec)
 	rec_delete_top(&area, ui_px(8))
 	
 	// value slider
@@ -698,6 +674,7 @@ color_picker :: proc(state: ^Project_State, rec: Rec) {
 		right_color = rl.WHITE,
 		rec = value_rec,
 	})
+
 	draw_grip(hsv_color[2], 0, 1, value_rec)
 
 	if hue_changed || saturation_changed || value_changed  {
@@ -737,8 +714,8 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 	
 	// load pallete button
 	load_rec := rec_cut_right(&buttons_area, ui_calc_button_width("load"))
-	FROM_FILE :: "from file"
-	FROM_FAV :: "from favorites"
+	FROM_FILE :: "From file"
+	FROM_FAV :: "From favorites"
 	load_items := [?]UI_Menu_Item {
 		{ id = ui_gen_id(), text = FROM_FILE },
 		{ id = ui_gen_id(), text = FROM_FAV },
@@ -775,10 +752,8 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 				if slice.contains(state.pallete.colors.data[:], color) {
 					continue
 				}
-	
 				if state.pallete.colors.len >= len(state.pallete.colors.data) {
-					msg := fmt.aprintf("Image color count over the limit. ({})", i)
-					ui_show_notif(msg, UI_NOTIF_STYLE_ERROR)
+					ui_show_notif("Image color count over the limit", UI_NOTIF_STYLE_ERROR)
 					break
 				}
 				sa.append(&state.pallete.colors, color)
@@ -796,9 +771,8 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 
 	ui_draw_text(state.pallete.name, buttons_area, { .Center, .Center })
 
-	ui_draw_rec(COLOR_BASE_0, area)
-	
 	// pallete list
+	ui_draw_rec(COLOR_BASE_0, area)
 	list_rec := rec_pad(area, ui_px(8))
 	pallete_x := list_rec.x
 	pallete_y := list_rec.y
@@ -837,6 +811,8 @@ fav_palletes_popup :: proc(state: ^Project_State) {
 		_, items := ui_begin_list(ui_gen_id(), &scroll, &lerped_scroll, ui_default_widget_height(), app.fav_palletes.len, content_rec)
 		for &item, i in items {			
 			item_rec := item.rec
+
+			// show delete button on hover 
 			if ui_is_mouse_in_rec(item_rec) {
 				delete_style := UI_BUTTON_STYLE_DEFAULT
 				delete_style.bg_color = COLOR_ERROR_0
@@ -849,6 +825,8 @@ fav_palletes_popup :: proc(state: ^Project_State) {
 					sa.ordered_remove(&app.fav_palletes, item.i)
 				}
 			}
+
+			// list item
 			current_pallete := &app.fav_palletes.data[item.i]
 			item_style := UI_BUTTON_STYLE_DEFAULT
 			item_style.text_align = { .Left, .Center }
@@ -866,9 +844,9 @@ fav_palletes_popup :: proc(state: ^Project_State) {
 				ui_close_current_popup()
 			}
 
-			ui_draw_rec_outline(COLOR_BASE_0, 1, content_rec)
 		}
 		ui_end_list()
+		ui_draw_rec_outline(COLOR_BASE_0, 1, content_rec)
 	}
 	ui_end_popup()
 }
@@ -877,15 +855,16 @@ preview :: proc(state: ^Project_State, rec: Rec) {
 	area := rec
 	id := ui_gen_id()
 	ui_update_widget(id, area)
+
 	if ui_ctx.hovered_widget == id {
 		update_zoom(&state.preview_zoom, 2, 1, 100)
 	}
 	state.lerped_preview_zoom = rl.Lerp(state.lerped_preview_zoom, state.preview_zoom, 20 * rl.GetFrameTime())
-
 	// work around for lerp never (taking too long) reaching it's desteniton 
 	if math.abs(state.preview_zoom - state.lerped_preview_zoom) < 0.01 {
 		state.lerped_preview_zoom = state.preview_zoom
 	}
+
 	if ui_ctx.active_widget == id {
 		state.preview_rotation -= rl.GetMouseDelta().x 
 	}
@@ -954,101 +933,7 @@ preview_settings_popup :: proc(state: ^Project_State) {
 	ui_end_popup()
 }
 
-// backend code:
-
-process_commands :: proc(commands: []UI_Draw_Command) {
-	for command in commands
-	{
-		switch kind in command {
-			case UI_Draw_Rect: {
-				rl.DrawRectangleRec(kind.rec, kind.color)
-			}
-			case UI_Draw_Rect_Outline: {
-				rl.DrawRectangleLinesEx(kind.rec, kind.thickness, kind.color)
-			}
-			case UI_Draw_Text: {
-				x := f32(0)
-				y := f32(0)
-
-				text := strings.clone_to_cstring(kind.text, context.temp_allocator)
-				text_size := rl.MeasureTextEx(ui_ctx.font, text, kind.size, 0)
-				
-				if kind.align.horizontal == .Left {
-					x = kind.rec.x
-				}
-				else if kind.align.horizontal == .Center {
-					x = kind.rec.x + kind.rec.width / 2 - text_size.x / 2
-				}
-				else if kind.align.horizontal == .Right {
-					x = kind.rec.x + kind.rec.width - text_size.x
-				}
-
-				if kind.align.vertical == .Top {
-					y = kind.rec.y
-				}
-				else if kind.align.vertical == .Center {
-					y = kind.rec.y + kind.rec.height / 2 - text_size.y / 2
-				}
-				else if kind.align.vertical == .Bottom {
-					y = kind.rec.y + kind.rec.height - text_size.y
-				}
-
-				rl.DrawTextEx(ui_ctx.font, text, { x, y }, kind.size, 0, kind.color)
-			}
-			case UI_Draw_Texture: {
-				src_rec := Rec { 0, 0, f32(kind.texture.width), f32(kind.texture.height) }
-				rl.DrawTexturePro(kind.texture, src_rec, kind.rec, { 0, 0 }, 0, rl.WHITE)
-			}
-			case UI_Draw_Gradient_H: {
-				x := i32(math.ceil_f32(kind.rec.x))
-				y := i32(math.ceil_f32(kind.rec.y))
-				w := i32(math.ceil_f32(kind.rec.width))
-				h := i32(math.ceil_f32(kind.rec.height))
-				rl.DrawRectangleGradientH(x, y, w, h, kind.left_color, kind.right_color)
-			}
-			case UI_Clip: {
-				if kind.rec != {} {
-					x := i32(math.round(kind.rec.x))
-					y := i32(math.round(kind.rec.y))
-					w := i32(math.round(kind.rec.width))
-					h := i32(math.round(kind.rec.height))
-					rl.BeginScissorMode(x, y, w, h)
-				}
-				else {
-					rl.EndScissorMode()
-				}
-			}
-			case UI_Draw_Canvas: {
-				// TODO: just draw these to a render texture
-				project, project_exists := app.state.(Project_State)
-				assert(project_exists)
-				draw_canvas(&project, kind.rec)
-			}
-			case UI_Draw_Grid: {
-				// TODO: just draw these to a render texture
-				project, project_exists := app.state.(Project_State)
-				assert(project_exists)
-				draw_grid(project.width, project.height, kind.rec)
-			}
-			case UI_Draw_Preview: {
-				// TODO: just draw these to a render texture
-				project, project_exists := app.state.(Project_State)
-				assert(project_exists)
-				
-				x := i32(math.round(kind.rec.x))
-				y := i32(math.round(kind.rec.y))
-				w := i32(math.round(kind.rec.width))
-				h := i32(math.round(kind.rec.height))
-				
-				rl.DrawRectangleGradientV(x, y, w, h, COLOR_BASE_1, COLOR_BASE_4)
-				px, py := rec_get_center_point(kind.rec)
-				draw_sprite_stack(&project.layers, px, py, project.lerped_preview_zoom, project.preview_rotation, project.spacing)
-				rl.DrawTextEx(ui_ctx.font, "Preview", { kind.rec.x + 10, kind.rec.y + 10 }, ui_font_size(), 0, { 255, 255, 255, 100 })
-				rl.DrawRectangleLinesEx(kind.rec, 1, COLOR_BASE_0)
-			}
-		}
-	}
-}
+// backend code
 
 app_shortcuts :: proc() {
 	// toggle unlock_fps
@@ -1328,6 +1213,7 @@ action_deinit :: proc(action: Action) {
 	}
 }
 
+// maybe this logic could move to action_preform? 
 action_do :: proc(state: ^Project_State, action: Action) {
 	action_preform(state, action)
 	append(&state.undos, action)
@@ -1348,7 +1234,7 @@ deinit_app :: proc() {
 			close_project(&state)
 		}
 		case Welcome_State: {
-
+			deinit_welcome_state(&state)
 		}
 	}
 
@@ -1481,8 +1367,7 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	append(&state.layers, layer)
 }
 
-/* some duplicate code from init_project_state() not sure what's the alternative
-TODO: return an error value instead of a bool */
+// TODO: return an error value instead of a bool
 load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	data_exists := os.exists(fmt.tprintf("{}{}", dir, "\\project.ini"))
 	sprites_exists := os.exists(fmt.tprintf("{}{}", dir, "\\sprites.png"))
@@ -1659,7 +1544,7 @@ close_project :: proc(state: ^Project_State) {
 	deinit_project_state(state)
 }
 
-// NOTE: deinit calls for the previous state will be handled automatically 
+// NOTE: deinit calls for the previous state are handled automatically 
 schedule_state_change :: proc(state: Screen_State) {
 	app.next_state = state
 }
@@ -1691,7 +1576,7 @@ mark_all_layers_dirty :: proc(state: ^Project_State) {
 }
 
 add_recent_project :: proc(path: string) {
-	// remove first recent when `recent_projects` is full
+	// remove first recent when recent_projects is full
 	if app.recent_projects.len >= len(app.recent_projects.data) {
 		delete(app.recent_projects.data[0])
 		sa.ordered_remove(&app.recent_projects, 0)
@@ -1728,6 +1613,7 @@ draw_sprite_stack :: proc(layers: ^[dynamic]Layer, x, y: f32, scale: f32, rotati
 	}
 }
 
+// TODO: return an enum instead of a string
 update_tools :: proc(state: ^Project_State, area: Rec) -> (cursor_icon: string) {
 	cursor_icon = ""
 
@@ -1807,11 +1693,10 @@ end_image_change :: proc(state: ^Project_State) {
 			action.after_image = rl.ImageCopy(get_current_layer(state).image)
 			action_do(state, action)
 			state.temp_undo = nil			
-			fmt.printfln("correct type")
 		}
 		else
 		{
-			fmt.printfln("not correct type")
+			fmt.printfln("something is fucked")
 		}
 	}
 }
@@ -1836,6 +1721,7 @@ dfs :: proc(image: ^rl.Image, x, y: i32, prev_color, new_color: rl.Color) {
 	if current_color != prev_color {
 		return
 	}
+
 	rl.ImageDrawPixel(image, x, y, new_color)
 
 	if x - 1 >= 0 {
@@ -1874,7 +1760,6 @@ move_image :: proc(state: ^Project_State, image: ^rl.Image, x, y: int) {
 
 draw_canvas :: proc(state: ^Project_State, area: Rec) {
 	src_rec := Rec { 0, 0, f32(state.width), f32(state.height) }
-	// rl.DrawTexturePro(state.bg_texture, src_rec, area, { 0, 0 }, 0, rl.WHITE)
 	if len(state.layers) > 1 && state.current_layer > 0 {
 		previous_layer := state.layers[state.current_layer - 1].texture
 		rl.DrawTexturePro(previous_layer, src_rec, area, { 0, 0 }, 0, { 255, 255, 255, 100 })
@@ -1896,6 +1781,100 @@ draw_grid :: proc(slice_w, slice_h: i32, rec: Rec) {
 	for y < rec.y + rec.height + 0.1 {
 		rl.DrawLineV({ rec.x, y }, { rec.x + rec.width, y }, COLOR_BASE_1)
 		y += y_step
+	}
+}
+
+process_commands :: proc(commands: []UI_Draw_Command) {
+	for command in commands
+	{
+		switch kind in command {
+			case UI_Draw_Rect: {
+				rl.DrawRectangleRec(kind.rec, kind.color)
+			}
+			case UI_Draw_Rect_Outline: {
+				rl.DrawRectangleLinesEx(kind.rec, kind.thickness, kind.color)
+			}
+			case UI_Draw_Text: {
+				x := f32(0)
+				y := f32(0)
+
+				text := strings.clone_to_cstring(kind.text, context.temp_allocator)
+				text_size := rl.MeasureTextEx(ui_ctx.font, text, kind.size, 0)
+				
+				if kind.align.horizontal == .Left {
+					x = kind.rec.x
+				}
+				else if kind.align.horizontal == .Center {
+					x = kind.rec.x + kind.rec.width / 2 - text_size.x / 2
+				}
+				else if kind.align.horizontal == .Right {
+					x = kind.rec.x + kind.rec.width - text_size.x
+				}
+
+				if kind.align.vertical == .Top {
+					y = kind.rec.y
+				}
+				else if kind.align.vertical == .Center {
+					y = kind.rec.y + kind.rec.height / 2 - text_size.y / 2
+				}
+				else if kind.align.vertical == .Bottom {
+					y = kind.rec.y + kind.rec.height - text_size.y
+				}
+
+				rl.DrawTextEx(ui_ctx.font, text, { x, y }, kind.size, 0, kind.color)
+			}
+			case UI_Draw_Texture: {
+				src_rec := Rec { 0, 0, f32(kind.texture.width), f32(kind.texture.height) }
+				rl.DrawTexturePro(kind.texture, src_rec, kind.rec, { 0, 0 }, 0, rl.WHITE)
+			}
+			case UI_Draw_Gradient_H: {
+				x := i32(math.ceil_f32(kind.rec.x))
+				y := i32(math.ceil_f32(kind.rec.y))
+				w := i32(math.ceil_f32(kind.rec.width))
+				h := i32(math.ceil_f32(kind.rec.height))
+				rl.DrawRectangleGradientH(x, y, w, h, kind.left_color, kind.right_color)
+			}
+			case UI_Clip: {
+				if kind.rec != {} {
+					x := i32(math.round(kind.rec.x))
+					y := i32(math.round(kind.rec.y))
+					w := i32(math.round(kind.rec.width))
+					h := i32(math.round(kind.rec.height))
+					rl.BeginScissorMode(x, y, w, h)
+				}
+				else {
+					rl.EndScissorMode()
+				}
+			}
+			case UI_Draw_Canvas: {
+				// TODO: just draw these to a render texture
+				project, project_exists := app.state.(Project_State)
+				assert(project_exists)
+				draw_canvas(&project, kind.rec)
+			}
+			case UI_Draw_Grid: {
+				// TODO: just draw these to a render texture
+				project, project_exists := app.state.(Project_State)
+				assert(project_exists)
+				draw_grid(project.width, project.height, kind.rec)
+			}
+			case UI_Draw_Preview: {
+				// TODO: just draw these to a render texture
+				project, project_exists := app.state.(Project_State)
+				assert(project_exists)
+				
+				x := i32(math.round(kind.rec.x))
+				y := i32(math.round(kind.rec.y))
+				w := i32(math.round(kind.rec.width))
+				h := i32(math.round(kind.rec.height))
+				
+				rl.DrawRectangleGradientV(x, y, w, h, COLOR_BASE_1, COLOR_BASE_4)
+				px, py := rec_get_center_point(kind.rec)
+				draw_sprite_stack(&project.layers, px, py, project.lerped_preview_zoom, project.preview_rotation, project.spacing)
+				rl.DrawTextEx(ui_ctx.font, "Preview", { kind.rec.x + 10, kind.rec.y + 10 }, ui_font_size(), 0, { 255, 255, 255, 100 })
+				rl.DrawRectangleLinesEx(kind.rec, 1, COLOR_BASE_0)
+			}
+		}
 	}
 }
 
@@ -1937,7 +1916,7 @@ ini_read_f32 :: proc(mapp: ini.Map, section, name: string, default: f32 = 0) -> 
 	return default
 } 
 
-ini_read_string :: proc(mapp: ini.Map, section, name: string, default: string = "", allocator := context.allocator) -> (res: string) {
+ini_read_string :: proc(mapp: ini.Map, section, name: string, default := "", allocator := context.allocator) -> (res: string) {
 	if name in mapp[section] {
 		value, ok := mapp[section][name]
 		if ok {
@@ -1951,11 +1930,16 @@ pick_file_dilaog :: proc(default_path := "", allocator := context.allocator) -> 
 	path_cstring: cstring
 	defer ntf.FreePathU8(path_cstring)
 	default_path_cstring := strings.clone_to_cstring(default_path, context.temp_allocator)
+	
+	window_type := ntf.Window_Handle_Type.Unset
+	if ODIN_OS == .Windows { window_type = .Windows }
+	else if ODIN_OS == .Linux { window_type = .X11 }
+	
 	args := ntf.Open_Dialog_Args {
 		default_path = default_path_cstring,
 		parent_window = {
 			handle = rl.GetWindowHandle(),
-			type = .Windows,
+			type = window_type,
 		}
 	}
 	
@@ -1970,11 +1954,15 @@ pick_folder_dialog :: proc(default_path := "", allocator := context.allocator) -
 	path_cstring: cstring
 	defer ntf.FreePathU8(path_cstring)
 
+	window_type := ntf.Window_Handle_Type.Unset
+	if ODIN_OS == .Windows { window_type = .Windows }
+	else if ODIN_OS == .Linux { window_type = .X11 }
+	
 	args := ntf.Pick_Folder_Args {
 		default_path = default_path_cstring,
 		parent_window = {
 			handle = rl.GetWindowHandle(),
-			type = .Windows,
+			type = window_type,
 		}
 	}
 	pick_res := ntf.PickFolderU8_With(&path_cstring, &args)
