@@ -45,6 +45,7 @@ Welcome_State :: struct {
 
 Project_State :: struct {
 	dir: string,
+	export_dir: string,
 	zoom: f32,
 	spacing: f32,
 	current_color: HSV,
@@ -362,11 +363,13 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 	NEW_PROJECT :: "New project" 
 	OPEN_PROJECT :: "Open project" 
 	SAVE_PROJECT :: "Save project" 
+	EXPORT_PROJECT :: "Export project"
 	OPEN_WELCOME_SCREEN :: "Go to welcome screen" 
 	menu_items := [?]UI_Menu_Item {
 		UI_Menu_Item { ui_gen_id(), NEW_PROJECT, "N" },
 		UI_Menu_Item { ui_gen_id(), OPEN_PROJECT, "O" },
 		UI_Menu_Item { ui_gen_id(), SAVE_PROJECT, "S" },
+		UI_Menu_Item { ui_gen_id(), EXPORT_PROJECT, "E" },
 		UI_Menu_Item { ui_gen_id(), OPEN_WELCOME_SCREEN, "W" },
 	}
 	clicked_item := ui_menu_button(ui_gen_id(), "File", menu_items[:], ui_px(300), { area.x, area.y, 60, area.height })
@@ -417,6 +420,27 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 	
 			add_recent_project(state.dir)
 			ui_show_notif("Project is saved")
+		}
+	}
+	else if clicked_item.text == EXPORT_PROJECT {
+		export_scope: {
+			ui_close_current_popup()
+			
+			path, res := pick_folder_dialog(state.export_dir, context.temp_allocator)
+			if res == .Error {
+				ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
+			}
+			else if res == .Cancel {
+				break export_scope
+			}
+	
+			exported := export_project_state(state, path)
+			if exported == false {
+				ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
+				break export_scope
+			}
+	
+			ui_show_notif("Project is exported")
 		}
 	}
 	else if clicked_item.text == OPEN_WELCOME_SCREEN {
@@ -1060,7 +1084,28 @@ project_shortcuts :: proc(state: ^Project_State) {
 					add_recent_project(state.dir)
 				}								
 			}			
+
+			// export project
+			if rl.IsKeyPressed(.E) {
+				export_scope: {													
+					path, res := pick_folder_dialog(state.export_dir, context.temp_allocator)
+					if res == .Error {
+						ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
+					}
+					else if res == .Cancel {
+						break export_scope
+					}
 			
+					exported := export_project_state(state, path)
+					if exported == false {
+						ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
+						break export_scope
+					}
+			
+					ui_show_notif("Project is exported")
+				}			
+			}
+
 			// create new layer above the current
 			if rl.IsKeyPressed(.SPACE) {
 				action_do(state, Action_Create_Layer {
@@ -1404,6 +1449,7 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	
 	loaded_state: Project_State
 	
+	loaded_state.export_dir = ini_read_string(loaded_map, "", "export_dir")
 	loaded_state.zoom = ini_read_f32(loaded_map, "", "zoom", 1)
 	loaded_state.spacing = ini_read_f32(loaded_map, "", "spacing")
 	loaded_state.current_layer = ini_read_int(loaded_map, "", "current_layer", 0)
@@ -1488,6 +1534,7 @@ save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 		return
 	}
 
+	ini.write_pair(file.stream, "export_dir", state.export_dir)
 	ini.write_pair(file.stream, "zoom", fmt.tprint(state.zoom))
 	ini.write_pair(file.stream, "spacing", fmt.tprint(state.spacing))
 	ini.write_pair(file.stream, "current_layer", fmt.tprint(state.current_layer))
@@ -1527,8 +1574,52 @@ save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	return true
 }
 
+// TODO: return an error value instead of a bool
+export_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
+	if state.export_dir != dir {
+		delete(state.export_dir)
+		state.export_dir = strings.clone(dir)
+	}
+
+	// clear the directory
+	remove_err := os.remove_all(dir)
+	if remove_err != os.ERROR_NONE {
+		fmt.printfln("{}", remove_err)
+		return false
+	}
+	make_dir_err := os.make_directory(dir)
+	if make_dir_err != os.ERROR_NONE {
+		fmt.printfln("{}", make_dir_err)
+		return false
+	}
+
+	file, create_err := os.create(fmt.tprintf("{}\\data.ini", dir))
+	defer os.close(file)
+	if create_err != nil {
+		return
+	}
+
+	ini.write_pair(file.stream, "spacing", fmt.tprint(state.spacing))
+	ini.write_pair(file.stream, "width", fmt.tprint(state.width))
+	ini.write_pair(file.stream, "height", fmt.tprint(state.height))
+
+	// save layers into one image
+	sprites := rl.GenImageColor(state.width * i32(len(state.layers)), state.height, rl.BLANK)
+	layer_w := f32(state.width)
+	layer_h := f32(state.height)
+	for layer, i in state.layers {
+		src_rec := Rec { 0, 0, layer_w, layer_h }
+		dest_rec := Rec { layer_w * f32(i), 0, layer_w, layer_h }
+		rl.ImageDraw(&sprites, layer.image, src_rec, dest_rec, rl.WHITE)
+	}
+	rl.ExportImage(sprites, fmt.ctprintf("{}\\sprites.png", dir))
+
+	return true
+}
+
 deinit_project_state :: proc(state: ^Project_State) {
 	delete(state.dir)
+	delete(state.export_dir)
 	for &layer in state.layers {
 		deinit_layer(&layer)
 	}
