@@ -971,8 +971,13 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 		style.font_size = ui_font_size()
 		style.text_align = { .Left, .Center }
 		for item, i in items {
-			if ui_button(item.id, item.text, { popup_rec.x, menu_item_y, item_width, item_height }, style = style) {
+			item_rec := Rec { popup_rec.x, menu_item_y, item_width, item_height }
+			if ui_button(item.id, item.text, item_rec, style = style) {
 				clicked_item = item
+			}
+			if item.shortcut != "" {
+				item_rec.width -= padding
+				ui_draw_text(item.shortcut, item_rec, { .Right, .Center }, rl.ColorAlpha(COLOR_TEXT_0, 0.6))
 			}
 			menu_item_y += item_height
 		}
