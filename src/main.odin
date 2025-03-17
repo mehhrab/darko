@@ -1129,6 +1129,13 @@ project_shortcuts :: proc(state: ^Project_State) {
 					mark_dirty_layers(state, state.current_layer)
 				}
 			}
+
+			// go to welcome screen
+			if rl.IsKeyPressed(.W) {
+				welcome_state := Welcome_State {}
+				init_welcome_state(&welcome_state)
+				schedule_state_change(welcome_state)
+			}
 		}
 	}
 }
