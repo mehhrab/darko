@@ -1685,7 +1685,7 @@ update_tools :: proc(state: ^Project_State, area: Rec) -> (current_tool: Tool) {
 			current_tool = .Fill
 		}
 	}
-	
+
 	return current_tool
 }
 
@@ -1708,8 +1708,7 @@ end_image_change :: proc(state: ^Project_State) {
 			action_do(state, action)
 			state.temp_undo = nil			
 		}
-		else
-		{
+		else {
 			fmt.printfln("something is fucked")
 		}
 	}
