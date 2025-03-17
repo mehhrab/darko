@@ -86,7 +86,7 @@ Tool :: enum {
 	Eraser,
 	Color_Picker,
 	Fill,
-	Travel,
+	GoTo,
 }
 
 // undo redo actions
@@ -553,7 +553,7 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 			// when clicked on another layer move to that layer
 			mouse_inside := ui_is_mouse_in_rec(layer_rec) && ui_is_any_popup_open() == false 
 			if mouse_inside {
-				current_tool = .Travel
+				current_tool = .GoTo
 				if rl.IsMouseButtonPressed(.LEFT) {
 					state.current_layer = i
 				}
@@ -572,7 +572,7 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 			case .None, .Pen, .Fill: cursor_icon = ICON_PEN
 			case .Color_Picker: cursor_icon = ICON_EYEDROPPER
 			case .Eraser: cursor_icon = ICON_ERASER
-			case .Travel: cursor_icon = ICON_STAR
+			case .GoTo: cursor_icon = ICON_STAR
 		}
 		
 		rl.HideCursor()
