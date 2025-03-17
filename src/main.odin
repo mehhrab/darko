@@ -79,6 +79,15 @@ Pallete :: struct {
 	colors: sa.Small_Array(256, HSV),
 }
 
+Tool :: enum {
+	None,
+	Pen,
+	Eraser,
+	Color_Picker,
+	Fill,
+	Travel,
+}
+
 // undo redo actions
 
 Action :: union {
@@ -490,10 +499,10 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 	canvas_h := f32(state.height) * 10 * state.lerped_zoom
 	canvas_rec := rec_center_in_area({ 0, 0, canvas_w, canvas_h }, area)
 	
-	cursor_icon := ""
+	current_tool := Tool.None
 	if ui_is_being_interacted() == false {
 		update_zoom(&state.zoom, 0.4, 0.1, 100)
-		cursor_icon = update_tools(state, canvas_rec)
+		current_tool = update_tools(state, canvas_rec)
 	}
 
 	state.lerped_current_layer = rl.Lerp(state.lerped_current_layer, f32(state.current_layer), rl.GetFrameTime() * 18)
@@ -520,7 +529,7 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 			// when clicked on another layer move to that layer
 			mouse_inside := ui_is_mouse_in_rec(layer_rec) && ui_is_any_popup_open() == false 
 			if mouse_inside {
-				cursor_icon = ICON_STAR
+				current_tool = .Travel
 				if rl.IsMouseButtonPressed(.LEFT) {
 					state.current_layer = i
 				}
@@ -534,8 +543,12 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 	}
 
 	if ui_is_mouse_in_rec(area) && ui_is_being_interacted() == false {
-		if cursor_icon == "" {
-			cursor_icon = ICON_PEN
+		cursor_icon := ""
+		switch current_tool {
+			case .None, .Pen, .Fill: cursor_icon = ICON_PEN
+			case .Color_Picker: cursor_icon = ICON_EYEDROPPER
+			case .Eraser: cursor_icon = ICON_ERASER
+			case .Travel: cursor_icon = ICON_STAR
 		}
 		
 		rl.HideCursor()
@@ -1613,9 +1626,8 @@ draw_sprite_stack :: proc(layers: ^[dynamic]Layer, x, y: f32, scale: f32, rotati
 	}
 }
 
-// TODO: return an enum instead of a string
-update_tools :: proc(state: ^Project_State, area: Rec) -> (cursor_icon: string) {
-	cursor_icon = ""
+update_tools :: proc(state: ^Project_State, area: Rec) -> (current_tool: Tool) {
+	current_tool = .None
 
 	// color picker
 	if rl.IsKeyDown(.LEFT_CONTROL) {
@@ -1628,10 +1640,10 @@ update_tools :: proc(state: ^Project_State, area: Rec) -> (cursor_icon: string) 
 				}
 			}
 		}
-		cursor_icon = ICON_EYEDROPPER
+		current_tool = .Color_Picker 
 	}
 	else {		
-		// pencil
+		// pen
 		if rl.IsMouseButtonDown(.LEFT) {
 			if ui_is_mouse_in_rec(area) {
 				begin_image_change(state)
@@ -1640,7 +1652,7 @@ update_tools :: proc(state: ^Project_State, area: Rec) -> (cursor_icon: string) 
 				rl.ImageDrawPixel(&get_current_layer(state).image, x, y, color)
 				mark_dirty_layers(state, state.current_layer)	
 			}
-			cursor_icon = ICON_PEN
+			current_tool = .Pen
 		}
 		if rl.IsMouseButtonReleased(.LEFT) {
 			end_image_change(state)
@@ -1654,7 +1666,7 @@ update_tools :: proc(state: ^Project_State, area: Rec) -> (cursor_icon: string) 
 				rl.ImageDrawPixel(&get_current_layer(state).image, x, y, rl.BLANK)
 				mark_dirty_layers(state, state.current_layer)
 			}
-			cursor_icon = ICON_ERASER
+			current_tool = .Eraser
 		}
 		if rl.IsMouseButtonReleased(.RIGHT) {
 			end_image_change(state)
@@ -1670,9 +1682,11 @@ update_tools :: proc(state: ^Project_State, area: Rec) -> (cursor_icon: string) 
 				mark_dirty_layers(state, state.current_layer)
 				end_image_change(state)
 			}
+			current_tool = .Fill
 		}
 	}
-	return cursor_icon
+	
+	return current_tool
 }
 
 begin_image_change :: proc(state: ^Project_State) {
