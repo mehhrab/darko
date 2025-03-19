@@ -1198,22 +1198,12 @@ project_shortcuts :: proc(state: ^Project_State) {
 
 			// undo
 			if rl.IsKeyPressed(.Z) {
-				if len(state.undos) > 0 {
-					fmt.printfln("undo")
-					action := pop(&state.undos)
-					action_unpreform(state, action)
-					append(&state.redos, action)
-				}	
+				undo(state)
 			}
 
 			// redo
 			if rl.IsKeyPressed(.Y) {
-				if len(state.redos) > 0 {
-					fmt.printfln("redo")
-					action := pop(&state.redos)
-					action_preform(state, action)
-					append(&state.undos, action)
-				}	
+				redo(state)
 			}
 
 			// copy
@@ -1337,6 +1327,24 @@ action_do :: proc(state: ^Project_State, action: Action) {
 		action_deinit(action)
 	}
 	clear(&state.redos)
+}
+
+undo :: proc(state: ^Project_State) {
+	if len(state.undos) > 0 {
+		fmt.printfln("undo")
+		action := pop(&state.undos)
+		action_unpreform(state, action)
+		append(&state.redos, action)
+	}	
+}
+
+redo :: proc(state: ^Project_State) {
+	if len(state.redos) > 0 {
+		fmt.printfln("redo")
+		action := pop(&state.redos)
+		action_preform(state, action)
+		append(&state.undos, action)
+	}	
 }
 
 init_app :: proc() {
