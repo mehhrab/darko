@@ -1218,26 +1218,12 @@ project_shortcuts :: proc(state: ^Project_State) {
 
 			// copy
 			if rl.IsKeyPressed(.C) {
-				if copied_image, exists := state.copied_image.?; exists {
-					rl.UnloadImage(copied_image)
-				}
-				image := rl.ImageCopy(get_current_layer(state).image)
-				state.copied_image = image
+				copy_layer(state, get_current_layer(state))
 			}
 
 			// paste
 			if rl.IsKeyPressed(.V) {
-				if copied_image, exists := state.copied_image.?; exists {
-					action_do(state, Action_Image_Change { 
-						before_image = rl.ImageCopy(get_current_layer(state).image),
-						after_image = rl.ImageCopy(copied_image),
-						layer_index = state.current_layer,
-					})
-					image_rec := Rec { 0, 0, f32(state.width), f32(state.height) }
-					rl.ImageClearBackground(&state.layers[state.current_layer].image, rl.BLANK)
-					rl.ImageDraw(&state.layers[state.current_layer].image, copied_image, image_rec, image_rec, rl.WHITE) 
-					mark_dirty_layers(state, state.current_layer)
-				}
+				paste_layer(state, state.current_layer)
 			}
 
 			// go to welcome screen
@@ -1932,6 +1918,28 @@ move_image :: proc(state: ^Project_State, image: ^rl.Image, x, y: int) {
 	defer rl.UnloadImage(prev_image)
 	rl.ImageClearBackground(image, rl.BLANK)
 	rl.ImageDraw(image, prev_image, image_rec, dest_rec, rl.WHITE)
+}
+
+copy_layer :: proc(state: ^Project_State, layer: ^Layer) {
+	if copied_image, exists := state.copied_image.?; exists {
+		rl.UnloadImage(copied_image)
+	}
+	image := rl.ImageCopy(layer.image)
+	state.copied_image = image
+}
+
+paste_layer :: proc(state: ^Project_State, layer_index: int) {
+	if copied_image, exists := state.copied_image.?; exists {
+		action_do(state, Action_Image_Change { 
+			before_image = rl.ImageCopy(get_current_layer(state).image),
+			after_image = rl.ImageCopy(copied_image),
+			layer_index = layer_index,
+		})
+		image_rec := Rec { 0, 0, f32(state.width), f32(state.height) }
+		rl.ImageClearBackground(&state.layers[layer_index].image, rl.BLANK)
+		rl.ImageDraw(&state.layers[layer_index].image, copied_image, image_rec, image_rec, rl.WHITE) 
+		mark_dirty_layers(state, layer_index)
+	}
 }
 
 draw_canvas :: proc(state: ^Project_State, area: Rec) {
