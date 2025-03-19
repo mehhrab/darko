@@ -358,27 +358,30 @@ project_screen :: proc(state: ^Project_State) {
 	fav_palletes_popup(state)
 }
 
-menu_bar :: proc(state: ^Project_State, area: Rec) {
+menu_bar :: proc(state: ^Project_State, rec: Rec) {
+	area := rec
 	ui_panel(ui_gen_id(), area, { bg_color = COLOR_BASE_2 })
+
 	NEW_PROJECT :: "New project" 
 	OPEN_PROJECT :: "Open project" 
 	SAVE_PROJECT :: "Save project" 
 	EXPORT_PROJECT :: "Export project"
 	OPEN_WELCOME_SCREEN :: "Go to welcome screen" 
-	menu_items := [?]UI_Menu_Item {
-		UI_Menu_Item { ui_gen_id(), NEW_PROJECT, "N" },
-		UI_Menu_Item { ui_gen_id(), OPEN_PROJECT, "O" },
-		UI_Menu_Item { ui_gen_id(), SAVE_PROJECT, "S" },
-		UI_Menu_Item { ui_gen_id(), EXPORT_PROJECT, "E" },
-		UI_Menu_Item { ui_gen_id(), OPEN_WELCOME_SCREEN, "W" },
+	file_items := [?]UI_Menu_Item {
+		ui_menu_item(ui_gen_id(), NEW_PROJECT, "N"),
+		ui_menu_item(ui_gen_id(), OPEN_PROJECT, "O"),
+		ui_menu_item(ui_gen_id(), SAVE_PROJECT, "S"),
+		ui_menu_item(ui_gen_id(), EXPORT_PROJECT, "E"),
+		ui_menu_item(ui_gen_id(), OPEN_WELCOME_SCREEN, "W"),
 	}
-	clicked_item := ui_menu_button(ui_gen_id(), "File", menu_items[:], ui_px(300), { area.x, area.y, 60, area.height })
+	file_rec := rec_cut_left(&area, ui_calc_button_width("File"))
+	file_clicked_item := ui_menu_button(ui_gen_id(), "File", file_items[:], ui_px(300), file_rec)
 	
-	if clicked_item.text == NEW_PROJECT {
+	if file_clicked_item.text == NEW_PROJECT {
 		ui_close_current_popup()
 		ui_open_popup(popup_new_project)
 	}
-	else if clicked_item.text == OPEN_PROJECT {
+	else if file_clicked_item.text == OPEN_PROJECT {
 		open_scope: {
 			ui_close_current_popup()
 	
@@ -400,7 +403,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 			schedule_state_change(loaded_project)
 		}
 	}
-	else if clicked_item.text == SAVE_PROJECT {
+	else if file_clicked_item.text == SAVE_PROJECT {
 		save_scope: {
 			ui_close_current_popup()
 			
@@ -422,7 +425,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 			ui_show_notif("Project is saved")
 		}
 	}
-	else if clicked_item.text == EXPORT_PROJECT {
+	else if file_clicked_item.text == EXPORT_PROJECT {
 		export_scope: {
 			ui_close_current_popup()
 			
@@ -443,7 +446,7 @@ menu_bar :: proc(state: ^Project_State, area: Rec) {
 			ui_show_notif("Project is exported")
 		}
 	}
-	else if clicked_item.text == OPEN_WELCOME_SCREEN {
+	else if file_clicked_item.text == OPEN_WELCOME_SCREEN {
 		ui_close_current_popup()
 
 		welcome_state := Welcome_State {}
@@ -754,8 +757,8 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 	FROM_FILE :: "From file"
 	FROM_FAV :: "From favorites"
 	load_items := [?]UI_Menu_Item {
-		{ id = ui_gen_id(), text = FROM_FILE },
-		{ id = ui_gen_id(), text = FROM_FAV },
+		ui_menu_item(ui_gen_id(), FROM_FILE),
+		ui_menu_item(ui_gen_id(), FROM_FAV),
 	}
 	clicked_item := ui_menu_button(ui_gen_id(), "Load", load_items[:], ui_px(160), load_rec)
 

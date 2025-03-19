@@ -81,6 +81,7 @@ UI_Menu_Item :: struct {
 	id: UI_ID,
 	text: string,
 	shortcut: string,
+	separator: bool,
 }
 
 UI_Option :: struct {
@@ -979,6 +980,12 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 				item_rec.width -= padding
 				ui_draw_text(item.shortcut, item_rec, { .Right, .Center }, rl.ColorAlpha(COLOR_TEXT_0, 0.6))
 			}
+			if item.separator {
+				sep_rec := item_rec
+				sep_rec.y += item_height - 1
+				sep_rec.height = 1
+				ui_draw_rec(COLOR_BASE_0, sep_rec)
+			}
 			menu_item_y += item_height
 		}
 	}
@@ -1003,6 +1010,10 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 		align = ui_ctx.text_align,	
 	})
 	return clicked_item
+}
+
+ui_menu_item :: proc(id: UI_ID, text: string, shortcut := "", separator := false) -> UI_Menu_Item {
+	return UI_Menu_Item { id, text, shortcut, separator }
 }
 
 ui_path_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := UI_BUTTON_STYLE_DEFAULT) -> (clicked: bool) {	
@@ -1363,8 +1374,8 @@ ui_is_mouse_in_rec :: proc(rec: Rec) -> (is_inside: bool) {
 	return mpos.x > rec.x && mpos.y > rec.y && mpos.x < rec.x + rec.width && mpos.y < rec.y + rec.height
 }
 
-ui_calc_popup_height :: proc(item_count: i32, item_h, seprator_h, padding: f32) -> (height: f32) {
-	return item_h * f32(item_count) + seprator_h * (f32(item_count) - 1) + padding * 2 
+ui_calc_popup_height :: proc(item_count: i32, item_h, separator_h, padding: f32) -> (height: f32) {
+	return item_h * f32(item_count) + separator_h * (f32(item_count) - 1) + padding * 2 
 }
 
 ui_is_any_popup_open :: #force_inline proc() -> (res: bool) {
