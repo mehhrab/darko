@@ -453,6 +453,35 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 		init_welcome_state(&welcome_state)
 		schedule_state_change(welcome_state)
 	}
+	
+	EDIT_COPY :: "Copy"
+	EDIT_PASTE :: "Paste"
+	EDIT_UNDO :: "Undo"
+	EDIT_REDO :: "Redo"
+	
+	edit_items := [?]UI_Menu_Item {
+		ui_menu_item(ui_gen_id(), EDIT_COPY, "C"),
+		ui_menu_item(ui_gen_id(), EDIT_PASTE, "V"),
+		ui_menu_item(ui_gen_id(), EDIT_UNDO, "Z"),
+		ui_menu_item(ui_gen_id(), EDIT_REDO, "Y"),
+	}
+	edit_rec := rec_cut_left(&area, ui_calc_button_width("Edit"))
+	edit_clicked_item := ui_menu_button(ui_gen_id(), "Edit", edit_items[:], ui_px(300), edit_rec)
+	
+	switch edit_clicked_item.text {
+		case EDIT_COPY: {
+			copy_layer(state, get_current_layer(state)) 
+		}
+		case EDIT_PASTE: {
+			paste_layer(state, state.current_layer)
+		}
+		case EDIT_UNDO: {
+			undo(state)
+		}
+		case EDIT_REDO: {
+			redo(state)
+		}
+	}
 
 	ADD_LAYER :: "Add at top"
 	ADD_LAYER_ABOVE :: "Add above"
