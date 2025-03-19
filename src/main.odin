@@ -453,6 +453,69 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 		init_welcome_state(&welcome_state)
 		schedule_state_change(welcome_state)
 	}
+
+	ADD_LAYER :: "Add at top"
+	ADD_LAYER_ABOVE :: "Add above"
+	CLEAR_LAYER :: "Clear" 
+	MOVE_LAYER_UP :: "Move up"
+	MOVE_LAYER_DOWN :: "Move down"
+	DELETE_LAYER :: "Delete"
+	
+	layer_items := [?]UI_Menu_Item {
+		ui_menu_item(ui_gen_id(), ADD_LAYER_ABOVE, "Space"),
+		ui_menu_item(ui_gen_id(), ADD_LAYER, "Ctrl + Space"),
+		ui_menu_item(ui_gen_id(), MOVE_LAYER_UP, ""),
+		ui_menu_item(ui_gen_id(), MOVE_LAYER_DOWN, ""),
+		ui_menu_item(ui_gen_id(), CLEAR_LAYER, ""),
+		ui_menu_item(ui_gen_id(), DELETE_LAYER, ""),
+	}
+	layer_rec := rec_cut_left(&area, ui_calc_button_width("Layer"))
+	layer_clicked_item := ui_menu_button(ui_gen_id(), "Layer", layer_items[:], ui_px(300), layer_rec)
+	
+	switch layer_clicked_item.text {
+		case ADD_LAYER_ABOVE: {
+			action_do(state, Action_Create_Layer {
+				current_layer_index = state.current_layer,
+				layer_index = state.current_layer + 1
+			})
+		}
+		case ADD_LAYER: {
+			action_do(state, Action_Create_Layer {
+				current_layer_index = state.current_layer,
+				layer_index = len(state.layers)
+			})
+		}
+		case MOVE_LAYER_UP: {
+			if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
+				action_do(state, Action_Change_Layer_Index {
+					from_index = state.current_layer,
+					to_index = state.current_layer + 1
+				})
+			}
+		}
+		case MOVE_LAYER_DOWN: {
+			if len(state.layers) > 1 && state.current_layer > 0 {
+				action_do(state, Action_Change_Layer_Index {
+					from_index = state.current_layer,
+					to_index = state.current_layer - 1
+				})
+			}
+		}
+		case CLEAR_LAYER: {
+			action_do(state, Action_Image_Change {
+				before_image = rl.ImageCopy(get_current_layer(state).image),
+				after_image = rl.GenImageColor(state.width, state.height, rl.BLANK),
+				layer_index = state.current_layer,
+			})
+		}
+		case DELETE_LAYER: {
+			if len(state.layers) > 1 {
+				action_do(state, Action_Delete_Layer {
+					layer_index = state.current_layer
+				})
+			}
+		}
+	}
 }
 
 layer_props :: proc(state: ^Project_State, rec: Rec) {
