@@ -499,7 +499,7 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 		ui_menu_item(ui_gen_id(), LAYER_MOVE_UP, ""),
 		ui_menu_item(ui_gen_id(), LAYER_MOVE_DOWN, ""),
 		ui_menu_item(ui_gen_id(), LAYER_CLEAR, ""),
-		ui_menu_item(ui_gen_id(), LAYER_DELETE, ""),
+		ui_menu_item(ui_gen_id(), LAYER_DELETE, "D"),
 	}
 	layer_rec := rec_cut_left(&area, ui_calc_button_width("Layer"))
 	layer_clicked_item := ui_menu_button(ui_gen_id(), "Layer", layer_items[:], ui_px(300), layer_rec)
@@ -1225,6 +1225,15 @@ project_shortcuts :: proc(state: ^Project_State) {
 				state.current_layer -= 1
 				if state.current_layer < 0 {
 					state.current_layer = len(state.layers) - 1
+				}
+			}
+
+			// delete current layer
+			if rl.IsKeyPressed(.D) {
+				if len(state.layers) > 1 {
+					action_do(state, Action_Delete_Layer {
+						layer_index = state.current_layer
+					})
 				}
 			}
 
