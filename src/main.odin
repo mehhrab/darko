@@ -498,7 +498,7 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 		ui_menu_item(ui_gen_id(), LAYER_ADD, "Ctrl + Space"),
 		ui_menu_item(ui_gen_id(), LAYER_MOVE_UP, ""),
 		ui_menu_item(ui_gen_id(), LAYER_MOVE_DOWN, ""),
-		ui_menu_item(ui_gen_id(), LAYER_CLEAR, ""),
+		ui_menu_item(ui_gen_id(), LAYER_CLEAR, "F"),
 		ui_menu_item(ui_gen_id(), LAYER_DELETE, "D"),
 	}
 	layer_rec := rec_cut_left(&area, ui_calc_button_width("Layer"))
@@ -1226,6 +1226,15 @@ project_shortcuts :: proc(state: ^Project_State) {
 				if state.current_layer < 0 {
 					state.current_layer = len(state.layers) - 1
 				}
+			}
+
+			// clear current layer
+			if rl.IsKeyPressed(.F) {
+				action_do(state, Action_Image_Change {
+					before_image = rl.ImageCopy(get_current_layer(state).image),
+					after_image = rl.GenImageColor(state.width, state.height, rl.BLANK),
+					layer_index = state.current_layer,
+				})	
 			}
 
 			// delete current layer
