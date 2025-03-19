@@ -362,96 +362,99 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 	area := rec
 	ui_panel(ui_gen_id(), area, { bg_color = COLOR_BASE_2 })
 
-	NEW_PROJECT :: "New project" 
-	OPEN_PROJECT :: "Open project" 
-	SAVE_PROJECT :: "Save project" 
-	EXPORT_PROJECT :: "Export project"
-	OPEN_WELCOME_SCREEN :: "Go to welcome screen" 
+	FILE_NEW_PROJ :: "New project" 
+	FILE_OPEN_PROJ :: "Open project" 
+	FILE_SAVE_PROJ :: "Save project" 
+	FILE_EXPORT_PROJ :: "Export project"
+	FILE_WELCOME_SCREEN :: "Go to welcome screen" 
+	
 	file_items := [?]UI_Menu_Item {
-		ui_menu_item(ui_gen_id(), NEW_PROJECT, "N"),
-		ui_menu_item(ui_gen_id(), OPEN_PROJECT, "O"),
-		ui_menu_item(ui_gen_id(), SAVE_PROJECT, "S"),
-		ui_menu_item(ui_gen_id(), EXPORT_PROJECT, "E"),
-		ui_menu_item(ui_gen_id(), OPEN_WELCOME_SCREEN, "W"),
+		ui_menu_item(ui_gen_id(), FILE_NEW_PROJ, "N"),
+		ui_menu_item(ui_gen_id(), FILE_OPEN_PROJ, "O"),
+		ui_menu_item(ui_gen_id(), FILE_SAVE_PROJ, "S"),
+		ui_menu_item(ui_gen_id(), FILE_EXPORT_PROJ, "E"),
+		ui_menu_item(ui_gen_id(), FILE_WELCOME_SCREEN, "W"),
 	}
 	file_rec := rec_cut_left(&area, ui_calc_button_width("File"))
 	file_clicked_item := ui_menu_button(ui_gen_id(), "File", file_items[:], ui_px(300), file_rec)
 	
-	if file_clicked_item.text == NEW_PROJECT {
-		ui_close_current_popup()
-		ui_open_popup(popup_new_project)
-	}
-	else if file_clicked_item.text == OPEN_PROJECT {
-		open_scope: {
+	switch file_clicked_item.text {
+		case FILE_NEW_PROJ: {
 			ui_close_current_popup()
-	
-			path, res := pick_folder_dialog(state.dir, context.temp_allocator)
-			if res == .Error {
-				ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+			ui_open_popup(popup_new_project)
+		}
+		case FILE_OPEN_PROJ: {
+			open_scope: {
+				ui_close_current_popup()
+		
+				path, res := pick_folder_dialog(state.dir, context.temp_allocator)
+				if res == .Error {
+					ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+				}
+				else if res == .Cancel {
+					break open_scope
+				}
+		
+				loaded_project: Project_State
+				loaded := load_project_state(&loaded_project, path)
+				if loaded == false {
+					ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+					break open_scope
+				}
+					
+				schedule_state_change(loaded_project)
 			}
-			else if res == .Cancel {
-				break open_scope
-			}
-	
-			loaded_project: Project_State
-			loaded := load_project_state(&loaded_project, path)
-			if loaded == false {
-				ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-				break open_scope
-			}
+		}
+		case FILE_SAVE_PROJ: {
+			save_scope: {
+				ui_close_current_popup()
 				
-			schedule_state_change(loaded_project)
+				path, res := pick_folder_dialog(state.dir, context.temp_allocator)
+				if res == .Error {
+					ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+				}
+				else if res == .Cancel {
+					break save_scope
+				}
+		
+				saved := save_project_state(state, path)
+				if saved == false {
+					ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+					break save_scope
+				}
+		
+				add_recent_project(state.dir)
+				ui_show_notif("Project is saved")
+			}
 		}
-	}
-	else if file_clicked_item.text == SAVE_PROJECT {
-		save_scope: {
+		case FILE_EXPORT_PROJ: {
+			export_scope: {
+				ui_close_current_popup()
+				
+				path, res := pick_folder_dialog(state.export_dir, context.temp_allocator)
+				if res == .Error {
+					ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
+				}
+				else if res == .Cancel {
+					break export_scope
+				}
+		
+				exported := export_project_state(state, path)
+				if exported == false {
+					ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
+					break export_scope
+				}
+		
+				ui_show_notif("Project is exported")
+			}
+		}
+		case FILE_WELCOME_SCREEN: {
 			ui_close_current_popup()
-			
-			path, res := pick_folder_dialog(state.dir, context.temp_allocator)
-			if res == .Error {
-				ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
-			}
-			else if res == .Cancel {
-				break save_scope
-			}
-	
-			saved := save_project_state(state, path)
-			if saved == false {
-				ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
-				break save_scope
-			}
-	
-			add_recent_project(state.dir)
-			ui_show_notif("Project is saved")
-		}
-	}
-	else if file_clicked_item.text == EXPORT_PROJECT {
-		export_scope: {
-			ui_close_current_popup()
-			
-			path, res := pick_folder_dialog(state.export_dir, context.temp_allocator)
-			if res == .Error {
-				ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
-			}
-			else if res == .Cancel {
-				break export_scope
-			}
-	
-			exported := export_project_state(state, path)
-			if exported == false {
-				ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
-				break export_scope
-			}
-	
-			ui_show_notif("Project is exported")
-		}
-	}
-	else if file_clicked_item.text == OPEN_WELCOME_SCREEN {
-		ui_close_current_popup()
 
-		welcome_state := Welcome_State {}
-		init_welcome_state(&welcome_state)
-		schedule_state_change(welcome_state)
+			welcome_state := Welcome_State {}
+			init_welcome_state(&welcome_state)
+			schedule_state_change(welcome_state)
+		}
 	}
 	
 	EDIT_COPY :: "Copy"
@@ -483,38 +486,38 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 		}
 	}
 
-	ADD_LAYER :: "Add at top"
-	ADD_LAYER_ABOVE :: "Add above"
-	CLEAR_LAYER :: "Clear" 
-	MOVE_LAYER_UP :: "Move up"
-	MOVE_LAYER_DOWN :: "Move down"
-	DELETE_LAYER :: "Delete"
+	LAYER_ADD :: "Add at top"
+	LAYER_ADD_ABOVE :: "Add above"
+	LAYER_CLEAR :: "Clear" 
+	LAYER_MOVE_UP :: "Move up"
+	LAYER_MOVE_DOWN :: "Move down"
+	LAYER_DELETE :: "Delete"
 	
 	layer_items := [?]UI_Menu_Item {
-		ui_menu_item(ui_gen_id(), ADD_LAYER_ABOVE, "Space"),
-		ui_menu_item(ui_gen_id(), ADD_LAYER, "Ctrl + Space"),
-		ui_menu_item(ui_gen_id(), MOVE_LAYER_UP, ""),
-		ui_menu_item(ui_gen_id(), MOVE_LAYER_DOWN, ""),
-		ui_menu_item(ui_gen_id(), CLEAR_LAYER, ""),
-		ui_menu_item(ui_gen_id(), DELETE_LAYER, ""),
+		ui_menu_item(ui_gen_id(), LAYER_ADD_ABOVE, "Space"),
+		ui_menu_item(ui_gen_id(), LAYER_ADD, "Ctrl + Space"),
+		ui_menu_item(ui_gen_id(), LAYER_MOVE_UP, ""),
+		ui_menu_item(ui_gen_id(), LAYER_MOVE_DOWN, ""),
+		ui_menu_item(ui_gen_id(), LAYER_CLEAR, ""),
+		ui_menu_item(ui_gen_id(), LAYER_DELETE, ""),
 	}
 	layer_rec := rec_cut_left(&area, ui_calc_button_width("Layer"))
 	layer_clicked_item := ui_menu_button(ui_gen_id(), "Layer", layer_items[:], ui_px(300), layer_rec)
 	
 	switch layer_clicked_item.text {
-		case ADD_LAYER_ABOVE: {
+		case LAYER_ADD_ABOVE: {
 			action_do(state, Action_Create_Layer {
 				current_layer_index = state.current_layer,
 				layer_index = state.current_layer + 1
 			})
 		}
-		case ADD_LAYER: {
+		case LAYER_ADD: {
 			action_do(state, Action_Create_Layer {
 				current_layer_index = state.current_layer,
 				layer_index = len(state.layers)
 			})
 		}
-		case MOVE_LAYER_UP: {
+		case LAYER_MOVE_UP: {
 			if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
 				action_do(state, Action_Change_Layer_Index {
 					from_index = state.current_layer,
@@ -522,7 +525,7 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 				})
 			}
 		}
-		case MOVE_LAYER_DOWN: {
+		case LAYER_MOVE_DOWN: {
 			if len(state.layers) > 1 && state.current_layer > 0 {
 				action_do(state, Action_Change_Layer_Index {
 					from_index = state.current_layer,
@@ -530,14 +533,14 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 				})
 			}
 		}
-		case CLEAR_LAYER: {
+		case LAYER_CLEAR: {
 			action_do(state, Action_Image_Change {
 				before_image = rl.ImageCopy(get_current_layer(state).image),
 				after_image = rl.GenImageColor(state.width, state.height, rl.BLANK),
 				layer_index = state.current_layer,
 			})
 		}
-		case DELETE_LAYER: {
+		case LAYER_DELETE: {
 			if len(state.layers) > 1 {
 				action_do(state, Action_Delete_Layer {
 					layer_index = state.current_layer
