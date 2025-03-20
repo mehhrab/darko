@@ -542,9 +542,7 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 		}
 		case LAYER_DELETE: {
 			if len(state.layers) > 1 {
-				action_do(state, Action_Delete_Layer {
-					layer_index = state.current_layer
-				})
+				delete_layer(state, state.current_layer)
 			}
 		}
 	}
@@ -562,13 +560,11 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 	// delete button
 	delete_rec := rec_cut_right(&props_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_TRASH, delete_rec, style = UI_BUTTON_STYLE_RED) {
-		if len(state.layers) <= 1 {
-			ui_show_notif("At least one layer is needed", UI_NOTIF_STYLE_ERROR)
-		} 
+		if len(state.layers) > 1 {
+			delete_layer(state, state.current_layer)
+		}
 		else {
-			action_do(state, Action_Delete_Layer {
-				layer_index = state.current_layer,
-			})
+			ui_show_notif("At least one layer is needed", UI_NOTIF_STYLE_ERROR)
 		}
 	}
 
@@ -1240,9 +1236,7 @@ project_shortcuts :: proc(state: ^Project_State) {
 			// delete current layer
 			if rl.IsKeyPressed(.D) {
 				if len(state.layers) > 1 {
-					action_do(state, Action_Delete_Layer {
-						layer_index = state.current_layer
-					})
+					delete_layer(state, state.current_layer)
 				}
 			}
 
@@ -1998,6 +1992,10 @@ paste_layer :: proc(state: ^Project_State, layer_index: int) {
 		rl.ImageDraw(&state.layers[layer_index].image, copied_image, image_rec, image_rec, rl.WHITE) 
 		mark_dirty_layers(state, layer_index)
 	}
+}
+
+delete_layer :: proc(state: ^Project_State, layer_index: int) {
+	action_do(state, Action_Delete_Layer { layer_index = layer_index })
 }
 
 draw_canvas :: proc(state: ^Project_State, area: Rec) {
