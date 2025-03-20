@@ -1108,16 +1108,16 @@ project_shortcuts :: proc(state: ^Project_State) {
 		if rl.IsKeyDown(.LEFT_CONTROL) {
 			// move layer
 			if rl.IsKeyPressed(.LEFT) {
-				move_layer(state, state.current_layer, -1, 0)
+				translate_layer(state, state.current_layer, -1, 0)
 			}
 			else if rl.IsKeyPressed(.RIGHT) {
-				move_layer(state, state.current_layer, 1, 0)
+				translate_layer(state, state.current_layer, 1, 0)
 			}
 			else if rl.IsKeyPressed(.UP) {
-				move_layer(state, state.current_layer, 0, -1)
+				translate_layer(state, state.current_layer, 0, -1)
 			}
 			else if rl.IsKeyPressed(.DOWN) {
-				move_layer(state, state.current_layer, 0, 1)
+				translate_layer(state, state.current_layer, 0, 1)
 			}
 
 			// create new layer at the top
@@ -1925,7 +1925,7 @@ dfs :: proc(image: ^rl.Image, x, y: i32, prev_color, new_color: rl.Color) {
 	}
 }
 
-move_layer :: proc(state: ^Project_State, layer_index, x, y: int) {
+translate_layer :: proc(state: ^Project_State, layer_index, x, y: int) {
 	before_image := rl.ImageCopy(state.layers[layer_index].image)
 	after_image := rl.ImageCopy(before_image)
 	move_image(state, &after_image, x, y)
