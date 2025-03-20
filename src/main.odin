@@ -486,8 +486,9 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 		}
 	}
 
-	LAYER_ADD :: "Add at top"
 	LAYER_ADD_ABOVE :: "Add above"
+	LAYER_ADD_TOP :: "Add at top"
+	LAYER_DUPLICATE :: "Duplicate"
 	LAYER_CLEAR :: "Clear" 
 	LAYER_MOVE_UP :: "Move up"
 	LAYER_MOVE_DOWN :: "Move down"
@@ -495,7 +496,8 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 	
 	layer_items := [?]UI_Menu_Item {
 		ui_menu_item(ui_gen_id(), LAYER_ADD_ABOVE, "Space"),
-		ui_menu_item(ui_gen_id(), LAYER_ADD, "Ctrl + Space"),
+		ui_menu_item(ui_gen_id(), LAYER_ADD_TOP, "Ctrl + Space"),
+		ui_menu_item(ui_gen_id(), LAYER_DUPLICATE, ""),
 		ui_menu_item(ui_gen_id(), LAYER_MOVE_UP, ""),
 		ui_menu_item(ui_gen_id(), LAYER_MOVE_DOWN, ""),
 		ui_menu_item(ui_gen_id(), LAYER_CLEAR, "F"),
@@ -508,8 +510,11 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 		case LAYER_ADD_ABOVE: {
 			add_empty_layer(state, state.current_layer + 1)
 		}
-		case LAYER_ADD: {
+		case LAYER_ADD_TOP: {
 			add_empty_layer(state, len(state.layers))
+		}
+		case LAYER_DUPLICATE: {
+			duplicate_layer(state, state.current_layer, state.current_layer + 1)
 		}
 		case LAYER_MOVE_UP: {
 			if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
