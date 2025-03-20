@@ -519,18 +519,12 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 		}
 		case LAYER_MOVE_UP: {
 			if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
-				action_do(state, Action_Change_Layer_Index {
-					from_index = state.current_layer,
-					to_index = state.current_layer + 1
-				})
+				change_layer_index(state, state.current_layer, state.current_layer + 1)
 			}
 		}
 		case LAYER_MOVE_DOWN: {
 			if len(state.layers) > 1 && state.current_layer > 0 {
-				action_do(state, Action_Change_Layer_Index {
-					from_index = state.current_layer,
-					to_index = state.current_layer - 1
-				})
+				change_layer_index(state, state.current_layer, state.current_layer - 1)
 			}
 		}
 		case LAYER_CLEAR: {
@@ -573,10 +567,7 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 	move_up_rec := rec_cut_right(&props_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_UP, move_up_rec, style = UI_BUTTON_STYLE_ACCENT) {
 		if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
-			action_do(state, Action_Change_Layer_Index {
-				from_index = state.current_layer,
-				to_index = state.current_layer + 1
-			})
+			change_layer_index(state, state.current_layer, state.current_layer + 1)
 		}
 	}
 
@@ -584,10 +575,7 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 	move_down_rec := rec_cut_right(&props_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_DOWN, move_down_rec, style = UI_BUTTON_STYLE_ACCENT) {
 		if len(state.layers) > 1 && state.current_layer > 0 {
-			action_do(state, Action_Change_Layer_Index {
-				from_index = state.current_layer,
-				to_index = state.current_layer - 1
-			})
+			change_layer_index(state, state.current_layer, state.current_layer - 1)
 		}
 	}
 
@@ -1992,6 +1980,10 @@ paste_layer :: proc(state: ^Project_State, layer_index: int) {
 		rl.ImageDraw(&state.layers[layer_index].image, copied_image, image_rec, image_rec, rl.WHITE) 
 		mark_dirty_layers(state, layer_index)
 	}
+}
+
+change_layer_index :: proc(state: ^Project_State, from_index, to_index: int) {
+	action_do(state, Action_Change_Layer_Index { from_index = from_index, to_index = to_index })
 }
 
 delete_layer :: proc(state: ^Project_State, layer_index: int) {
