@@ -506,16 +506,10 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 	
 	switch layer_clicked_item.text {
 		case LAYER_ADD_ABOVE: {
-			action_do(state, Action_Create_Layer {
-				current_layer_index = state.current_layer,
-				layer_index = state.current_layer + 1
-			})
+			add_empty_layer(state, state.current_layer + 1)
 		}
 		case LAYER_ADD: {
-			action_do(state, Action_Create_Layer {
-				current_layer_index = state.current_layer,
-				layer_index = len(state.layers)
-			})
+			add_empty_layer(state, len(state.layers))
 		}
 		case LAYER_MOVE_UP: {
 			if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
@@ -1131,10 +1125,7 @@ project_shortcuts :: proc(state: ^Project_State) {
 
 			// create new layer at the top
 			if rl.IsKeyPressed(.SPACE) {
-				action_do(state, Action_Create_Layer {
-					current_layer_index = state.current_layer,
-					layer_index = len(state.layers)
-				})
+				add_empty_layer(state, len(state.layers))
 			}		
 		}
 		else {			
@@ -1190,10 +1181,7 @@ project_shortcuts :: proc(state: ^Project_State) {
 
 			// create new layer above the current
 			if rl.IsKeyPressed(.SPACE) {
-				action_do(state, Action_Create_Layer {
-					current_layer_index = state.current_layer,
-					layer_index = state.current_layer + 1
-				})
+				add_empty_layer(state, state.current_layer + 1)
 			}
 
 			// move current layer up
@@ -1980,6 +1968,10 @@ paste_layer :: proc(state: ^Project_State, layer_index: int) {
 		rl.ImageDraw(&state.layers[layer_index].image, copied_image, image_rec, image_rec, rl.WHITE) 
 		mark_dirty_layers(state, layer_index)
 	}
+}
+
+add_empty_layer :: proc(state: ^Project_State, layer_index: int) {
+	action_do(state, Action_Create_Layer { current_layer_index = state.current_layer, layer_index = layer_index })
 }
 
 change_layer_index :: proc(state: ^Project_State, from_index, to_index: int) {
