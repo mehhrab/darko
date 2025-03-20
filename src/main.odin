@@ -577,10 +577,7 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 	rec_cut_right(&props_area, ui_px(8))
 	duplicate_rec := rec_cut_right(&props_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_COPY, duplicate_rec, style = UI_BUTTON_STYLE_ACCENT) {
-		action_do(state, Action_Duplicate_Layer {
-			from_index = state.current_layer,
-			to_index = state.current_layer + 1,
-		})
+		duplicate_layer(state, state.current_layer, state.current_layer + 1)
 	}
 }
 
@@ -1972,6 +1969,10 @@ paste_layer :: proc(state: ^Project_State, layer_index: int) {
 
 add_empty_layer :: proc(state: ^Project_State, layer_index: int) {
 	action_do(state, Action_Create_Layer { current_layer_index = state.current_layer, layer_index = layer_index })
+}
+
+duplicate_layer :: proc(state: ^Project_State, from_index, to_index: int) {
+	action_do(state, Action_Duplicate_Layer { from_index = from_index, to_index = to_index })
 }
 
 change_layer_index :: proc(state: ^Project_State, from_index, to_index: int) {
