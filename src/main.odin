@@ -66,6 +66,8 @@ Project_State :: struct {
 	temp_undo: Maybe(Action),
 	undos: [dynamic]Action,
 	redos: [dynamic]Action,
+	// used for checking if the project is saved before quitting
+	undos_len_on_save: int,
 	dirty_layers: [dynamic]int,
 	pallete: Pallete,
 }
@@ -197,6 +199,15 @@ main :: proc() {
 					}
 					clear(&state.dirty_layers)
 				}
+				
+				// put a star in the window title when an unsaved change exists
+				@(static) was_saved := true
+				saved := is_saved(&state)
+				if saved != was_saved {
+					star := saved == false ? "*" : ""
+					rl.SetWindowTitle(fmt.ctprint("Darko  ", state.dir, star))
+				}
+				was_saved = is_saved(&state)
 			}
 			case Welcome_State: {
 				welcome_screen(&state)
@@ -1593,6 +1604,7 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 
 // TODO: return an error value instead of a bool
 save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
+	state.undos_len_on_save = len(state.undos)
 	if state.dir != dir {
 		delete(state.dir)
 		state.dir = strings.clone(dir)
@@ -2106,6 +2118,10 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 			}
 		}
 	}
+}
+
+is_saved :: proc(state: ^Project_State) -> (saved: bool) {
+	return state.undos_len_on_save == len(state.undos)
 }
 
 rgb_to_hsv :: #force_inline proc(rgb: rl.Color) -> (hsv: HSV) {
