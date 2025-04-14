@@ -23,6 +23,7 @@ HSV :: distinct [3]f32
 popup_new_project := ui_gen_id()
 popup_preview_settings := ui_gen_id()
 popup_fav_palletes := ui_gen_id()
+popup_exit := ui_gen_id()
 
 App :: struct {
 	state: Screen_State, 
@@ -32,6 +33,8 @@ App :: struct {
 	fav_palletes: sa.Small_Array(24, Pallete),
 	show_fps: bool,
 	unlock_fps: bool,
+	exit: bool,
+	exit_dest: Exit_Dest,
 }
 
 Screen_State :: union {
@@ -89,6 +92,11 @@ Tool :: enum {
 	Color_Picker,
 	Fill,
 	GoTo,
+}
+
+Exit_Dest :: enum {
+	Welcome_Screen,
+	Desktop,
 }
 
 // undo redo actions
@@ -180,7 +188,7 @@ main :: proc() {
 	defer deinit_app()
 	defer save_app_data()
 
-	for rl.WindowShouldClose() == false {
+	for app.exit == false {
 		ui_begin()
 		app_shortcuts()
 		switch &state in app.state {
@@ -208,9 +216,24 @@ main :: proc() {
 					rl.SetWindowTitle(fmt.ctprint("Darko  ", state.dir, star))
 				}
 				was_saved = is_saved(&state)
+				
+				if rl.WindowShouldClose() {
+					if is_saved(&state) == false {
+						app.exit_dest = .Desktop
+						ui_open_popup(popup_exit)
+					}
+					else {
+						app.exit = true
+					}
+				}
+				exit_popup(&state)
 			}
 			case Welcome_State: {
 				welcome_screen(&state)
+
+				if rl.WindowShouldClose() {
+					app.exit = true
+				}
 			}
 		}
 		new_file_popup(&app.state)
@@ -244,9 +267,6 @@ main :: proc() {
 				case Welcome_State: {
 					rl.SetWindowTitle("Darko")
 					app.state = state	
-				}
-				case: {
-					panic("x")
 				}
 			}
 			app.next_state = nil
@@ -460,11 +480,7 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 			}
 		}
 		case FILE_WELCOME_SCREEN: {
-			ui_close_current_popup()
-
-			welcome_state := Welcome_State {}
-			init_welcome_state(&welcome_state)
-			schedule_state_change(welcome_state)
+			go_to_welcome_screen(state)
 		}
 	}
 	
@@ -1058,6 +1074,89 @@ preview_settings_popup :: proc(state: ^Project_State) {
 	ui_end_popup()
 }
 
+exit_popup :: proc(state: ^Project_State) {
+	screen_rec := ui_get_screen_rec()
+	
+	popup_h := ui_calc_popup_height(2, ui_default_widget_height(), ui_px(8), ui_px(16))
+	popup_area := rec_center_in_area({ 0, 0, ui_px(300), popup_h }, screen_rec)
+	if open, rec := ui_begin_popup_title(popup_exit, "Confirm", popup_area); open {
+		area := rec_pad(rec, ui_px(16))
+		
+		ui_draw_text("Save chenges to the project?", rec_cut_top(&area, ui_default_widget_height()), align = { .Center, .Center })
+		
+		rec_cut_top(&area, ui_px(8))
+		buttons_area := rec_cut_top(&area, ui_default_widget_height())
+		button_w := buttons_area.width / 3 - ui_px(2)
+		if ui_button(ui_gen_id(), "Cancel", rec_cut_right(&buttons_area, button_w)) {
+			ui_close_current_popup()
+		}
+
+		exiting := false
+
+		rec_cut_right(&buttons_area, ui_px(4))
+		if ui_button(ui_gen_id(), "No", rec_cut_right(&buttons_area, button_w)) {
+			exiting = true
+		}
+		
+		rec_cut_right(&buttons_area, ui_px(4))
+		if ui_button(ui_gen_id(), "Yes", rec_cut_right(&buttons_area, button_w)) {
+			saved := false
+			save_scope: {								
+				if state.dir == "" {
+					path, res := pick_folder_dialog(state.dir, context.temp_allocator)
+					if res == .Error {
+						ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+					}
+					else if res == .Cancel {
+						break save_scope
+					}
+			
+					saved = save_project_state(state, path)
+					ui_show_notif("Project is saved")
+				}
+				else {
+					saved = save_project_state(state, state.dir)
+				}
+
+				if saved == false {
+					ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+					break save_scope
+				}
+		
+				add_recent_project(state.dir)
+			}
+			exiting = saved
+		}
+		
+		if exiting {
+			switch app.exit_dest {
+				case .Desktop: {
+					app.exit = true
+				}
+				case .Welcome_Screen: {
+					welcome_state := Welcome_State {}
+					init_welcome_state(&welcome_state)
+					schedule_state_change(welcome_state)
+					ui_close_all_popups()
+				}
+			}
+		}
+	}
+}
+
+go_to_welcome_screen :: proc(state: ^Project_State) {
+	if is_saved(state) {
+		welcome_state := Welcome_State {}
+		init_welcome_state(&welcome_state)
+		schedule_state_change(welcome_state)
+		ui_close_all_popups()
+	}
+	else {
+		app.exit_dest = .Welcome_Screen
+		ui_open_popup(popup_exit)
+	}
+}
+
 // backend code
 
 app_shortcuts :: proc() {
@@ -1251,9 +1350,7 @@ project_shortcuts :: proc(state: ^Project_State) {
 
 			// go to welcome screen
 			if rl.IsKeyPressed(.W) {
-				welcome_state := Welcome_State {}
-				init_welcome_state(&welcome_state)
-				schedule_state_change(welcome_state)
+				go_to_welcome_screen(state)
 			}
 		}
 	}
