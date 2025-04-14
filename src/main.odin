@@ -236,7 +236,7 @@ main :: proc() {
 				}
 			}
 		}
-		new_file_popup(&app.state)
+		new_project_popup(&app.state)
 		ui_end()
 
 		// draw
@@ -1030,7 +1030,11 @@ preview :: proc(state: ^Project_State, rec: Rec) {
 	ui_end_clip()
 }
 
-new_file_popup :: proc(state: ^Screen_State) {
+new_project_popup :: proc(state: ^Screen_State) {
+	if rl.IsKeyPressed(.ESCAPE) {
+		ui_close_current_popup()
+	}
+
 	screen_rec := ui_get_screen_rec()
 	
 	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
@@ -1043,7 +1047,7 @@ new_file_popup :: proc(state: ^Screen_State) {
 		ui_slider_i32(ui_gen_id(), "Height", &app.new_project_height, 2, 30, rec_cut_top(&area, ui_default_widget_height()))
 		rec_delete_top(&area, ui_px(8))
 		
-		if ui_button(ui_gen_id(), "Create", area) {
+		if ui_button(ui_gen_id(), "Create", area) || rl.IsKeyPressed(.ENTER) {
 			project: Project_State
 			init_project_state(&project, app.new_project_width, app.new_project_height)
 			schedule_state_change(project)
