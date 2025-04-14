@@ -1060,6 +1060,10 @@ new_project_popup :: proc(state: ^Screen_State) {
 }
 
 preview_settings_popup :: proc(state: ^Project_State) {
+	if rl.IsKeyPressed(.ESCAPE) {
+		ui_close_current_popup()
+	}
+	
 	screen_rec := ui_get_screen_rec()
 	
 	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
