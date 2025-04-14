@@ -1087,19 +1087,19 @@ exit_popup :: proc(state: ^Project_State) {
 		rec_cut_top(&area, ui_px(8))
 		buttons_area := rec_cut_top(&area, ui_default_widget_height())
 		button_w := buttons_area.width / 3 - ui_px(2)
-		if ui_button(ui_gen_id(), "Cancel", rec_cut_right(&buttons_area, button_w)) {
+		if ui_button(ui_gen_id(), "Cancel", rec_cut_right(&buttons_area, button_w)) || rl.IsKeyPressed(.ESCAPE) {
 			ui_close_current_popup()
 		}
 
 		exiting := false
 
 		rec_cut_right(&buttons_area, ui_px(4))
-		if ui_button(ui_gen_id(), "No", rec_cut_right(&buttons_area, button_w)) {
+		if ui_button(ui_gen_id(), "No", rec_cut_right(&buttons_area, button_w)) || rl.IsKeyPressed(.N) {
 			exiting = true
 		}
 		
 		rec_cut_right(&buttons_area, ui_px(4))
-		if ui_button(ui_gen_id(), "Yes", rec_cut_right(&buttons_area, button_w)) {
+		if ui_button(ui_gen_id(), "Yes", rec_cut_right(&buttons_area, button_w)) || rl.IsKeyPressed(.ENTER) || rl.IsKeyPressed(.Y) {
 			saved := false
 			save_scope: {								
 				if state.dir == "" {
