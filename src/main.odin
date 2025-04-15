@@ -662,7 +662,7 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 		}
 		else {
 			// when clicked on another layer move to that layer
-			mouse_inside := ui_is_mouse_in_rec(layer_rec) && ui_is_any_popup_open() == false 
+			mouse_inside := rl.IsKeyDown(.LEFT_SHIFT) && ui_is_mouse_in_rec(layer_rec) && ui_is_any_popup_open() == false 
 			if mouse_inside {
 				current_tool = .GoTo
 				if rl.IsMouseButtonPressed(.LEFT) {
