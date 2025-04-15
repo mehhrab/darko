@@ -16,6 +16,7 @@ import ntf "../lib/ntf"
 import "core:encoding/ini"
 import "core:strconv"
 
+VERSION :: "1.0.0"
 TARGET_FPS :: 60
 HSV :: distinct [3]f32
 
@@ -301,7 +302,12 @@ welcome_screen :: proc(state: ^Welcome_State) {
 	ui_begin_clip(left_area)
 
 	text_rec := rec_cut_top(&left_area, ui_default_widget_height() * 2)
-	ui_draw_text("Welcome to Darko", text_rec, { .Center, .Center }, COLOR_ACCENT_0, ui_font_size() * 2)
+	ui_draw_text("Welcome to Darko", text_rec, { .Center, .Bottom }, COLOR_ACCENT_0, ui_font_size() * 2)
+	
+	ver_rec := rec_cut_top(&left_area, ui_default_widget_height())
+	ui_draw_text("version " + VERSION, ver_rec, { .Center, .Center }, COLOR_BASE_4, ui_font_size())
+
+	rec_cut_top(&left_area, ui_px(16))
 
 	buttons_area := rec_cut_top(&left_area, ui_default_widget_height())
 	new_button_rec := rec_cut_left(&buttons_area, buttons_area.width / 2 - ui_px(8))
