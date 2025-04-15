@@ -288,7 +288,11 @@ welcome_screen :: proc(state: ^Welcome_State) {
 	
 	right_area := rec_cut_right(&screen_area, screen_area.width / 2)
 	left_area := screen_area
-	ui_draw_rec(COLOR_ACCENT_0, right_area)
+	ui_push_command(UI_Draw_Gradient_V { 
+		top_color = COLOR_ACCENT_0, 
+		bottom_color = COLOR_ACCENT_1, 
+		rec = right_area
+	})
 	
 	mascot_size := ui_px(right_area.width / 2)
 	mascot_rec := rec_center_in_area({ 0, 0, mascot_size , mascot_size }, right_area)
