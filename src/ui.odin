@@ -99,6 +99,7 @@ UI_Draw_Command :: union {
 	UI_Draw_Rect_Outline,
 	UI_Draw_Text,
 	UI_Draw_Gradient_H,
+	UI_Draw_Gradient_V,
 	UI_Clip,
 	UI_Draw_Texture,
 	UI_Draw_Canvas,
@@ -133,6 +134,12 @@ UI_Draw_Texture :: struct {
 UI_Draw_Gradient_H :: struct {
 	left_color: rl.Color,
 	right_color: rl.Color,
+	rec: Rec,
+}
+
+UI_Draw_Gradient_V :: struct {
+	top_color: rl.Color,
+	bottom_color: rl.Color,
 	rec: Rec,
 }
 

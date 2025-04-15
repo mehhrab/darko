@@ -2207,6 +2207,13 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 				h := i32(math.ceil_f32(kind.rec.height))
 				rl.DrawRectangleGradientH(x, y, w, h, kind.left_color, kind.right_color)
 			}
+			case UI_Draw_Gradient_V: {
+				x := i32(math.ceil_f32(kind.rec.x))
+				y := i32(math.ceil_f32(kind.rec.y))
+				w := i32(math.ceil_f32(kind.rec.width))
+				h := i32(math.ceil_f32(kind.rec.height))
+				rl.DrawRectangleGradientV(x, y, w, h, kind.top_color, kind.bottom_color)
+			}
 			case UI_Clip: {
 				if kind.rec != {} {
 					x := i32(math.round(kind.rec.x))
