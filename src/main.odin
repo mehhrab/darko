@@ -530,11 +530,11 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 	layer_items := [?]UI_Menu_Item {
 		ui_menu_item(ui_gen_id(), LAYER_ADD_ABOVE, "Space"),
 		ui_menu_item(ui_gen_id(), LAYER_ADD_TOP, "Ctrl + Space"),
-		ui_menu_item(ui_gen_id(), LAYER_DUPLICATE, ""),
-		ui_menu_item(ui_gen_id(), LAYER_MOVE_UP, ""),
-		ui_menu_item(ui_gen_id(), LAYER_MOVE_DOWN, ""),
+		ui_menu_item(ui_gen_id(), LAYER_DUPLICATE, "D"),
+		ui_menu_item(ui_gen_id(), LAYER_MOVE_UP, "Alt + Up"),
+		ui_menu_item(ui_gen_id(), LAYER_MOVE_DOWN, "Alt + Down"),
 		ui_menu_item(ui_gen_id(), LAYER_CLEAR, "F"),
-		ui_menu_item(ui_gen_id(), LAYER_DELETE, "D"),
+		ui_menu_item(ui_gen_id(), LAYER_DELETE, "X"),
 	}
 	layer_rec := rec_cut_left(&area, ui_calc_button_width("Layer"))
 	layer_clicked_item := ui_menu_button(ui_gen_id(), "Layer", layer_items[:], ui_px(300), layer_rec)
@@ -1235,7 +1235,7 @@ app_shortcuts :: proc() {
 project_shortcuts :: proc(state: ^Project_State) {
 	if ui_is_any_popup_open() == false {
 		if rl.IsKeyDown(.LEFT_CONTROL) {
-			// move layer
+			// translate layer
 			if rl.IsKeyPressed(.LEFT) {
 				translate_layer(state, state.current_layer, -1, 0)
 			}
@@ -1253,6 +1253,21 @@ project_shortcuts :: proc(state: ^Project_State) {
 			if rl.IsKeyPressed(.SPACE) {
 				add_empty_layer(state, len(state.layers))
 			}		
+		}
+		else if rl.IsKeyDown(.LEFT_ALT) {
+			// move layer up
+			if rl.IsKeyPressed(.UP) {
+				if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
+					change_layer_index(state, state.current_layer, state.current_layer + 1)
+				}
+			}
+
+			// move layer down
+			if rl.IsKeyPressed(.DOWN) {
+				if len(state.layers) > 1 && state.current_layer > 0 {
+					change_layer_index(state, state.current_layer, state.current_layer - 1)
+				}
+			}
 		}
 		else {			
 			// save project
@@ -1310,6 +1325,11 @@ project_shortcuts :: proc(state: ^Project_State) {
 				add_empty_layer(state, state.current_layer + 1)
 			}
 
+			// duplicate layer
+			if rl.IsKeyPressed(.D) {
+				duplicate_layer(state, state.current_layer, state.current_layer + 1)
+			}
+
 			// move current layer up
 			if rl.IsKeyPressed(.UP) {
 				state.current_layer += 1
@@ -1336,7 +1356,7 @@ project_shortcuts :: proc(state: ^Project_State) {
 			}
 
 			// delete current layer
-			if rl.IsKeyPressed(.D) {
+			if rl.IsKeyPressed(.X) {
 				if len(state.layers) > 1 {
 					delete_layer(state, state.current_layer)
 				}
