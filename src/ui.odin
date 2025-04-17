@@ -1224,7 +1224,8 @@ ui_slider_f32 :: proc(
 		}
 
 		if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.C) {
-			text_cstring := strings.to_cstring(&ui_ctx.slider_text)
+			text_cstring, err := strings.to_cstring(&ui_ctx.slider_text)
+			assert(err == nil)
 			rl.SetClipboardText(text_cstring)
 		}
 
