@@ -1377,6 +1377,17 @@ ui_is_being_interacted :: #force_inline proc() -> (res: bool) {
 	(ui_is_any_popup_open())
 }
 
+ui_close_popup_on_esc :: proc(id: UI_ID) {
+	popup := ui_get_top_popup()
+	if popup == nil do return
+	if popup.id != id do return
+
+	can_shortcut := ui_ctx.text_mode_slider == 0
+	if can_shortcut && rl.IsKeyPressed(.ESCAPE) {
+		ui_close_current_popup()
+	}
+}
+
 ui_is_mouse_in_rec :: proc(rec: Rec) -> (is_inside: bool) {
 	mpos := rl.GetMousePosition()
 	return mpos.x > rec.x && mpos.y > rec.y && mpos.x < rec.x + rec.width && mpos.y < rec.y + rec.height
