@@ -1041,14 +1041,14 @@ preview :: proc(state: ^Project_State, rec: Rec) {
 }
 
 new_project_popup :: proc(state: ^Screen_State) {
-	if rl.IsKeyPressed(.ESCAPE) {
-		ui_close_current_popup()
-	}
+	can_shortcut := ui_ctx.text_mode_slider == 0
+	ui_close_popup_on_esc(popup_new_project)
 
 	screen_rec := ui_get_screen_rec()
 	
 	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
 	popup_rec := rec_center_in_area({ 0, 0, ui_px(400), popup_h }, screen_rec)
+	
 	if open, rec := ui_begin_popup_title(popup_new_project, "New project", popup_rec); open {
 		area := rec_pad(rec, ui_px(16))
 		ui_slider_i32(ui_gen_id(), "Width", &app.new_project_width, 2, 30, rec_cut_top(&area, ui_default_widget_height()))
@@ -1057,7 +1057,7 @@ new_project_popup :: proc(state: ^Screen_State) {
 		ui_slider_i32(ui_gen_id(), "Height", &app.new_project_height, 2, 30, rec_cut_top(&area, ui_default_widget_height()))
 		rec_delete_top(&area, ui_px(8))
 		
-		if ui_button(ui_gen_id(), "Create", area) || rl.IsKeyPressed(.ENTER) {
+		if ui_button(ui_gen_id(), "Create", area) || (can_shortcut && rl.IsKeyPressed(.ENTER)) {
 			project: Project_State
 			init_project_state(&project, app.new_project_width, app.new_project_height)
 			schedule_state_change(project)
@@ -1070,10 +1070,8 @@ new_project_popup :: proc(state: ^Screen_State) {
 }
 
 preview_settings_popup :: proc(state: ^Project_State) {
-	if rl.IsKeyPressed(.ESCAPE) {
-		ui_close_current_popup()
-	}
-	
+	ui_close_popup_on_esc(popup_preview_settings)
+
 	screen_rec := ui_get_screen_rec()
 	
 	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
