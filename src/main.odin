@@ -35,7 +35,7 @@ App :: struct {
 	show_fps: bool,
 	unlock_fps: bool,
 	exit: bool,
-	exit_dest: Exit_Dest,
+	exit_popup_confirm: proc(state: ^Project_State),
 }
 
 Screen_State :: union {
@@ -93,11 +93,6 @@ Tool :: enum {
 	Color_Picker,
 	Fill,
 	GoTo,
-}
-
-Exit_Dest :: enum {
-	Welcome_Screen,
-	Desktop,
 }
 
 // undo redo actions
@@ -220,8 +215,9 @@ main :: proc() {
 				
 				if rl.WindowShouldClose() {
 					if is_saved(&state) == false {
-						app.exit_dest = .Desktop
-						ui_open_popup(popup_exit)
+						confirm_project_exit(proc(state: ^Project_State) {
+							app.exit = true
+						})
 					}
 					else {
 						app.exit = true
@@ -425,30 +421,30 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 			ui_open_popup(popup_new_project)
 		}
 		case FILE_OPEN_PROJ: {
-			open_scope: {
-				ui_close_current_popup()
+			confirm_project_exit(proc(state: ^Project_State) {
+				ui_close_all_popups()
 		
 				path, res := pick_folder_dialog(state.dir, context.temp_allocator)
 				if res == .Error {
 					ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
 				}
 				else if res == .Cancel {
-					break open_scope
+					return
 				}
 		
 				loaded_project: Project_State
 				loaded := load_project_state(&loaded_project, path)
 				if loaded == false {
 					ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-					break open_scope
+					return
 				}
 					
 				schedule_state_change(loaded_project)
-			}
+			})
 		}
 		case FILE_SAVE_PROJ: {
 			save_scope: {
-				ui_close_current_popup()
+				ui_close_all_popups()
 				
 				path, res := pick_folder_dialog(state.dir, context.temp_allocator)
 				if res == .Error {
@@ -470,7 +466,7 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 		}
 		case FILE_EXPORT_PROJ: {
 			export_scope: {
-				ui_close_current_popup()
+				ui_close_all_popups()
 				
 				path, res := pick_folder_dialog(state.export_dir, context.temp_allocator)
 				if res == .Error {
@@ -1058,12 +1054,23 @@ new_project_popup :: proc(state: ^Screen_State) {
 		rec_delete_top(&area, ui_px(8))
 		
 		if ui_button(ui_gen_id(), "Create", area) || (can_shortcut && rl.IsKeyPressed(.ENTER)) {
-			project: Project_State
-			init_project_state(&project, app.new_project_width, app.new_project_height)
-			schedule_state_change(project)
-			ui_close_all_popups()
-		
-			ui_show_notif(ICON_CHECK + " Project is created")
+			create_project :: proc() {
+				project: Project_State
+				init_project_state(&project, app.new_project_width, app.new_project_height)
+				schedule_state_change(project)
+				ui_close_all_popups()
+			
+				ui_show_notif(ICON_CHECK + " Project is created")
+			}
+			_, project_open := app.state.(Project_State)
+			if project_open {
+				confirm_project_exit(proc(state: ^Project_State) { 
+					create_project() 
+				})
+			}
+			else {
+				create_project()
+			}
 		}	
 	}
 	ui_end_popup()
@@ -1145,19 +1152,15 @@ exit_popup :: proc(state: ^Project_State) {
 		}
 		
 		if exiting {
-			switch app.exit_dest {
-				case .Desktop: {
-					app.exit = true
-				}
-				case .Welcome_Screen: {
-					welcome_state := Welcome_State {}
-					init_welcome_state(&welcome_state)
-					schedule_state_change(welcome_state)
-					ui_close_all_popups()
-				}
-			}
+			fmt.printfln("y")
+			app.exit_popup_confirm(state)
 		}
 	}
+}
+
+confirm_project_exit :: proc(callback: proc(state: ^Project_State)) {
+	app.exit_popup_confirm = callback
+	ui_open_popup(popup_exit)
 }
 
 go_to_welcome_screen :: proc(state: ^Project_State) {
@@ -1168,8 +1171,12 @@ go_to_welcome_screen :: proc(state: ^Project_State) {
 		ui_close_all_popups()
 	}
 	else {
-		app.exit_dest = .Welcome_Screen
-		ui_open_popup(popup_exit)
+		confirm_project_exit(proc(state: ^Project_State) {
+			welcome_state := Welcome_State {}
+			init_welcome_state(&welcome_state)
+			schedule_state_change(welcome_state)
+			ui_close_all_popups()
+		})
 	}
 }
 
