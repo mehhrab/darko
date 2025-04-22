@@ -55,6 +55,7 @@ Project_State :: struct {
 	current_color: HSV,
 	width: i32,
 	height: i32,
+	pen_size: i32,
 	current_layer: int,
 	lerped_current_layer: f32,
 	layers: [dynamic]Layer,
@@ -617,6 +618,14 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 	if ui_button(ui_gen_id(), ICON_COPY, duplicate_rec, style = UI_BUTTON_STYLE_ACCENT) {
 		duplicate_layer(state, state.current_layer, state.current_layer + 1)
 	}
+
+	size_slider_style := UI_SLIDER_STYLE_DEFAULT
+	size_slider_style.bg_color.a = 200
+
+	// pen size
+	rec_cut_right(&props_area, ui_px(8))
+	pen_size_rec := rec_cut_right(&props_area, ui_px(150))
+	ui_slider_i32(ui_gen_id(), "Pen size", &state.pen_size, 1, 10, pen_size_rec, style = size_slider_style)
 }
 
 canvas :: proc(state: ^Project_State, rec: Rec) {
@@ -649,6 +658,7 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 			ui_push_command(UI_Draw_Canvas {
 				rec = layer_rec,
 			})
+
 			if state.zoom > 1.2 {
 				ui_push_command(UI_Draw_Grid {
 					rec = layer_rec,
@@ -659,6 +669,17 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 				ui_draw_text(ICON_HAND, hand_rec, { .Center, .Center }, size = ui_font_size() * 2)
 			}
 			ui_draw_rec_outline(COLOR_BASE_4, 2, layer_rec)
+			
+			// draw cursor preview
+			if ui_is_mouse_in_rec(layer_rec) && ui_is_being_interacted() == false {
+				mx, my := get_mouse_pos_in_canvas(state, layer_rec)
+				pixel_size := layer_rec.width / f32(state.width)
+				pen_size := current_tool == .Color_Picker ? 1 : state.pen_size
+				x := f32(mx - (pen_size - 1) / 2) * pixel_size + layer_rec.x
+				y := f32(my - (pen_size - 1) / 2) * pixel_size + layer_rec.y
+				size := f32(pen_size) * pixel_size
+				ui_draw_rec_outline(rl.WHITE, 2, { x, y, size, size })
+			}
 		}
 		else {
 			// when clicked on another layer move to that layer
@@ -1980,7 +2001,13 @@ update_tools :: proc(state: ^Project_State, area: Rec) -> (current_tool: Tool) {
 				begin_image_change(state)
 				x, y := get_mouse_pos_in_canvas(state, area)
 				color := hsv_to_rgb(state.current_color)
-				rl.ImageDrawPixel(&get_current_layer(state).image, x, y, color)
+				for i in 0..<state.pen_size {
+					for j in 0..<state.pen_size {
+						x := x + i - (state.pen_size - 1) / 2
+						y := y + j - (state.pen_size - 1) / 2
+						rl.ImageDrawPixel(&get_current_layer(state).image, x, y, color)
+					}
+				}
 				mark_dirty_layers(state, state.current_layer)	
 			}
 			current_tool = .Pen
@@ -1994,7 +2021,13 @@ update_tools :: proc(state: ^Project_State, area: Rec) -> (current_tool: Tool) {
 			if ui_is_mouse_in_rec(area) {
 				begin_image_change(state)
 				x, y := get_mouse_pos_in_canvas(state, area)
-				rl.ImageDrawPixel(&get_current_layer(state).image, x, y, rl.BLANK)
+				for i in 0..<state.pen_size {
+					for j in 0..<state.pen_size {
+						x := x + i - (state.pen_size - 1) / 2
+						y := y + j - (state.pen_size - 1) / 2
+						rl.ImageDrawPixel(&get_current_layer(state).image, x, y, rl.BLANK)
+					}
+				}
 				mark_dirty_layers(state, state.current_layer)
 			}
 			current_tool = .Eraser
