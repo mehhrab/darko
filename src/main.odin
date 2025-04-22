@@ -210,7 +210,7 @@ main :: proc() {
 				saved := is_saved(&state)
 				if saved != was_saved {
 					star := saved == false ? "*" : ""
-					rl.SetWindowTitle(fmt.ctprint("Darko  ", state.dir, star))
+					rl.SetWindowTitle(fmt.ctprint("Darko - ", state.dir, star))
 				}
 				was_saved = is_saved(&state)
 				
@@ -1900,7 +1900,7 @@ open_project :: proc(state: ^Project_State) {
 	if state.dir != "" {
 		add_recent_project(state.dir)
 	}
-	rl.SetWindowTitle(fmt.ctprintf("Darko   {}", state.dir))
+	rl.SetWindowTitle(fmt.ctprintf("Darko - {}", state.dir))
 	app.state = state^
 	ui_show_notif(ICON_CHECK + " Project is opened")
 }
