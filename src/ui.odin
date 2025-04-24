@@ -972,8 +972,6 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 	}
 
 	if ui_begin_popup(id, text, popup_rec) {
-		ui_find_popup(id)
-
 		menu_item_y := popup_rec.y
 		style := UI_BUTTON_STYLE_DEFAULT
 		style.font_size = ui_font_size()
