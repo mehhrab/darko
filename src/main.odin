@@ -1,5 +1,5 @@
 /* application code 
-frontend, backend code etc */
+frontend, backend, etc... */
 package darko
 
 import "core:fmt"
@@ -18,13 +18,6 @@ import "core:strconv"
 
 VERSION :: "1.0.0"
 TARGET_FPS :: 60
-HSV :: distinct [3]f32
-
-// popup ids used for opening them
-popup_new_project := ui_gen_id()
-popup_preview_settings := ui_gen_id()
-popup_fav_palletes := ui_gen_id()
-popup_exit := ui_gen_id()
 
 App :: struct {
 	state: Screen_State, 
@@ -35,7 +28,6 @@ App :: struct {
 	show_fps: bool,
 	unlock_fps: bool,
 	exit: bool,
-	exit_popup_confirm: proc(state: ^Project_State),
 }
 
 Screen_State :: union {
@@ -50,31 +42,36 @@ Welcome_State :: struct {
 Project_State :: struct {
 	dir: string,
 	export_dir: string,
+
 	zoom: f32,
+	lerped_zoom: f32,
 	spacing: f32,
-	current_color: HSV,
 	width: i32,
 	height: i32,
+	layers: [dynamic]Layer,
+	
 	pen_size: i32,
+	current_color: HSV,
 	current_layer: int,
 	lerped_current_layer: f32,
-	layers: [dynamic]Layer,
-	lerped_zoom: f32,
-	image_changed: bool,
-	copied_image: Maybe(rl.Image),
-	bg_texture: rl.Texture,
+	pallete: Pallete,
+	
 	preview_zoom: f32,
 	lerped_preview_zoom: f32,
 	preview_rotation: f32,
 	preview_rotation_speed: f32,
 	auto_rotate_preview: bool,
+	
 	temp_undo: Maybe(Action),
 	undos: [dynamic]Action,
 	redos: [dynamic]Action,
 	// used for checking if the project is saved before quitting
 	undos_len_on_save: int,
+
 	dirty_layers: [dynamic]int,
-	pallete: Pallete,
+	copied_image: Maybe(rl.Image),
+	bg_texture: rl.Texture,
+	exit_popup_confirm: proc(state: ^Project_State),
 }
 
 Layer :: struct {
@@ -95,6 +92,15 @@ Tool :: enum {
 	Fill,
 	GoTo,
 }
+
+HSV :: distinct [3]f32
+
+// popup ids used for opening them
+
+popup_new_project := ui_gen_id()
+popup_preview_settings := ui_gen_id()
+popup_fav_palletes := ui_gen_id()
+popup_exit := ui_gen_id()
 
 // undo redo actions
 
@@ -158,10 +164,10 @@ main :: proc() {
 		}
 	}
 	
+	rl.SetTargetFPS(TARGET_FPS)
 	rl.SetConfigFlags({ rl.ConfigFlags.WINDOW_RESIZABLE, rl.ConfigFlags.MSAA_4X_HINT })
 	rl.InitWindow(1200, 700, "Darko")
 	rl.SetExitKey(nil)
-	rl.SetTargetFPS(TARGET_FPS)
 
 	ntf.Init()
 	defer ntf.Quit()
@@ -171,17 +177,15 @@ main :: proc() {
 	
 	if os.exists("data.ini") {
 		load_app_data("data.ini")
-		welcome_state := Welcome_State {}
-		init_welcome_state(&welcome_state)
-		app.state = welcome_state
 	}
 	else {
 		init_app()
-		welcome_state := Welcome_State {}
-		init_welcome_state(&welcome_state)
-		app.state = welcome_state
 	}
 
+	welcome_state := Welcome_State {}
+	init_welcome_state(&welcome_state)
+	app.state = welcome_state
+	
 	defer deinit_app()
 	defer save_app_data()
 
@@ -191,7 +195,7 @@ main :: proc() {
 		switch &state in app.state {
 			case Project_State: {
 				project_shortcuts(&state)				
-				project_screen(&state)
+				project_view(&state)
 
 				// update the textures for dirty layers
 				if len(state.dirty_layers) > 0 {
@@ -206,17 +210,18 @@ main :: proc() {
 				}
 				
 				// put a star in the window title when an unsaved change exists
-				@(static) was_saved := true
+				@(static) saved_last_frame := true
 				saved := is_saved(&state)
-				if saved != was_saved {
+				if saved != saved_last_frame {
 					star := saved == false ? "*" : ""
 					rl.SetWindowTitle(fmt.ctprint("Darko - ", state.dir, star))
 				}
-				was_saved = is_saved(&state)
+				saved_last_frame = is_saved(&state)
 				
+				// show the confirm exit popup when user closes the window
 				if rl.WindowShouldClose() {
 					if is_saved(&state) == false {
-						confirm_project_exit(proc(state: ^Project_State) {
+						confirm_project_exit(&state, proc(state: ^Project_State) {
 							app.exit = true
 						})
 					}
@@ -224,17 +229,16 @@ main :: proc() {
 						app.exit = true
 					}
 				}
-				exit_popup(&state)
 			}
 			case Welcome_State: {
-				welcome_screen(&state)
+				welcome_screen_view(&state)
 
 				if rl.WindowShouldClose() {
 					app.exit = true
 				}
 			}
 		}
-		new_project_popup(&app.state)
+		new_project_popup_view(&app.state)
 		ui_end()
 
 		// draw
@@ -247,7 +251,7 @@ main :: proc() {
 		rl.EndDrawing()
 
 		if next_state, ok := app.next_state.?; ok {
-			// cleanup previuos state
+			// cleanup previous state
 			switch &state in app.state {
 				case Project_State: {
 					close_project(&state)
@@ -277,9 +281,9 @@ main :: proc() {
 	rl.CloseWindow()
 }
 
-// ui code
+// frontend code
 
-welcome_screen :: proc(state: ^Welcome_State) {
+welcome_screen_view :: proc(state: ^Welcome_State) {
 	screen_rec := ui_get_screen_rec()
 	screen_area := screen_rec
 	
@@ -368,10 +372,10 @@ welcome_screen :: proc(state: ^Welcome_State) {
 	ui_end_clip()
 }
 
-project_screen :: proc(state: ^Project_State) {
+project_view :: proc(state: ^Project_State) {
 	screen_rec := ui_get_screen_rec()
 	menu_bar_area := rec_cut_top(&screen_rec, ui_default_widget_height())
-	menu_bar(state, menu_bar_area)
+	menu_bar_view(state, menu_bar_area)
 
 	screen_area := screen_rec
 
@@ -379,24 +383,26 @@ project_screen :: proc(state: ^Project_State) {
 	middle_panel_area := screen_area
 	
 	layer_props_area := rec_cut_top(&middle_panel_area, ui_default_widget_height() + ui_px(16))
-	layer_props(state, layer_props_area)
+	toolbar_view(state, layer_props_area)
 
-	canvas(state, middle_panel_area)
+	canvas_view(state, middle_panel_area)
 	
 	ui_panel(ui_gen_id(), right_panel_area)
 	right_panel_area = rec_pad(right_panel_area, ui_px(16))
 	
 	color_panel_area := rec_cut_top(&right_panel_area, calc_color_picker_height())
-	color_panel(state, color_panel_area)
+	color_panel_view(state, color_panel_area)
 
 	rec_delete_top(&right_panel_area, ui_px(16))
 
-	preview(state, right_panel_area)	
-	preview_settings_popup(state)
-	fav_palletes_popup(state)
+	preview_view(state, right_panel_area)	
+
+	preview_settings_popup_view(state)
+	fav_palletes_popup_view(state)
+	exit_popup_view(state)
 }
 
-menu_bar :: proc(state: ^Project_State, rec: Rec) {
+menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 	area := rec
 	ui_panel(ui_gen_id(), area, { bg_color = COLOR_BASE_2 })
 
@@ -404,14 +410,14 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 	FILE_OPEN_PROJ :: "Open project" 
 	FILE_SAVE_PROJ :: "Save project" 
 	FILE_EXPORT_PROJ :: "Export project"
-	FILE_WELCOME_SCREEN :: "Go to welcome screen" 
+	FILE_WELCOME_SCREEN_view :: "Go to welcome screen" 
 	
 	file_items := [?]UI_Menu_Item {
 		ui_menu_item(ui_gen_id(), FILE_NEW_PROJ, "N"),
 		ui_menu_item(ui_gen_id(), FILE_OPEN_PROJ, "O"),
 		ui_menu_item(ui_gen_id(), FILE_SAVE_PROJ, "S"),
 		ui_menu_item(ui_gen_id(), FILE_EXPORT_PROJ, "E"),
-		ui_menu_item(ui_gen_id(), FILE_WELCOME_SCREEN, "W"),
+		ui_menu_item(ui_gen_id(), FILE_WELCOME_SCREEN_view, "W"),
 	}
 	file_rec := rec_cut_left(&area, ui_calc_button_width("File"))
 	file_clicked_item := ui_menu_button(ui_gen_id(), "File", file_items[:], ui_px(300), file_rec)
@@ -422,7 +428,7 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 			ui_open_popup(popup_new_project)
 		}
 		case FILE_OPEN_PROJ: {
-			confirm_project_exit(proc(state: ^Project_State) {
+			confirm_project_exit(state, proc(state: ^Project_State) {
 				ui_close_all_popups()
 		
 				path, res := pick_folder_dialog(state.dir, context.temp_allocator)
@@ -486,7 +492,7 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 				ui_show_notif("Project is exported")
 			}
 		}
-		case FILE_WELCOME_SCREEN: {
+		case FILE_WELCOME_SCREEN_view: {
 			go_to_welcome_screen(state)
 		}
 	}
@@ -575,17 +581,17 @@ menu_bar :: proc(state: ^Project_State, rec: Rec) {
 	}
 }
 
-layer_props :: proc(state: ^Project_State, rec: Rec) {
+toolbar_view :: proc(state: ^Project_State, rec: Rec) {
 	ui_panel(ui_gen_id(), rec)
-	props_area := rec_pad(rec, ui_px(8))
+	tools_area := rec_pad(rec, ui_px(8))
 	
 	// draw current layer index and layer count
 	current_layer := state.current_layer + 1
 	layer_count := len(state.layers)
-	ui_draw_text(fmt.tprintf("Layer {}/{}", current_layer, layer_count), props_area)
+	ui_draw_text(fmt.tprintf("Layer {}/{}", current_layer, layer_count), tools_area)
 
 	// delete button
-	delete_rec := rec_cut_right(&props_area, ui_default_widget_height())
+	delete_rec := rec_cut_right(&tools_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_TRASH, delete_rec, style = UI_BUTTON_STYLE_RED) {
 		if len(state.layers) > 1 {
 			delete_layer(state, state.current_layer)
@@ -596,8 +602,8 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 	}
 
 	// move up button
-	rec_cut_right(&props_area, ui_px(8))
-	move_up_rec := rec_cut_right(&props_area, ui_default_widget_height())
+	rec_cut_right(&tools_area, ui_px(8))
+	move_up_rec := rec_cut_right(&tools_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_UP, move_up_rec, style = UI_BUTTON_STYLE_ACCENT) {
 		if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
 			change_layer_index(state, state.current_layer, state.current_layer + 1)
@@ -605,7 +611,7 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 	}
 
 	// move down button
-	move_down_rec := rec_cut_right(&props_area, ui_default_widget_height())
+	move_down_rec := rec_cut_right(&tools_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_DOWN, move_down_rec, style = UI_BUTTON_STYLE_ACCENT) {
 		if len(state.layers) > 1 && state.current_layer > 0 {
 			change_layer_index(state, state.current_layer, state.current_layer - 1)
@@ -613,22 +619,21 @@ layer_props :: proc(state: ^Project_State, rec: Rec) {
 	}
 
 	// duplicate button
-	rec_cut_right(&props_area, ui_px(8))
-	duplicate_rec := rec_cut_right(&props_area, ui_default_widget_height())
+	rec_cut_right(&tools_area, ui_px(8))
+	duplicate_rec := rec_cut_right(&tools_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_COPY, duplicate_rec, style = UI_BUTTON_STYLE_ACCENT) {
 		duplicate_layer(state, state.current_layer, state.current_layer + 1)
 	}
 
+	// pen size
+	rec_cut_right(&tools_area, ui_px(8))
 	size_slider_style := UI_SLIDER_STYLE_DEFAULT
 	size_slider_style.bg_color.a = 200
-
-	// pen size
-	rec_cut_right(&props_area, ui_px(8))
-	pen_size_rec := rec_cut_right(&props_area, ui_px(150))
+	pen_size_rec := rec_cut_right(&tools_area, ui_px(150))
 	ui_slider_i32(ui_gen_id(), "Pen size", &state.pen_size, 1, 10, pen_size_rec, style = size_slider_style)
 }
 
-canvas :: proc(state: ^Project_State, rec: Rec) {
+canvas_view :: proc(state: ^Project_State, rec: Rec) {
 	area := rec
 
 	ui_begin_clip(rec)
@@ -698,6 +703,7 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 		}
 	}
 
+	// draw cursor
 	if ui_is_mouse_in_rec(area) && ui_is_being_interacted() == false {
 		cursor_icon := ""
 		switch current_tool {
@@ -724,7 +730,7 @@ canvas :: proc(state: ^Project_State, rec: Rec) {
 	ui_end_clip()
 }
 
-color_panel :: proc(state: ^Project_State, rec: Rec) {
+color_panel_view :: proc(state: ^Project_State, rec: Rec) {
 	area := rec
 
 	@(static) selected: int
@@ -732,16 +738,17 @@ color_panel :: proc(state: ^Project_State, rec: Rec) {
 		{ id = ui_gen_id(), text = "Color picker" },
 		{ id = ui_gen_id(), text = "Pallete" }
 	}
+
 	options_style := UI_OPTION_STYLE_DEFAULT
 	options_style.option_style.text_color = rl.Fade(COLOR_TEXT_0, 0.7)
 	options_rec := rec_cut_top(&area, ui_default_widget_height())
 	ui_option(ui_gen_id(), options[:], &selected, options_rec, options_style)
 	
 	if selected == 0 {
-		color_picker(state, area)
+		color_picker_view(state, area)
 	}
 	else {
-		color_pallete(state, area)
+		color_pallete_view(state, area)
 	}
 }
 
@@ -750,7 +757,7 @@ calc_color_picker_height :: proc() -> (h: f32) {
 	return ui_default_widget_height() * 7 + ui_px(8) * 3 
 }
 
-color_picker :: proc(state: ^Project_State, rec: Rec) {		
+color_picker_view :: proc(state: ^Project_State, rec: Rec) {		
 	area := rec
 
 	// preview color
@@ -851,7 +858,7 @@ color_picker :: proc(state: ^Project_State, rec: Rec) {
 	}
 }
 
-color_pallete :: proc(state: ^Project_State, rec: Rec) {
+color_pallete_view :: proc(state: ^Project_State, rec: Rec) {
 	area := rec
 
 	buttons_area := rec_cut_top(&area, ui_default_widget_height())
@@ -968,7 +975,7 @@ color_pallete :: proc(state: ^Project_State, rec: Rec) {
 	ui_draw_rec_outline(COLOR_BASE_0, 1, rec)
 }
 
-fav_palletes_popup :: proc(state: ^Project_State) {
+fav_palletes_popup_view :: proc(state: ^Project_State) {
 	screen_rec := ui_get_screen_rec()
 
 	rec := rec_center_in_area({ 0, 0, ui_px(400), ui_px(200) }, screen_rec)
@@ -1019,7 +1026,7 @@ fav_palletes_popup :: proc(state: ^Project_State) {
 	ui_end_popup()
 }
 
-preview :: proc(state: ^Project_State, rec: Rec) {
+preview_view :: proc(state: ^Project_State, rec: Rec) {
 	area := rec
 	id := ui_gen_id()
 	ui_update_widget(id, area)
@@ -1057,7 +1064,7 @@ preview :: proc(state: ^Project_State, rec: Rec) {
 	ui_end_clip()
 }
 
-new_project_popup :: proc(state: ^Screen_State) {
+new_project_popup_view :: proc(state: ^Screen_State) {
 	can_shortcut := ui_ctx.text_mode_slider == 0
 	ui_close_popup_on_esc(popup_new_project)
 
@@ -1083,9 +1090,9 @@ new_project_popup :: proc(state: ^Screen_State) {
 			
 				ui_show_notif(ICON_CHECK + " Project is created")
 			}
-			_, project_open := app.state.(Project_State)
+			project, project_open := app.state.(Project_State)
 			if project_open {
-				confirm_project_exit(proc(state: ^Project_State) { 
+				confirm_project_exit(&project, proc(state: ^Project_State) { 
 					create_project() 
 				})
 			}
@@ -1097,7 +1104,7 @@ new_project_popup :: proc(state: ^Screen_State) {
 	ui_end_popup()
 }
 
-preview_settings_popup :: proc(state: ^Project_State) {
+preview_settings_popup_view :: proc(state: ^Project_State) {
 	ui_close_popup_on_esc(popup_preview_settings)
 
 	screen_rec := ui_get_screen_rec()
@@ -1118,7 +1125,7 @@ preview_settings_popup :: proc(state: ^Project_State) {
 	ui_end_popup()
 }
 
-exit_popup :: proc(state: ^Project_State) {
+exit_popup_view :: proc(state: ^Project_State) {
 	screen_rec := ui_get_screen_rec()
 	
 	popup_h := ui_calc_popup_height(2, ui_default_widget_height(), ui_px(8), ui_px(16))
@@ -1173,14 +1180,14 @@ exit_popup :: proc(state: ^Project_State) {
 		}
 		
 		if exiting {
-			fmt.printfln("y")
-			app.exit_popup_confirm(state)
+			fmt.printfln("exiting")
+			state.exit_popup_confirm(state)
 		}
 	}
 }
 
-confirm_project_exit :: proc(callback: proc(state: ^Project_State)) {
-	app.exit_popup_confirm = callback
+confirm_project_exit :: proc(state: ^Project_State, callback: proc(state: ^Project_State)) {
+	state.exit_popup_confirm = callback
 	ui_open_popup(popup_exit)
 }
 
@@ -1192,7 +1199,7 @@ go_to_welcome_screen :: proc(state: ^Project_State) {
 		ui_close_all_popups()
 	}
 	else {
-		confirm_project_exit(proc(state: ^Project_State) {
+		confirm_project_exit(state, proc(state: ^Project_State) {
 			welcome_state := Welcome_State {}
 			init_welcome_state(&welcome_state)
 			schedule_state_change(welcome_state)
@@ -1202,344 +1209,6 @@ go_to_welcome_screen :: proc(state: ^Project_State) {
 }
 
 // backend code
-
-app_shortcuts :: proc() {
-	// toggle unlock_fps
-	if rl.IsKeyPressed(.F1) {
-		app.unlock_fps = !app.unlock_fps
-		if app.unlock_fps {
-			rl.SetTargetFPS(-1)
-		}
-		else {
-			rl.SetTargetFPS(TARGET_FPS)
-		}
-	}
-
-	// toggle show_fps
-	if rl.IsKeyPressed(.F2) {
-		app.show_fps = !app.show_fps
-	}
-
-	// zoom in ui
-	if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.EQUAL) {
-		ui_set_scale(ui_ctx.scale + 0.2)
-	}
-	// zoom out ui
-	if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.MINUS) {
-		ui_set_scale(ui_ctx.scale - 0.2)
-	}
-
-	// update these shortcuts when no textbox is active
-	if ui_ctx.text_mode_slider == 0 {
-		// new project
-		if rl.IsKeyPressed(.N) {
-			ui_open_popup(popup_new_project)
-		}
-
-		// open project
-		if rl.IsKeyPressed(.O) {
-			open_scope: {
-				ui_close_all_popups()
-				
-				path, res := pick_folder_dialog("", context.temp_allocator)
-				if res == .Error {
-					ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-				}
-				else if res == .Cancel {
-					break open_scope
-				}
-		
-				loaded_project: Project_State
-				loaded := load_project_state(&loaded_project, path)
-				if loaded == false {
-					ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-					break open_scope
-				}
-					
-				schedule_state_change(loaded_project)
-			}
-		}
-	}
-}
-
-project_shortcuts :: proc(state: ^Project_State) {
-	if ui_is_any_popup_open() == false {
-		if rl.IsKeyDown(.LEFT_CONTROL) {
-			// translate layer
-			if rl.IsKeyPressed(.LEFT) {
-				translate_layer(state, state.current_layer, -1, 0)
-			}
-			else if rl.IsKeyPressed(.RIGHT) {
-				translate_layer(state, state.current_layer, 1, 0)
-			}
-			else if rl.IsKeyPressed(.UP) {
-				translate_layer(state, state.current_layer, 0, -1)
-			}
-			else if rl.IsKeyPressed(.DOWN) {
-				translate_layer(state, state.current_layer, 0, 1)
-			}
-
-			// create new layer at the top
-			if rl.IsKeyPressed(.SPACE) {
-				add_empty_layer(state, len(state.layers))
-			}		
-		}
-		else if rl.IsKeyDown(.LEFT_ALT) {
-			// move layer up
-			if rl.IsKeyPressed(.UP) {
-				if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
-					change_layer_index(state, state.current_layer, state.current_layer + 1)
-				}
-			}
-
-			// move layer down
-			if rl.IsKeyPressed(.DOWN) {
-				if len(state.layers) > 1 && state.current_layer > 0 {
-					change_layer_index(state, state.current_layer, state.current_layer - 1)
-				}
-			}
-		}
-		else {			
-			// save project
-			if rl.IsKeyPressed(.S) {
-				save_scope: {								
-					saved := false
-					if state.dir == "" {
-						path, res := pick_folder_dialog(state.dir, context.temp_allocator)
-						if res == .Error {
-							ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
-						}
-						else if res == .Cancel {
-							break save_scope
-						}
-				
-						saved = save_project_state(state, path)
-						ui_show_notif("Project is saved")
-					}
-					else {
-						saved = save_project_state(state, state.dir)
-					}
-
-					if saved == false {
-						ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
-						break save_scope
-					}
-			
-					add_recent_project(state.dir)
-				}								
-			}			
-
-			// export project
-			if rl.IsKeyPressed(.E) {
-				export_scope: {													
-					path, res := pick_folder_dialog(state.export_dir, context.temp_allocator)
-					if res == .Error {
-						ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
-					}
-					else if res == .Cancel {
-						break export_scope
-					}
-			
-					exported := export_project_state(state, path)
-					if exported == false {
-						ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
-						break export_scope
-					}
-			
-					ui_show_notif("Project is exported")
-				}			
-			}
-
-			// create new layer above the current
-			if rl.IsKeyPressed(.SPACE) {
-				add_empty_layer(state, state.current_layer + 1)
-			}
-
-			// duplicate layer
-			if rl.IsKeyPressed(.D) {
-				duplicate_layer(state, state.current_layer, state.current_layer + 1)
-			}
-
-			// move current layer up
-			if rl.IsKeyPressed(.UP) {
-				state.current_layer += 1
-				if state.current_layer >= len(state.layers) {
-					state.current_layer = 0
-				}
-			}
-
-			// move current layer down
-			if rl.IsKeyPressed(.DOWN) {
-				state.current_layer -= 1
-				if state.current_layer < 0 {
-					state.current_layer = len(state.layers) - 1
-				}
-			}
-
-			// clear current layer
-			if rl.IsKeyPressed(.F) {
-				action_do(state, Action_Image_Change {
-					before_image = rl.ImageCopy(get_current_layer(state).image),
-					after_image = rl.GenImageColor(state.width, state.height, rl.BLANK),
-					layer_index = state.current_layer,
-				})	
-			}
-
-			// delete current layer
-			if rl.IsKeyPressed(.X) {
-				if len(state.layers) > 1 {
-					delete_layer(state, state.current_layer)
-				}
-			}
-
-			// undo
-			if rl.IsKeyPressed(.Z) {
-				undo(state)
-			}
-
-			// redo
-			if rl.IsKeyPressed(.Y) {
-				redo(state)
-			}
-
-			// copy
-			if rl.IsKeyPressed(.C) {
-				copy_layer(state, get_current_layer(state))
-			}
-
-			// paste
-			if rl.IsKeyPressed(.V) {
-				paste_layer(state, state.current_layer)
-			}
-
-			// go to welcome screen
-			if rl.IsKeyPressed(.W) {
-				go_to_welcome_screen(state)
-			}
-		}
-	}
-}
-
-action_preform :: proc(state: ^Project_State, action: Action) {
-	switch &kind in action {
-		case Action_Image_Change: {
-			image := rl.ImageCopy(kind.after_image)
-			state.layers[kind.layer_index].image = image
-			mark_dirty_layers(state, state.current_layer)
-		}
-		case Action_Create_Layer: {
-			layer: Layer
-			init_layer(&layer, state.width, state.height)
-			inject_at(&state.layers, kind.layer_index, layer)
-			state.current_layer = kind.layer_index
-		}
-		case Action_Duplicate_Layer: {
-			layer: Layer
-			layer.image = rl.ImageCopy(state.layers[kind.from_index].image)
-			layer.texture = rl.LoadTextureFromImage(layer.image)
-			inject_at_elem(&state.layers, kind.to_index, layer)
-			state.current_layer = kind.to_index
-		}
-		case Action_Change_Layer_Index: {
-			layer := state.layers[kind.from_index]
-			ordered_remove(&state.layers, kind.from_index)
-			inject_at_elem(&state.layers, kind.to_index, layer)
-			state.current_layer = kind.to_index
-		}
-		case Action_Delete_Layer: {
-			kind.image = rl.ImageCopy(get_current_layer(state).image)
-			deinit_layer(&state.layers[kind.layer_index])
-			ordered_remove(&state.layers, kind.layer_index)
-			if kind.layer_index > 0 {
-				state.current_layer -= 1
-			}
-		}
-	}
-}
-
-action_unpreform :: proc(state: ^Project_State, action: Action) {
-	switch kind in action {
-		case Action_Image_Change: {
-			image := rl.ImageCopy(kind.before_image)
-			state.layers[kind.layer_index].image = image
-			mark_dirty_layers(state, kind.layer_index)
-			state.current_layer = kind.layer_index
-		}
-		case Action_Create_Layer: {
-			deinit_layer(&state.layers[kind.layer_index])
-			ordered_remove(&state.layers, kind.layer_index)
-			state.current_layer = kind.current_layer_index
-		}
-		case Action_Duplicate_Layer: {
-			deinit_layer(&state.layers[kind.to_index])
-			ordered_remove(&state.layers, kind.to_index)
-			state.current_layer = kind.from_index
-		}
-		case Action_Change_Layer_Index: {
-			layer := state.layers[kind.to_index]
-			ordered_remove(&state.layers, kind.to_index)
-			inject_at_elem(&state.layers, kind.from_index, layer)
-			state.current_layer = kind.from_index
-		}
-		case Action_Delete_Layer: {
-			layer: Layer
-			layer.image = rl.ImageCopy(kind.image)
-			layer.texture = rl.LoadTextureFromImage(layer.image)
-			inject_at(&state.layers, kind.layer_index, layer)
-			state.current_layer = kind.layer_index
-			mark_dirty_layers(state, state.current_layer)
-		}
-	}
-}
-
-action_deinit :: proc(action: Action) {
-	switch kind in action {
-		case Action_Image_Change: {
-			rl.UnloadImage(kind.before_image)
-			rl.UnloadImage(kind.after_image)
-		}
-		case Action_Create_Layer: {
-
-		}
-		case Action_Duplicate_Layer: {
-
-		}
-		case Action_Change_Layer_Index: {
-
-		}
-		case Action_Delete_Layer: {
-			rl.UnloadImage(kind.image)
-		}
-	}
-}
-
-// maybe this logic could move to action_preform? 
-action_do :: proc(state: ^Project_State, action: Action) {
-	action_preform(state, action)
-	append(&state.undos, action)
-	for action in state.redos {
-		action_deinit(action)
-	}
-	clear(&state.redos)
-}
-
-undo :: proc(state: ^Project_State) {
-	if len(state.undos) > 0 {
-		fmt.printfln("undo")
-		action := pop(&state.undos)
-		action_unpreform(state, action)
-		append(&state.redos, action)
-	}	
-}
-
-redo :: proc(state: ^Project_State) {
-	if len(state.redos) > 0 {
-		fmt.printfln("redo")
-		action := pop(&state.redos)
-		action_preform(state, action)
-		append(&state.undos, action)
-	}	
-}
 
 init_app :: proc() {
 	app.new_project_width = 16
@@ -1909,6 +1578,24 @@ close_project :: proc(state: ^Project_State) {
 	deinit_project_state(state)
 }
 
+add_recent_project :: proc(path: string) {
+	// remove first recent when recent_projects is full
+	if app.recent_projects.len >= len(app.recent_projects.data) {
+		delete(app.recent_projects.data[0])
+		sa.ordered_remove(&app.recent_projects, 0)
+	}
+
+	// remove duplicate recents
+	if index, found := slice.linear_search(app.recent_projects.data[:], path); found {
+		if found {
+			delete(app.recent_projects.data[index])
+			sa.ordered_remove(&app.recent_projects, index)
+		}
+	}
+
+	sa.append(&app.recent_projects, strings.clone(path))
+}
+
 // NOTE: deinit calls for the previous state are handled automatically 
 schedule_state_change :: proc(state: Screen_State) {
 	app.next_state = state
@@ -1937,44 +1624,6 @@ mark_dirty_layers :: proc(state: ^Project_State, indexes: ..int) {
 mark_all_layers_dirty :: proc(state: ^Project_State) {
 	for i in 0..<len(state.layers) {
 		append(&state.dirty_layers, i)
-	}
-}
-
-add_recent_project :: proc(path: string) {
-	// remove first recent when recent_projects is full
-	if app.recent_projects.len >= len(app.recent_projects.data) {
-		delete(app.recent_projects.data[0])
-		sa.ordered_remove(&app.recent_projects, 0)
-	}
-
-	// remove duplicate recents
-	if index, found := slice.linear_search(app.recent_projects.data[:], path); found {
-		if found {
-			delete(app.recent_projects.data[index])
-			sa.ordered_remove(&app.recent_projects, index)
-		}
-	}
-
-	sa.append(&app.recent_projects, strings.clone(path))
-}
-
-update_zoom :: proc(current_zoom: ^f32, strength: f32, min: f32, max: f32) {
-	zoom := current_zoom^ + rl.GetMouseWheelMove() * strength
-	zoom = math.clamp(zoom, min, max)
-	current_zoom^ = zoom
-}
-
-draw_sprite_stack :: proc(layers: ^[dynamic]Layer, x, y: f32, scale: f32, rotation: f32, spacing: f32) {
-	spacing := spacing * scale
-	y := y + f32(len(layers^) - 1) * spacing / 2
-	for layer in layers {
-		layer_width := f32(layer.image.width)
-		layer_height := f32(layer.image.height)
-		source_rec := Rec { 0, 0, layer_width, layer_height }
-		dest_rec := Rec { x, y, layer_width * scale, layer_height * scale }
-		origin := rl.Vector2 { layer_width * scale / 2, layer_height * scale / 2 }
-		rl.DrawTexturePro(layer.texture, source_rec, dest_rec, origin, rotation, rl.WHITE)
-		y -= spacing
 	}
 }
 
@@ -2118,7 +1767,7 @@ dfs :: proc(image: ^rl.Image, x, y: i32, prev_color, new_color: rl.Color) {
 translate_layer :: proc(state: ^Project_State, layer_index, x, y: int) {
 	before_image := rl.ImageCopy(state.layers[layer_index].image)
 	after_image := rl.ImageCopy(before_image)
-	move_image(state, &after_image, x, y)
+	translate_image(state, &after_image, x, y)
 	action_do(state, Action_Image_Change { 
 		before_image = before_image, 
 		after_image = after_image, 
@@ -2126,7 +1775,7 @@ translate_layer :: proc(state: ^Project_State, layer_index, x, y: int) {
 	})
 }
 
-move_image :: proc(state: ^Project_State, image: ^rl.Image, x, y: int) {
+translate_image :: proc(state: ^Project_State, image: ^rl.Image, x, y: int) {
 	image_rec := Rec { 0, 0, f32(state.width), f32(state.height) }
 	dest_rec := Rec { f32(x), f32(y), f32(state.width), f32(state.height) }
 	prev_image := rl.ImageCopy(image^)
@@ -2173,6 +1822,20 @@ delete_layer :: proc(state: ^Project_State, layer_index: int) {
 	action_do(state, Action_Delete_Layer { layer_index = layer_index })
 }
 
+draw_sprite_stack :: proc(layers: ^[dynamic]Layer, x, y: f32, scale: f32, rotation: f32, spacing: f32) {
+	spacing := spacing * scale
+	y := y + f32(len(layers^) - 1) * spacing / 2
+	for layer in layers {
+		layer_width := f32(layer.image.width)
+		layer_height := f32(layer.image.height)
+		source_rec := Rec { 0, 0, layer_width, layer_height }
+		dest_rec := Rec { x, y, layer_width * scale, layer_height * scale }
+		origin := rl.Vector2 { layer_width * scale / 2, layer_height * scale / 2 }
+		rl.DrawTexturePro(layer.texture, source_rec, dest_rec, origin, rotation, rl.WHITE)
+		y -= spacing
+	}
+}
+
 draw_canvas :: proc(state: ^Project_State, area: Rec) {
 	src_rec := Rec { 0, 0, f32(state.width), f32(state.height) }
 	if len(state.layers) > 1 && state.current_layer > 0 {
@@ -2197,6 +1860,344 @@ draw_grid :: proc(slice_w, slice_h: i32, rec: Rec) {
 		rl.DrawLineV({ rec.x, y }, { rec.x + rec.width, y }, COLOR_BASE_1)
 		y += y_step
 	}
+}
+
+app_shortcuts :: proc() {
+	// toggle unlock_fps
+	if rl.IsKeyPressed(.F1) {
+		app.unlock_fps = !app.unlock_fps
+		if app.unlock_fps {
+			rl.SetTargetFPS(-1)
+		}
+		else {
+			rl.SetTargetFPS(TARGET_FPS)
+		}
+	}
+
+	// toggle show_fps
+	if rl.IsKeyPressed(.F2) {
+		app.show_fps = !app.show_fps
+	}
+
+	// zoom in ui
+	if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.EQUAL) {
+		ui_set_scale(ui_ctx.scale + 0.2)
+	}
+	// zoom out ui
+	if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.MINUS) {
+		ui_set_scale(ui_ctx.scale - 0.2)
+	}
+
+	// update these shortcuts when no textbox is active
+	if ui_ctx.text_mode_slider == 0 {
+		// new project
+		if rl.IsKeyPressed(.N) {
+			ui_open_popup(popup_new_project)
+		}
+
+		// open project
+		if rl.IsKeyPressed(.O) {
+			open_scope: {
+				ui_close_all_popups()
+				
+				path, res := pick_folder_dialog("", context.temp_allocator)
+				if res == .Error {
+					ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+				}
+				else if res == .Cancel {
+					break open_scope
+				}
+		
+				loaded_project: Project_State
+				loaded := load_project_state(&loaded_project, path)
+				if loaded == false {
+					ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+					break open_scope
+				}
+					
+				schedule_state_change(loaded_project)
+			}
+		}
+	}
+}
+
+project_shortcuts :: proc(state: ^Project_State) {
+	if ui_is_any_popup_open() == false {
+		if rl.IsKeyDown(.LEFT_CONTROL) {
+			// translate layer
+			if rl.IsKeyPressed(.LEFT) {
+				translate_layer(state, state.current_layer, -1, 0)
+			}
+			else if rl.IsKeyPressed(.RIGHT) {
+				translate_layer(state, state.current_layer, 1, 0)
+			}
+			else if rl.IsKeyPressed(.UP) {
+				translate_layer(state, state.current_layer, 0, -1)
+			}
+			else if rl.IsKeyPressed(.DOWN) {
+				translate_layer(state, state.current_layer, 0, 1)
+			}
+
+			// create new layer at the top
+			if rl.IsKeyPressed(.SPACE) {
+				add_empty_layer(state, len(state.layers))
+			}		
+		}
+		else if rl.IsKeyDown(.LEFT_ALT) {
+			// move layer up
+			if rl.IsKeyPressed(.UP) {
+				if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
+					change_layer_index(state, state.current_layer, state.current_layer + 1)
+				}
+			}
+
+			// move layer down
+			if rl.IsKeyPressed(.DOWN) {
+				if len(state.layers) > 1 && state.current_layer > 0 {
+					change_layer_index(state, state.current_layer, state.current_layer - 1)
+				}
+			}
+		}
+		else {			
+			// save project
+			if rl.IsKeyPressed(.S) {
+				save_scope: {								
+					saved := false
+					if state.dir == "" {
+						path, res := pick_folder_dialog(state.dir, context.temp_allocator)
+						if res == .Error {
+							ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+						}
+						else if res == .Cancel {
+							break save_scope
+						}
+				
+						saved = save_project_state(state, path)
+						ui_show_notif("Project is saved")
+					}
+					else {
+						saved = save_project_state(state, state.dir)
+					}
+
+					if saved == false {
+						ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+						break save_scope
+					}
+			
+					add_recent_project(state.dir)
+				}								
+			}			
+
+			// export project
+			if rl.IsKeyPressed(.E) {
+				export_scope: {													
+					path, res := pick_folder_dialog(state.export_dir, context.temp_allocator)
+					if res == .Error {
+						ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
+					}
+					else if res == .Cancel {
+						break export_scope
+					}
+			
+					exported := export_project_state(state, path)
+					if exported == false {
+						ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
+						break export_scope
+					}
+			
+					ui_show_notif("Project is exported")
+				}			
+			}
+
+			// create new layer above the current
+			if rl.IsKeyPressed(.SPACE) {
+				add_empty_layer(state, state.current_layer + 1)
+			}
+
+			// duplicate layer
+			if rl.IsKeyPressed(.D) {
+				duplicate_layer(state, state.current_layer, state.current_layer + 1)
+			}
+
+			// move current layer up
+			if rl.IsKeyPressed(.UP) {
+				state.current_layer += 1
+				if state.current_layer >= len(state.layers) {
+					state.current_layer = 0
+				}
+			}
+
+			// move current layer down
+			if rl.IsKeyPressed(.DOWN) {
+				state.current_layer -= 1
+				if state.current_layer < 0 {
+					state.current_layer = len(state.layers) - 1
+				}
+			}
+
+			// clear current layer
+			if rl.IsKeyPressed(.F) {
+				action_do(state, Action_Image_Change {
+					before_image = rl.ImageCopy(get_current_layer(state).image),
+					after_image = rl.GenImageColor(state.width, state.height, rl.BLANK),
+					layer_index = state.current_layer,
+				})	
+			}
+
+			// delete current layer
+			if rl.IsKeyPressed(.X) {
+				if len(state.layers) > 1 {
+					delete_layer(state, state.current_layer)
+				}
+			}
+
+			// undo
+			if rl.IsKeyPressed(.Z) {
+				undo(state)
+			}
+
+			// redo
+			if rl.IsKeyPressed(.Y) {
+				redo(state)
+			}
+
+			// copy
+			if rl.IsKeyPressed(.C) {
+				copy_layer(state, get_current_layer(state))
+			}
+
+			// paste
+			if rl.IsKeyPressed(.V) {
+				paste_layer(state, state.current_layer)
+			}
+
+			// go to welcome screen
+			if rl.IsKeyPressed(.W) {
+				go_to_welcome_screen(state)
+			}
+		}
+	}
+}
+
+action_preform :: proc(state: ^Project_State, action: Action) {
+	switch &kind in action {
+		case Action_Image_Change: {
+			image := rl.ImageCopy(kind.after_image)
+			state.layers[kind.layer_index].image = image
+			mark_dirty_layers(state, state.current_layer)
+		}
+		case Action_Create_Layer: {
+			layer: Layer
+			init_layer(&layer, state.width, state.height)
+			inject_at(&state.layers, kind.layer_index, layer)
+			state.current_layer = kind.layer_index
+		}
+		case Action_Duplicate_Layer: {
+			layer: Layer
+			layer.image = rl.ImageCopy(state.layers[kind.from_index].image)
+			layer.texture = rl.LoadTextureFromImage(layer.image)
+			inject_at_elem(&state.layers, kind.to_index, layer)
+			state.current_layer = kind.to_index
+		}
+		case Action_Change_Layer_Index: {
+			layer := state.layers[kind.from_index]
+			ordered_remove(&state.layers, kind.from_index)
+			inject_at_elem(&state.layers, kind.to_index, layer)
+			state.current_layer = kind.to_index
+		}
+		case Action_Delete_Layer: {
+			kind.image = rl.ImageCopy(get_current_layer(state).image)
+			deinit_layer(&state.layers[kind.layer_index])
+			ordered_remove(&state.layers, kind.layer_index)
+			if kind.layer_index > 0 {
+				state.current_layer -= 1
+			}
+		}
+	}
+}
+
+action_unpreform :: proc(state: ^Project_State, action: Action) {
+	switch kind in action {
+		case Action_Image_Change: {
+			image := rl.ImageCopy(kind.before_image)
+			state.layers[kind.layer_index].image = image
+			mark_dirty_layers(state, kind.layer_index)
+			state.current_layer = kind.layer_index
+		}
+		case Action_Create_Layer: {
+			deinit_layer(&state.layers[kind.layer_index])
+			ordered_remove(&state.layers, kind.layer_index)
+			state.current_layer = kind.current_layer_index
+		}
+		case Action_Duplicate_Layer: {
+			deinit_layer(&state.layers[kind.to_index])
+			ordered_remove(&state.layers, kind.to_index)
+			state.current_layer = kind.from_index
+		}
+		case Action_Change_Layer_Index: {
+			layer := state.layers[kind.to_index]
+			ordered_remove(&state.layers, kind.to_index)
+			inject_at_elem(&state.layers, kind.from_index, layer)
+			state.current_layer = kind.from_index
+		}
+		case Action_Delete_Layer: {
+			layer: Layer
+			layer.image = rl.ImageCopy(kind.image)
+			layer.texture = rl.LoadTextureFromImage(layer.image)
+			inject_at(&state.layers, kind.layer_index, layer)
+			state.current_layer = kind.layer_index
+			mark_dirty_layers(state, state.current_layer)
+		}
+	}
+}
+
+action_deinit :: proc(action: Action) {
+	switch kind in action {
+		case Action_Image_Change: {
+			rl.UnloadImage(kind.before_image)
+			rl.UnloadImage(kind.after_image)
+		}
+		case Action_Create_Layer: {
+			
+		}
+		case Action_Duplicate_Layer: {
+			
+		}
+		case Action_Change_Layer_Index: {
+			
+		}
+		case Action_Delete_Layer: {
+			rl.UnloadImage(kind.image)
+		}
+	}
+}
+
+// maybe this logic could move to action_preform? 
+action_do :: proc(state: ^Project_State, action: Action) {
+	action_preform(state, action)
+	append(&state.undos, action)
+	for action in state.redos {
+		action_deinit(action)
+	}
+	clear(&state.redos)
+}
+
+undo :: proc(state: ^Project_State) {
+	if len(state.undos) > 0 {
+		fmt.printfln("undo")
+		action := pop(&state.undos)
+		action_unpreform(state, action)
+		append(&state.redos, action)
+	}	
+}
+
+redo :: proc(state: ^Project_State) {
+	if len(state.redos) > 0 {
+		fmt.printfln("redo")
+		action := pop(&state.redos)
+		action_preform(state, action)
+		append(&state.undos, action)
+	}	
 }
 
 process_commands :: proc(commands: []UI_Draw_Command) {
@@ -2298,6 +2299,12 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 			}
 		}
 	}
+}
+
+update_zoom :: proc(current_zoom: ^f32, strength: f32, min: f32, max: f32) {
+	zoom := current_zoom^ + rl.GetMouseWheelMove() * strength
+	zoom = math.clamp(zoom, min, max)
+	current_zoom^ = zoom
 }
 
 is_saved :: proc(state: ^Project_State) -> (saved: bool) {
