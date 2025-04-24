@@ -1327,6 +1327,112 @@ ui_option :: proc(id: UI_ID, items: []UI_Option, selceted: ^int, rec: Rec, style
 	}
 }
 
+// HACK: this guy uses some stuff from main.odin but i can't be bothered 
+ui_color_picker :: proc(id: UI_ID, color: ^HSV, rec: Rec) {
+	area := rec
+
+	// preview color
+	preview_area := rec_cut_top(&area, ui_default_widget_height() * 3)
+	ui_draw_rec(hsv_to_rgb(color^), preview_area)
+	ui_draw_rec_outline(COLOR_BASE_0, ui_px(1), preview_area)
+	rec_delete_top(&area, ui_px(8))
+
+	hsv_color := color^
+
+	// not sure if it's actually called grip...
+	draw_grip :: proc(value, min, max: f32, rec: Rec) {
+		grip_width := ui_px(10)
+		grip_x := (value - min) * (rec.width) / (max - min) - grip_width / 2
+		g_rec := Rec { rec.x + grip_x, rec.y, grip_width, rec.height }
+		ui_draw_rec_outline(rl.BLACK, 3, rec_pad(g_rec, -1))
+		ui_draw_rec_outline(rl.WHITE, 1, g_rec)
+	}
+
+	// hue slider
+	hue_rec := rec_cut_top(&area, ui_default_widget_height())
+	hue_changed := ui_slider_behaviour_f32(ui_gen_id(int(id)), &hsv_color[0], 0, 360, hue_rec)
+	ui_draw_rec(COLOR_BASE_0, hue_rec)
+
+	hue_rec = rec_pad(hue_rec, 1)
+	hue_area := hue_rec
+	segment_width := hue_rec.width / 6
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = { 255, 0, 255, 255 },
+		right_color = { 255, 0, 0, 255 },
+		rec = rec_cut_right(&hue_area, segment_width)
+	})
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = { 0, 0, 255, 255 },
+		right_color = { 255, 0, 255, 255 },
+		rec = rec_cut_right(&hue_area, segment_width)
+	})
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = { 0, 255, 255, 255 },
+		right_color = { 0, 0, 255, 255 },
+		rec = rec_cut_right(&hue_area, segment_width)
+	})
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = { 0, 255, 0, 255 },
+		right_color = { 0, 255, 255, 255 },
+		rec = rec_cut_right(&hue_area, segment_width)
+	})
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = { 255, 255, 0, 255 },
+		right_color = { 0, 255, 0, 255 },
+		rec = rec_cut_right(&hue_area, segment_width)
+	})
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = { 255, 0, 0, 255 },
+		right_color = { 255, 255, 0, 255 },
+		rec = rec_cut_right(&hue_area, segment_width)
+	})
+
+	draw_grip(hsv_color[0], 0, 360, hue_rec)
+	rec_delete_top(&area, ui_px(8))
+
+	// saturation slider
+	saturation_rec := rec_cut_top(&area, ui_default_widget_height())
+	saturation_changed := ui_slider_behaviour_f32(ui_gen_id(int(id)), &hsv_color[1], 0, 1, saturation_rec)
+	ui_draw_rec(COLOR_BASE_0, saturation_rec)
+
+	saturation_rec = rec_pad(saturation_rec, 1)
+	sat_color := hsv_color
+	sat_color[1] = 1
+	left_color := rl.ColorLerp(rl.WHITE, rl.BLACK, 1 - hsv_color[2])
+	right_color := hsv_to_rgb(sat_color)
+	right_color = rl.ColorLerp(right_color, rl.BLACK, 1 - hsv_color[2])
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = left_color,
+		right_color = right_color,
+		rec = saturation_rec,
+	})
+
+	draw_grip(hsv_color[1], 0, 1, saturation_rec)
+	rec_delete_top(&area, ui_px(8))
+	
+	// value slider
+	value_rec := rec_cut_top(&area, ui_default_widget_height())
+	value_changed := ui_slider_behaviour_f32(ui_gen_id(int(id)), &hsv_color[2], 0, 1, value_rec)
+	ui_draw_rec(COLOR_BASE_0, value_rec)
+
+	value_rec = rec_pad(value_rec, 1)
+	ui_push_command(UI_Draw_Gradient_H {
+		left_color = rl.BLACK,
+		right_color = rl.WHITE,
+		rec = value_rec,
+	})
+
+	draw_grip(hsv_color[2], 0, 1, value_rec)
+
+	if hue_changed || saturation_changed || value_changed  {
+		color^ = hsv_color
+	}
+}
+
+ui_calc_color_picker_height :: proc() -> (h: f32) {
+	return ui_default_widget_height() * 7 + ui_px(8) * 3 
+}
+
 ui_draw_text :: proc(text: string, rec: Rec, align := UI_Align { .Left, .Center }, color := COLOR_TEXT_0, size := f32(0)) {
 	size := size == 0 ? ui_font_size() : size
 	ui_push_command(UI_Draw_Text { text = text, rec = rec, align = align, color = color, size = size })
