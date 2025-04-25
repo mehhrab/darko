@@ -1430,6 +1430,31 @@ ui_color_picker :: proc(id: UI_ID, color: ^HSV, rec: Rec) {
 ui_calc_color_picker_height :: proc() -> (h: f32) {
 	return ui_default_widget_height() * 6 + ui_px(8) * 3 
 }
+
+ui_color_button :: proc(id: UI_ID, label: string, color: ^HSV, rec: Rec) {
+	area := rec
+
+	ui_draw_text(label, area)
+
+	color_rec := rec_take_right(&area, ui_default_widget_height())
+	ui_update_widget(id, color_rec)
+	if ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT) {
+		ui_open_popup(id, false)
+	}
+	
+	ui_draw_rec(COLOR_BASE_0, color_rec)
+	ui_draw_rec(hsv_to_rgb(color^), rec_pad(color_rec, 2))
+
+	popup_rec := Rec { 
+		rec.x + rec.width + ui_px(10), 
+		rec.y + rec.height + ui_px(10), 
+		ui_px(300), 
+		ui_calc_color_picker_height()
+	}
+	if ui_begin_popup(id, popup_rec) {
+		ui_color_picker(ui_gen_id(int(id)), color, popup_rec)
+	}
+	ui_end_popup()
 }
 
 ui_draw_text :: proc(text: string, rec: Rec, align := UI_Align { .Left, .Center }, color := COLOR_TEXT_0, size := f32(0)) {
