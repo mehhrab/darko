@@ -390,7 +390,7 @@ project_view :: proc(state: ^Project_State) {
 	ui_panel(ui_gen_id(), right_panel_area)
 	right_panel_area = rec_pad(right_panel_area, ui_px(16))
 	
-	color_panel_area := rec_cut_top(&right_panel_area, ui_calc_color_picker_height())
+	color_panel_area := rec_cut_top(&right_panel_area, calc_color_panel_h())
 	color_panel_view(state, color_panel_area)
 
 	rec_delete_top(&right_panel_area, ui_px(16))
@@ -750,6 +750,10 @@ color_panel_view :: proc(state: ^Project_State, rec: Rec) {
 	else {
 		color_pallete_view(state, area)
 	}
+}
+
+calc_color_panel_h :: proc() -> (h: f32) {
+	return ui_default_widget_height() + ui_calc_color_picker_height()
 }
 
 color_pallete_view :: proc(state: ^Project_State, rec: Rec) {
