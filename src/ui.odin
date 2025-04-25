@@ -1428,7 +1428,8 @@ ui_color_picker :: proc(id: UI_ID, color: ^HSV, rec: Rec) {
 }
 
 ui_calc_color_picker_height :: proc() -> (h: f32) {
-	return ui_default_widget_height() * 7 + ui_px(8) * 3 
+	return ui_default_widget_height() * 6 + ui_px(8) * 3 
+}
 }
 
 ui_draw_text :: proc(text: string, rec: Rec, align := UI_Align { .Left, .Center }, color := COLOR_TEXT_0, size := f32(0)) {
