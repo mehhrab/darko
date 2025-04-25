@@ -61,7 +61,8 @@ Project_State :: struct {
 	preview_rotation: f32,
 	preview_rotation_speed: f32,
 	auto_rotate_preview: bool,
-	
+	preview_bg_color: HSV,
+
 	temp_undo: Maybe(Action),
 	undos: [dynamic]Action,
 	redos: [dynamic]Action,
@@ -1007,7 +1008,7 @@ preview_settings_popup_view :: proc(state: ^Project_State) {
 
 	screen_rec := ui_get_screen_rec()
 	
-	popup_h := ui_calc_popup_height(3, ui_default_widget_height(), ui_px(8), ui_px(16))
+	popup_h := ui_calc_popup_height(4, ui_default_widget_height(), ui_px(8), ui_px(16))
 	popup_area := rec_center_in_area({ 0, 0, ui_px(300), popup_h }, screen_rec)
 	if open, rec := ui_begin_popup_title(popup_preview_settings, "Preview settings", popup_area); open {
 		area := rec_pad(rec, ui_px(16))
@@ -1019,6 +1020,9 @@ preview_settings_popup_view :: proc(state: ^Project_State) {
 		rec_delete_top(&area, ui_px(8))
 		
 		ui_slider_f32(ui_gen_id(), "Spacing", &state.spacing, 0.1, 2, rec_cut_top(&area, ui_default_widget_height()))
+		rec_delete_top(&area, ui_px(8))
+		
+		ui_color_button(ui_gen_id(), "BG color", &state.preview_bg_color, area)
 	}
 	ui_end_popup()
 }
@@ -1240,6 +1244,7 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	state.bg_texture = rl.LoadTextureFromImage(bg_image)
 	state.preview_rotation = 0
 	state.preview_zoom = 10
+	state.preview_bg_color = { 230, 0.3, 0.5 }
 	state.layers = make([dynamic]Layer)
 	state.undos = make([dynamic]Action)
 	state.redos = make([dynamic]Action)
@@ -1284,6 +1289,10 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	loaded_state.current_color[0] = ini_read_f32(loaded_map, "current_color", "h")
 	loaded_state.current_color[1] = ini_read_f32(loaded_map, "current_color", "s")
 	loaded_state.current_color[2] = ini_read_f32(loaded_map, "current_color", "v")
+	
+	loaded_state.preview_bg_color[0] = ini_read_f32(loaded_map, "preview_bg_color", "h", 240)
+	loaded_state.preview_bg_color[1] = ini_read_f32(loaded_map, "preview_bg_color", "s", 0.3)
+	loaded_state.preview_bg_color[2] = ini_read_f32(loaded_map, "preview_bg_color", "v", 0.5)
 
 	loaded_state.pallete.name = ini_read_string(loaded_map, "pallete", "name")
 	pallete_count := ini_read_int(loaded_map, "pallete", "len")
@@ -1371,7 +1380,12 @@ save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	ini.write_pair(file.stream, "h", fmt.tprint(state.current_color[0]))
 	ini.write_pair(file.stream, "s", fmt.tprint(state.current_color[1]))
 	ini.write_pair(file.stream, "v", fmt.tprint(state.current_color[2]))
-	
+
+	ini.write_section(file.stream, "preview_bg_color")
+	ini.write_pair(file.stream, "h", fmt.tprint(state.preview_bg_color[0]))
+	ini.write_pair(file.stream, "s", fmt.tprint(state.preview_bg_color[1]))
+	ini.write_pair(file.stream, "v", fmt.tprint(state.preview_bg_color[2]))
+
 	ini.write_section(file.stream, "pallete")
 	ini.write_pair(file.stream, "name", state.pallete.name)
 	ini.write_pair(file.stream, "len", fmt.tprint(state.pallete.colors.len))
@@ -2189,10 +2203,19 @@ process_commands :: proc(commands: []UI_Draw_Command) {
 				w := i32(math.round(kind.rec.width))
 				h := i32(math.round(kind.rec.height))
 				
-				rl.DrawRectangleGradientV(x, y, w, h, COLOR_BASE_1, COLOR_BASE_4)
+				bottom_color := hsv_to_rgb(project.preview_bg_color)
+				top_color := hsv_to_rgb({
+					f32(int(project.preview_bg_color[0] - 20) % 360),
+					project.preview_bg_color[1],
+					project.preview_bg_color[2] / 2,
+				})
+				rl.DrawRectangleGradientV(x, y, w, h, top_color, bottom_color)
+
 				px, py := rec_get_center_point(kind.rec)
 				draw_sprite_stack(&project.layers, px, py, project.lerped_preview_zoom, project.preview_rotation, project.spacing)
+				
 				rl.DrawTextEx(ui_ctx.font, "Preview", { kind.rec.x + 10, kind.rec.y + 10 }, ui_font_size(), 0, { 255, 255, 255, 100 })
+				
 				rl.DrawRectangleLinesEx(kind.rec, 1, COLOR_BASE_0)
 			}
 		}
