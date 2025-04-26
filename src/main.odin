@@ -54,8 +54,9 @@ Project_State :: struct {
 	current_color: HSV,
 	current_layer: int,
 	lerped_current_layer: f32,
-	pallete: Pallete,
 	onion_skinning: bool,
+	hide_grid: bool,
+	pallete: Pallete,
 	
 	preview_zoom: f32,
 	lerped_preview_zoom: f32,
@@ -582,15 +583,20 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 		}
 	}
 
+	VIEW_TOGGLE_GRID :: "Toggle grid"
 	VIEW_ONION_SKINNING :: "Toggle onion skinning"
 
 	view_items := [?]UI_Menu_Item {
+		ui_menu_item(ui_gen_id(), VIEW_TOGGLE_GRID),
 		ui_menu_item(ui_gen_id(), VIEW_ONION_SKINNING, "Tab"),
 	}
 	view_rec := rec_cut_left(&area, ui_calc_button_width("View"))
 	view_clicked_item := ui_menu_button(ui_gen_id(), "View", view_items[:], ui_px(300), view_rec)
 
 	switch view_clicked_item.text {
+		case VIEW_TOGGLE_GRID: {
+			state.hide_grid = !state.hide_grid
+		}
 		case VIEW_ONION_SKINNING: {
 			state.onion_skinning = !state.onion_skinning
 		}
@@ -689,9 +695,11 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 			})
 
 			if state.zoom > 1.2 {
-				ui_push_command(UI_Draw_Grid {
-					rec = layer_rec,
-				})
+				if state.hide_grid == false {
+					ui_push_command(UI_Draw_Grid {
+						rec = layer_rec,
+					})
+				}
 			}
 			else {
 				hand_rec := Rec { layer_rec.x - ui_px(32), layer_rec.y + layer_rec.height / 2, 0, 0 }
