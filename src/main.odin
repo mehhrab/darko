@@ -55,6 +55,7 @@ Project_State :: struct {
 	current_layer: int,
 	lerped_current_layer: f32,
 	pallete: Pallete,
+	onion_skinning: bool,
 	
 	preview_zoom: f32,
 	lerped_preview_zoom: f32,
@@ -580,6 +581,20 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 			}
 		}
 	}
+
+	VIEW_ONION_SKINNING :: "Toggle onion skinning"
+
+	view_items := [?]UI_Menu_Item {
+		ui_menu_item(ui_gen_id(), VIEW_ONION_SKINNING, "Tab"),
+	}
+	view_rec := rec_cut_left(&area, ui_calc_button_width("View"))
+	view_clicked_item := ui_menu_button(ui_gen_id(), "View", view_items[:], ui_px(300), view_rec)
+
+	switch view_clicked_item.text {
+		case VIEW_ONION_SKINNING: {
+			state.onion_skinning = !state.onion_skinning
+		}
+	}
 }
 
 toolbar_view :: proc(state: ^Project_State, rec: Rec) {
@@ -624,6 +639,14 @@ toolbar_view :: proc(state: ^Project_State, rec: Rec) {
 	duplicate_rec := rec_cut_right(&tools_area, ui_default_widget_height())
 	if ui_button(ui_gen_id(), ICON_COPY, duplicate_rec, style = UI_BUTTON_STYLE_ACCENT) {
 		duplicate_layer(state, state.current_layer, state.current_layer + 1)
+	}
+
+	// toggle onion skining
+	rec_cut_right(&tools_area, ui_px(8))
+	onion_rec := rec_cut_right(&tools_area, ui_default_widget_height())
+	onion_icon := state.onion_skinning ? ICON_EYE : ICON_EYE_OFF
+	if ui_button(ui_gen_id(), onion_icon, onion_rec, style = UI_BUTTON_STYLE_ACCENT) {
+		state.onion_skinning = !state.onion_skinning
 	}
 
 	// pen size
@@ -1750,7 +1773,7 @@ draw_sprite_stack :: proc(layers: ^[dynamic]Layer, x, y: f32, scale: f32, rotati
 
 draw_canvas :: proc(state: ^Project_State, area: Rec) {
 	src_rec := Rec { 0, 0, f32(state.width), f32(state.height) }
-	if len(state.layers) > 1 && state.current_layer > 0 {
+	if state.onion_skinning && len(state.layers) > 1 && state.current_layer > 0 {
 		previous_layer := state.layers[state.current_layer - 1].texture
 		rl.DrawTexturePro(previous_layer, src_rec, area, { 0, 0 }, 0, { 255, 255, 255, 100 })
 	}
@@ -1929,6 +1952,11 @@ project_shortcuts :: proc(state: ^Project_State) {
 			// duplicate layer
 			if rl.IsKeyPressed(.D) {
 				duplicate_layer(state, state.current_layer, state.current_layer + 1)
+			}
+
+			// toggle onion skinning
+			if rl.IsKeyPressed(.TAB) {
+				state.onion_skinning = !state.onion_skinning
 			}
 
 			// move current layer up
