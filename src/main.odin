@@ -866,7 +866,7 @@ color_pallete_view :: proc(state: ^Project_State, rec: Rec) {
 			}
 	
 			delete(state.pallete.name)
-			state.pallete.name = get_file_name_from_path(path)
+			state.pallete.name = shorten_path(path)
 		}
 	}
 	else if clicked_item.text == FROM_FAV {
@@ -2361,7 +2361,7 @@ pick_folder_dialog :: proc(default_path := "", allocator := context.allocator) -
 	return path_res, pick_res
 }
 
-get_file_name_from_path :: proc(path: string, allocator := context.allocator) -> (res: string) {
+shorten_path :: proc(path: string, allocator := context.allocator) -> (res: string) {
 	if strings.contains_any(path, "/") {
 		splitted_path := strings.split(path, "/")
 		defer delete(splitted_path)
