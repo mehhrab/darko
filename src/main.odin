@@ -1316,6 +1316,7 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	loaded_state.auto_rotate_preview = ini_read_bool(loaded_map, "", "auto_rotate_preview")
 	loaded_state.width = i32(ini_read_int(loaded_map, "", "width"))
 	loaded_state.height = i32(ini_read_int(loaded_map, "", "height"))
+	loaded_state.hide_grid = ini_read_bool(loaded_map, "", "hide_grid")
 	
 	loaded_state.current_color[0] = ini_read_f32(loaded_map, "current_color", "h")
 	loaded_state.current_color[1] = ini_read_f32(loaded_map, "current_color", "s")
@@ -1406,6 +1407,7 @@ save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	ini.write_pair(file.stream, "auto_rotate_preview", fmt.tprint(state.auto_rotate_preview))
 	ini.write_pair(file.stream, "width", fmt.tprint(state.width))
 	ini.write_pair(file.stream, "height", fmt.tprint(state.height))
+	ini.write_pair(file.stream, "hide_grid", fmt.tprint(state.hide_grid))
 	
 	ini.write_section(file.stream, "current_color")
 	ini.write_pair(file.stream, "h", fmt.tprint(state.current_color[0]))
