@@ -82,6 +82,7 @@ UI_Menu_Item :: struct {
 	text: string,
 	shortcut: string,
 	separator: bool,
+	toggled: Maybe(bool),
 }
 
 UI_Option :: struct {
@@ -986,6 +987,13 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 			if ui_button(item.id, item.text, item_rec, style = style) {
 				clicked_item = item
 			}
+			
+			toggled, is_toggleble := item.toggled.?
+			if toggled {
+				text_w := ui_calc_button_width(item.text)
+				ui_draw_text(ICON_CHECK, { item_rec.x + text_w, item_rec.y, item_rec.width, item_rec.height })
+			}
+
 			if item.shortcut != "" {
 				item_rec.width -= padding
 				ui_draw_text(item.shortcut, item_rec, { .Right, .Center }, rl.ColorAlpha(COLOR_TEXT_0, 0.6))
@@ -1022,8 +1030,8 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 	return clicked_item
 }
 
-ui_menu_item :: proc(id: UI_ID, text: string, shortcut := "", separator := false) -> UI_Menu_Item {
-	return UI_Menu_Item { id, text, shortcut, separator }
+ui_menu_item :: proc(id: UI_ID, text: string, shortcut := "", separator := false, toggled: Maybe(bool) = nil) -> UI_Menu_Item {
+	return UI_Menu_Item { id, text, shortcut, separator, toggled }
 }
 
 ui_path_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := UI_BUTTON_STYLE_DEFAULT) -> (clicked: bool) {	

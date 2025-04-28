@@ -583,12 +583,12 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 		}
 	}
 
-	VIEW_TOGGLE_GRID :: "Toggle grid"
-	VIEW_ONION_SKINNING :: "Toggle onion skinning"
+	VIEW_TOGGLE_GRID :: "Show grid"
+	VIEW_ONION_SKINNING :: "Onion skinning"
 
 	view_items := [?]UI_Menu_Item {
-		ui_menu_item(ui_gen_id(), VIEW_TOGGLE_GRID),
-		ui_menu_item(ui_gen_id(), VIEW_ONION_SKINNING, "Tab"),
+		ui_menu_item(ui_gen_id(), VIEW_TOGGLE_GRID, toggled = !state.hide_grid),
+		ui_menu_item(ui_gen_id(), VIEW_ONION_SKINNING, "Tab", toggled = state.onion_skinning),
 	}
 	view_rec := rec_cut_left(&area, ui_calc_button_width("View"))
 	view_clicked_item := ui_menu_button(ui_gen_id(), "View", view_items[:], ui_px(300), view_rec)
