@@ -1551,10 +1551,9 @@ ui_is_any_popup_open :: #force_inline proc() -> (res: bool) {
 	return ui_ctx.open_popups.len > 0
 }
 
-// not sure if px is the right name...
 // returns v multiplied by ui scale 
 ui_px :: #force_inline proc(v: f32) -> (px: f32) {
-	return v * ui_ctx.scale
+	return math.round(v * ui_ctx.scale)
 }
 
 // returns default widget height multiplied by ui scale 
