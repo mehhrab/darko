@@ -1044,7 +1044,7 @@ new_project_popup_view :: proc(state: ^Screen_State) {
 				ui_show_notif(ICON_CHECK + " Project is created")
 			}
 			project, project_open := &app.state.(Project_State)
-			if project_open {
+			if project_open && is_saved(project) == false {
 				confirm_project_exit(project, proc(state: ^Project_State) { 
 					create_project() 
 				})
