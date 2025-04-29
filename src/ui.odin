@@ -989,9 +989,10 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 			}
 			
 			toggled, is_toggleble := item.toggled.?
-			if toggled {
+			if is_toggleble {
 				text_w := ui_calc_button_width(item.text)
-				ui_draw_text(ICON_CHECK, { item_rec.x + text_w, item_rec.y, item_rec.width, item_rec.height })
+				toggle_rec := Rec { item_rec.x + text_w, item_rec.y, item_rec.width, item_rec.height }
+				ui_draw_text(toggled ? ICON_CHECK: ICON_X, toggle_rec)
 			}
 
 			if item.shortcut != "" {
