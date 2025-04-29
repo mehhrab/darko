@@ -1448,6 +1448,10 @@ ui_calc_color_picker_height :: proc() -> (h: f32) {
 }
 
 ui_color_button :: proc(id: UI_ID, label: string, color: ^HSV, rec: Rec) {
+	// HACK: make popup_scope stack based
+	prev_popup_scope := ui_ctx.popup_scope
+	defer ui_ctx.popup_scope = prev_popup_scope
+
 	area := rec
 
 	ui_draw_text(label, area)
