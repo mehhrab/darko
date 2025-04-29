@@ -1340,7 +1340,7 @@ ui_option :: proc(id: UI_ID, items: []UI_Option, selceted: ^int, rec: Rec, style
 }
 
 // HACK: this guy uses some stuff from main.odin but i can't be bothered 
-ui_color_picker :: proc(id: UI_ID, color: ^HSV, rec: Rec) {
+ui_color_picker :: proc(id: UI_ID, color: ^HSV, rec: Rec) -> (changed: bool) {
 	area := rec
 
 	// preview color
@@ -1436,9 +1436,11 @@ ui_color_picker :: proc(id: UI_ID, color: ^HSV, rec: Rec) {
 
 	draw_grip(hsv_color[2], 0, 1, value_rec)
 
-	if hue_changed || saturation_changed || value_changed  {
+	changed = hue_changed || saturation_changed || value_changed
+	if changed {
 		color^ = hsv_color
 	}
+	return changed
 }
 
 ui_calc_color_picker_height :: proc() -> (h: f32) {
