@@ -1232,7 +1232,8 @@ load_app_data :: proc(path: string) {
 	app.unlock_fps = ini_read_bool(loaded_map, "", "unlock_fps")
 	app.new_project_width = i32(ini_read_int(loaded_map, "", "new_project_width"))
 	app.new_project_height = i32(ini_read_int(loaded_map, "", "new_project_height"))
-	
+	ui_set_scale(ini_read_f32(loaded_map, "", "ui_scale"))
+
 	sa.clear(&app.recent_projects)
 	if "recent_projects" in loaded_map {
 		len := ini_read_int(loaded_map, "recent_projects", "len")
@@ -1276,6 +1277,7 @@ save_app_data :: proc() {
 	ini.write_pair(file.stream, "show_fps", fmt.tprint(app.show_fps))
 	ini.write_pair(file.stream, "unlock_fps", fmt.tprint(app.unlock_fps))
 	ini.write_pair(file.stream, "fav_palletes_len", fmt.tprint(app.fav_palletes.len))
+	ini.write_pair(file.stream, "ui_scale", fmt.tprint(ui_ctx.scale))
 
 	ini.write_section(file.stream, "recent_projects")
 	ini.write_pair(file.stream, "len", app.recent_projects.len)
