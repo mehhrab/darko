@@ -1117,6 +1117,7 @@ exit_popup_view :: proc(state: ^Project_State) {
 			state.exit_popup_confirm(state)
 		}
 	}
+	ui_end_popup()
 }
 
 confirm_project_exit :: proc(state: ^Project_State, callback: proc(state: ^Project_State)) {
