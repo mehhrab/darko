@@ -57,6 +57,10 @@ Project_State :: struct {
 	onion_skinning: bool,
 	hide_grid: bool,
 	pallete: Pallete,
+
+	show_bg: bool,
+	bg_color1, bg_color2: HSV,
+	bg_texture: rl.Texture,
 	
 	preview_zoom: f32,
 	lerped_preview_zoom: f32,
@@ -73,7 +77,6 @@ Project_State :: struct {
 
 	dirty_layers: [dynamic]int,
 	copied_image: Maybe(rl.Image),
-	bg_texture: rl.Texture,
 	exit_popup_confirm: proc(state: ^Project_State),
 }
 
@@ -103,6 +106,7 @@ HSV :: distinct [3]f32
 popup_new_project := ui_gen_id()
 popup_preview_settings := ui_gen_id()
 popup_fav_palletes := ui_gen_id()
+popup_bg_colors := ui_gen_id()
 popup_exit := ui_gen_id()
 
 // undo redo actions
@@ -402,6 +406,7 @@ project_view :: proc(state: ^Project_State) {
 
 	preview_settings_popup_view(state)
 	fav_palletes_popup_view(state)
+	bg_colors_popup_view(state)
 	exit_popup_view(state)
 }
 
@@ -584,10 +589,14 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 	}
 
 	VIEW_TOGGLE_GRID :: "Show grid"
+	VIEW_SHOW_BG :: "Show bg"
+	VIEW_CHANGE_BG_COLORS :: "Change bg colors"
 	VIEW_ONION_SKINNING :: "Onion skinning"
 
 	view_items := [?]UI_Menu_Item {
 		ui_menu_item(ui_gen_id(), VIEW_TOGGLE_GRID, toggled = !state.hide_grid),
+		ui_menu_item(ui_gen_id(), VIEW_SHOW_BG, toggled = state.show_bg),
+		ui_menu_item(ui_gen_id(), VIEW_CHANGE_BG_COLORS),
 		ui_menu_item(ui_gen_id(), VIEW_ONION_SKINNING, "Tab", toggled = state.onion_skinning),
 	}
 	view_rec := rec_cut_left(&area, ui_calc_button_width("View"))
@@ -596,6 +605,12 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 	switch view_clicked_item.text {
 		case VIEW_TOGGLE_GRID: {
 			state.hide_grid = !state.hide_grid
+		}
+		case VIEW_SHOW_BG: {
+			state.show_bg = !state.show_bg
+		}
+		case VIEW_CHANGE_BG_COLORS: {
+			ui_open_popup(popup_bg_colors)
 		}
 		case VIEW_ONION_SKINNING: {
 			state.onion_skinning = !state.onion_skinning
@@ -689,6 +704,14 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 	for i in 0..<len(state.layers) {
 		layer_rec := canvas_rec
 		layer_rec.y -= (canvas_h + ui_px(16) * state.zoom) * (f32(i) - state.lerped_current_layer)		
+		
+		if state.show_bg {
+			ui_push_command(UI_Draw_Texture {
+				texture = state.bg_texture,
+				rec = layer_rec
+			})
+		}
+		
 		if i == state.current_layer {
 			ui_push_command(UI_Draw_Canvas {
 				rec = layer_rec,
@@ -1058,6 +1081,30 @@ preview_settings_popup_view :: proc(state: ^Project_State) {
 	ui_end_popup()
 }
 
+bg_colors_popup_view :: proc(state: ^Project_State) {
+	screen_rec := ui_get_screen_rec()
+
+	popup_h := ui_calc_popup_height(2, ui_default_widget_height(), ui_px(8), ui_px(16))
+	popup_area := rec_center_in_area({ 0, 0, ui_px(300), popup_h }, screen_rec)
+	if open, rec := ui_begin_popup_title(popup_bg_colors, "BG colors", popup_area); open {
+		area := rec_pad(rec, ui_px(16))
+		
+		color1_rec := rec_cut_top(&area, ui_default_widget_height())
+		ui_color_button(ui_gen_id(), "BG color 1", &state.bg_color1, color1_rec)
+		
+		rec_cut_top(&area, ui_px(8))
+		
+		color2_rec := rec_cut_top(&area, ui_default_widget_height())
+		ui_color_button(ui_gen_id(), "BG color 2", &state.bg_color2, color2_rec)
+
+		// HACK
+		if rl.IsMouseButtonReleased(.LEFT) {
+			create_bg_texture(state)
+		}
+	}
+	ui_end_popup()
+}
+
 exit_popup_view :: proc(state: ^Project_State) {
 	screen_rec := ui_get_screen_rec()
 	
@@ -1271,9 +1318,6 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	state.current_color = { 200, 0.5, 0.1 }		
 	state.lerped_zoom = 0
 	state.lerped_preview_zoom = 1
-	bg_image := rl.GenImageChecked(state.width, state.height, 1, 1, { 198, 208, 245, 255 }, { 131, 139, 167, 255 })
-	defer rl.UnloadImage(bg_image)
-	state.bg_texture = rl.LoadTextureFromImage(bg_image)
 	state.preview_rotation = 0
 	state.preview_zoom = 10
 	state.preview_bg_color = { 230, 0.3, 0.5 }
@@ -1281,8 +1325,9 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	state.undos = make([dynamic]Action)
 	state.redos = make([dynamic]Action)
 	state.dirty_layers = make([dynamic]int)
-	// state.pallete.name = strings.clone("")
-	// state.pallete.path = strings.clone("")
+	state.bg_color1 = HSV { 240, 0.3, 0.7 }
+	state.bg_color2 = HSV { 240, 0.3, 1 }
+	create_bg_texture(state)
 	
 	layer: Layer
 	init_layer(&layer, width, height)
@@ -1319,6 +1364,7 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	loaded_state.height = i32(ini_read_int(loaded_map, "", "height"))
 	loaded_state.hide_grid = ini_read_bool(loaded_map, "", "hide_grid")
 	loaded_state.onion_skinning = ini_read_bool(loaded_map, "", "onion_skinning")
+	loaded_state.show_bg = ini_read_bool(loaded_map, "", "show_bg")
 
 	loaded_state.current_color[0] = ini_read_f32(loaded_map, "current_color", "h")
 	loaded_state.current_color[1] = ini_read_f32(loaded_map, "current_color", "s")
@@ -1327,6 +1373,14 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	loaded_state.preview_bg_color[0] = ini_read_f32(loaded_map, "preview_bg_color", "h", 240)
 	loaded_state.preview_bg_color[1] = ini_read_f32(loaded_map, "preview_bg_color", "s", 0.3)
 	loaded_state.preview_bg_color[2] = ini_read_f32(loaded_map, "preview_bg_color", "v", 0.5)
+
+	loaded_state.bg_color1[0] = ini_read_f32(loaded_map, "bg_color1", "h", 240)
+	loaded_state.bg_color1[1] = ini_read_f32(loaded_map, "bg_color1", "s", 0.3)
+	loaded_state.bg_color1[2] = ini_read_f32(loaded_map, "bg_color1", "v", 0.7)
+	loaded_state.bg_color2[0] = ini_read_f32(loaded_map, "bg_color2", "h", 240)
+	loaded_state.bg_color2[1] = ini_read_f32(loaded_map, "bg_color2", "s", 0.3)
+	loaded_state.bg_color2[2] = ini_read_f32(loaded_map, "bg_color2", "v", 1)
+	create_bg_texture(&loaded_state)
 
 	loaded_state.pallete.name = ini_read_string(loaded_map, "pallete", "name")
 	pallete_count := ini_read_int(loaded_map, "pallete", "len")
@@ -1344,10 +1398,6 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	loaded_state.lerped_current_layer = f32(loaded_state.current_layer)
 	loaded_state.lerped_zoom = 0
 	loaded_state.lerped_preview_zoom = 0
-	
-	bg_image := rl.GenImageChecked(loaded_state.width,  loaded_state.height, 1, 1, { 198, 208, 245, 255 }, { 131, 139, 167, 255 })
-	defer rl.UnloadImage(bg_image)
-	loaded_state.bg_texture = rl.LoadTextureFromImage(bg_image)
 
 	loaded_state.layers = make([dynamic]Layer)
 	loaded_state.undos = make([dynamic]Action)
@@ -1411,7 +1461,8 @@ save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	ini.write_pair(file.stream, "height", fmt.tprint(state.height))
 	ini.write_pair(file.stream, "hide_grid", fmt.tprint(state.hide_grid))
 	ini.write_pair(file.stream, "onion_skinning", fmt.tprint(state.onion_skinning))
-	
+	ini.write_pair(file.stream, "show_bg", fmt.tprint(state.show_bg))
+
 	ini.write_section(file.stream, "current_color")
 	ini.write_pair(file.stream, "h", fmt.tprint(state.current_color[0]))
 	ini.write_pair(file.stream, "s", fmt.tprint(state.current_color[1]))
@@ -1421,6 +1472,16 @@ save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	ini.write_pair(file.stream, "h", fmt.tprint(state.preview_bg_color[0]))
 	ini.write_pair(file.stream, "s", fmt.tprint(state.preview_bg_color[1]))
 	ini.write_pair(file.stream, "v", fmt.tprint(state.preview_bg_color[2]))
+
+	ini.write_section(file.stream, "bg_color1")
+	ini.write_pair(file.stream, "h", fmt.tprint(state.bg_color1[0]))
+	ini.write_pair(file.stream, "s", fmt.tprint(state.bg_color1[1]))
+	ini.write_pair(file.stream, "v", fmt.tprint(state.bg_color1[2]))
+
+	ini.write_section(file.stream, "bg_color2")
+	ini.write_pair(file.stream, "h", fmt.tprint(state.bg_color2[0]))
+	ini.write_pair(file.stream, "s", fmt.tprint(state.bg_color2[1]))
+	ini.write_pair(file.stream, "v", fmt.tprint(state.bg_color2[2]))
 
 	ini.write_section(file.stream, "pallete")
 	ini.write_pair(file.stream, "name", state.pallete.name)
@@ -2267,6 +2328,14 @@ update_zoom :: proc(current_zoom: ^f32, strength: f32, min: f32, max: f32) {
 	zoom := current_zoom^ + rl.GetMouseWheelMove() * strength
 	zoom = math.clamp(zoom, min, max)
 	current_zoom^ = zoom
+}
+
+create_bg_texture :: proc(state: ^Project_State) {
+	color1 := hsv_to_rgb(state.bg_color1)
+	color2 := hsv_to_rgb(state.bg_color2)
+	bg_image := rl.GenImageChecked(state.width, state.height, 1, 1, color1, color2)
+	defer rl.UnloadImage(bg_image)
+	state.bg_texture = rl.LoadTextureFromImage(bg_image)
 }
 
 is_saved :: proc(state: ^Project_State) -> (saved: bool) {
