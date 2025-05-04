@@ -1,0 +1,1 @@
+cd build && odin run ../src -debug -out:debug.exe
