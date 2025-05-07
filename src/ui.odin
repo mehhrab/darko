@@ -200,8 +200,8 @@ UI_BUTTON_STYLE_DEFAULT :: UI_Button_Style {
 
 UI_BUTTON_STYLE_TRANSPARENT :: UI_Button_Style {
 	bg_color = rl.BLANK,
-	bg_color_hovered = COLOR_BASE_3,
-	bg_color_active = COLOR_BASE_4,
+	bg_color_hovered = { 255, 255, 255, 50 },
+	bg_color_active = { 255, 255, 255, 100 },
 	text_color = COLOR_TEXT_0,
 	text_align = { .Center, .Center },
 	font_size = 0,
