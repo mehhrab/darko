@@ -50,6 +50,7 @@ Project_State :: struct {
 	height: i32,
 	layers: [dynamic]Layer,
 	
+	current_tool: Tool,
 	pen_size: i32,
 	current_color: HSV,
 	current_layer: int,
@@ -91,7 +92,6 @@ Pallete :: struct {
 }
 
 Tool :: enum {
-	None,
 	Pen,
 	Eraser,
 	Color_Picker,
@@ -393,7 +393,8 @@ project_view :: proc(state: ^Project_State) {
 	toolbar_view(state, layer_props_area)
 
 	canvas_view(state, middle_panel_area)
-	
+	tool_box_view(state, middle_panel_area)
+
 	ui_panel(ui_gen_id(), right_panel_area)
 	right_panel_area = rec_pad(right_panel_area, ui_px(16))
 	
@@ -693,10 +694,11 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 	canvas_h := f32(state.height) * 10 * state.lerped_zoom
 	canvas_rec := rec_center_in_area({ 0, 0, canvas_w, canvas_h }, area)
 	
-	current_tool := Tool.None
+	current_tool := tool_shortcuts(state)
+	
 	if ui_is_being_interacted() == false {
 		update_zoom(&state.zoom, 0.4, 0.1, 100)
-		current_tool = update_tools(state, canvas_rec)
+		update_tools(state, canvas_rec, current_tool)
 	}
 
 	state.lerped_current_layer = rl.Lerp(state.lerped_current_layer, f32(state.current_layer), rl.GetFrameTime() * 18)
@@ -713,6 +715,7 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 		}
 		
 		if i == state.current_layer {
+			// TOOD: just use a UI_Draw_Texture
 			ui_push_command(UI_Draw_Canvas {
 				rec = layer_rec,
 			})
@@ -731,7 +734,8 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 			ui_draw_rec_outline(COLOR_BASE_4, 2, layer_rec)
 			
 			// draw cursor preview
-			if ui_is_mouse_in_rec(layer_rec) && ui_is_being_interacted() == false {
+			tool_needs_preview := current_tool != .GoTo
+			if tool_needs_preview && ui_is_mouse_in_rec(layer_rec) && ui_is_being_interacted() == false {
 				mx, my := get_mouse_pos_in_canvas(state, layer_rec)
 				pixel_size := layer_rec.width / f32(state.width)
 				pen_size := current_tool == .Color_Picker ? 1 : state.pen_size
@@ -743,18 +747,20 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 		}
 		else {
 			// when clicked on another layer move to that layer
-			mouse_inside := rl.IsKeyDown(.LEFT_SHIFT) && ui_is_mouse_in_rec(layer_rec) && ui_is_any_popup_open() == false 
-			if mouse_inside {
-				current_tool = .GoTo
-				if rl.IsMouseButtonPressed(.LEFT) {
-					state.current_layer = i
-				}
+			can_go_to := 
+				current_tool == .GoTo &&
+				ui_is_mouse_in_rec(layer_rec) && 
+				ui_is_any_popup_open() == false 
+			
+			if can_go_to && rl.IsMouseButtonPressed(.LEFT) {
+				state.current_layer = i
 			}
+
 			ui_push_command(UI_Draw_Texture {
 				texture = state.layers[i].texture,
 				rec = layer_rec,
 			})
-			ui_draw_rec_outline(mouse_inside ? COLOR_BASE_3 : COLOR_BASE_1, 2, layer_rec)
+			ui_draw_rec_outline(can_go_to ? COLOR_BASE_3 : COLOR_BASE_1, 2, layer_rec)
 		}
 	}
 
@@ -762,9 +768,10 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 	if ui_is_mouse_in_rec(area) && ui_is_being_interacted() == false {
 		cursor_icon := ""
 		switch current_tool {
-			case .None, .Pen, .Fill: cursor_icon = ICON_PEN
+			case .Pen: cursor_icon = ICON_PEN
 			case .Color_Picker: cursor_icon = ICON_EYEDROPPER
 			case .Eraser: cursor_icon = ICON_ERASER
+			case .Fill: cursor_icon = ICON_FILL
 			case .GoTo: cursor_icon = ICON_STAR
 		}
 		
@@ -774,7 +781,7 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 
 		shadow_rec := Rec { mpos.x + 1, mpos.y - cursor_size + 5 + 1, 100, 100 }
 		ui_draw_text(cursor_icon, shadow_rec, { .Left, .Top }, rl.BLACK, cursor_size)
-		
+
 		cursor_rec := Rec { mpos.x, mpos.y - cursor_size + 5, 100, 100 }
 		ui_draw_text(cursor_icon, cursor_rec, { .Left, .Top }, rl.WHITE, cursor_size)
 	}
@@ -783,6 +790,40 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 	}
 
 	ui_end_clip()
+}
+
+tool_box_view :: proc(state: ^Project_State, rec: Rec) {
+	padded_rec := rec_pad(rec, ui_px(4))
+	
+	tool_size := ui_px(40)
+
+	area := rec_cut_right(&padded_rec, tool_size)
+	area.height = tool_size * 4 + 2
+	
+	ui_panel(ui_gen_id(), area)
+	ui_draw_rec_outline(COLOR_BASE_0, 1, area)
+	
+	area = rec_pad(area, 1)
+
+	pen_rec := rec_cut_top(&area, tool_size)
+	if togglable_button(ui_gen_id(), ICON_PEN, state.current_tool == .Pen, pen_rec, ui_font_size() * 1.3) {
+		state.current_tool = .Pen
+	}
+	
+	eraser_rec := rec_cut_top(&area, tool_size)
+	if togglable_button(ui_gen_id(), ICON_ERASER, state.current_tool == .Eraser, eraser_rec, ui_font_size() * 1.3) {
+		state.current_tool = .Eraser
+	}
+
+	eye_dropper_rec := rec_cut_top(&area, tool_size)
+	if togglable_button(ui_gen_id(), ICON_EYEDROPPER, state.current_tool == .Color_Picker, eye_dropper_rec, ui_font_size() * 1.3) {
+		state.current_tool = .Color_Picker
+	}
+
+	fill_rec := rec_cut_top(&area, tool_size)
+	if togglable_button(ui_gen_id(), ICON_FILL, state.current_tool == .Fill, fill_rec, ui_font_size() * 1.4) {
+		state.current_tool = .Fill
+	}
 }
 
 color_panel_view :: proc(state: ^Project_State, rec: Rec) {
@@ -1187,6 +1228,17 @@ go_to_welcome_screen :: proc(state: ^Project_State) {
 			ui_close_all_popups()
 		})
 	}
+}
+
+togglable_button :: proc(id: UI_ID, text: string, toggled: bool, rec: Rec, font_size: f32 = 0) -> (clicked: bool) {
+	active_style := UI_BUTTON_STYLE_DEFAULT
+	active_style.bg_color = COLOR_ACCENT_0
+	active_style.bg_color_hovered = COLOR_ACCENT_0
+	active_style.text_color = COLOR_BASE_0
+	
+	style := toggled ? active_style : UI_BUTTON_STYLE_DEFAULT
+	style.font_size = font_size
+	return ui_button(id, text, rec, style = style)
 }
 
 // backend code
@@ -1638,79 +1690,68 @@ mark_all_layers_dirty :: proc(state: ^Project_State) {
 	}
 }
 
-update_tools :: proc(state: ^Project_State, area: Rec) -> (current_tool: Tool) {
-	current_tool = .None
-
+update_tools :: proc(state: ^Project_State, area: Rec, tool: Tool) {
 	// color picker
-	if rl.IsKeyDown(.LEFT_CONTROL) {
+	if tool == .Color_Picker && rl.IsMouseButtonPressed(.LEFT) {
 		if ui_is_mouse_in_rec(area) {
-			if rl.IsMouseButtonPressed(.LEFT) {
-				x, y := get_mouse_pos_in_canvas(state, area)
-				rgb_color := rl.GetImageColor(get_current_layer(state).image, x, y)
-				if rgb_color.a != 0 {
-					state.current_color = rgb_to_hsv(rgb_color)
-				}
+			x, y := get_mouse_pos_in_canvas(state, area)
+			rgb_color := rl.GetImageColor(get_current_layer(state).image, x, y)
+			if rgb_color.a != 0 {
+				state.current_color = rgb_to_hsv(rgb_color)
 			}
-		}
-		current_tool = .Color_Picker 
-	}
-	else {		
-		// pen
-		if rl.IsMouseButtonDown(.LEFT) {
-			if ui_is_mouse_in_rec(area) {
-				begin_image_change(state)
-				x, y := get_mouse_pos_in_canvas(state, area)
-				color := hsv_to_rgb(state.current_color)
-				for i in 0..<state.pen_size {
-					for j in 0..<state.pen_size {
-						x := x + i - (state.pen_size - 1) / 2
-						y := y + j - (state.pen_size - 1) / 2
-						rl.ImageDrawPixel(&get_current_layer(state).image, x, y, color)
-					}
-				}
-				mark_dirty_layers(state, state.current_layer)	
-			}
-			current_tool = .Pen
-		}
-		if rl.IsMouseButtonReleased(.LEFT) {
-			end_image_change(state)
-		}
-
-		// eraser
-		if rl.IsMouseButtonDown(.RIGHT) {
-			if ui_is_mouse_in_rec(area) {
-				begin_image_change(state)
-				x, y := get_mouse_pos_in_canvas(state, area)
-				for i in 0..<state.pen_size {
-					for j in 0..<state.pen_size {
-						x := x + i - (state.pen_size - 1) / 2
-						y := y + j - (state.pen_size - 1) / 2
-						rl.ImageDrawPixel(&get_current_layer(state).image, x, y, rl.BLANK)
-					}
-				}
-				mark_dirty_layers(state, state.current_layer)
-			}
-			current_tool = .Eraser
-		}
-		if rl.IsMouseButtonReleased(.RIGHT) {
-			end_image_change(state)
-		}
-
-		// fill
-		if rl.IsMouseButtonPressed(.MIDDLE) {
-			if ui_is_mouse_in_rec(area) {
-				begin_image_change(state)
-				x, y := get_mouse_pos_in_canvas(state, area)
-				color := hsv_to_rgb(state.current_color)
-				fill(&get_current_layer(state).image, x, y, color)
-				mark_dirty_layers(state, state.current_layer)
-				end_image_change(state)
-			}
-			current_tool = .Fill
 		}
 	}
 
-	return current_tool
+	// pen
+	if tool == .Pen &&  rl.IsMouseButtonDown(.LEFT) {
+		if ui_is_mouse_in_rec(area) {
+			begin_image_change(state)
+			x, y := get_mouse_pos_in_canvas(state, area)
+			color := hsv_to_rgb(state.current_color)
+			for i in 0..<state.pen_size {
+				for j in 0..<state.pen_size {
+					x := x + i - (state.pen_size - 1) / 2
+					y := y + j - (state.pen_size - 1) / 2
+					rl.ImageDrawPixel(&get_current_layer(state).image, x, y, color)
+				}
+			}
+			mark_dirty_layers(state, state.current_layer)	
+		}
+	}
+	if rl.IsMouseButtonReleased(.LEFT) {
+		end_image_change(state)
+	}
+
+	// eraser
+	if tool == .Eraser && rl.IsMouseButtonDown(.LEFT) {
+		if ui_is_mouse_in_rec(area) {
+			begin_image_change(state)
+			x, y := get_mouse_pos_in_canvas(state, area)
+			for i in 0..<state.pen_size {
+				for j in 0..<state.pen_size {
+					x := x + i - (state.pen_size - 1) / 2
+					y := y + j - (state.pen_size - 1) / 2
+					rl.ImageDrawPixel(&get_current_layer(state).image, x, y, rl.BLANK)
+				}
+			}
+			mark_dirty_layers(state, state.current_layer)
+		}
+	}
+	if rl.IsMouseButtonReleased(.RIGHT) {
+		end_image_change(state)
+	}
+
+	// fill
+	if tool == .Fill && rl.IsMouseButtonPressed(.LEFT) {
+		if ui_is_mouse_in_rec(area) {
+			begin_image_change(state)
+			x, y := get_mouse_pos_in_canvas(state, area)
+			color := hsv_to_rgb(state.current_color)
+			fill(&get_current_layer(state).image, x, y, color)
+			mark_dirty_layers(state, state.current_layer)
+			end_image_change(state)
+		}
+	}
 }
 
 begin_image_change :: proc(state: ^Project_State) {
@@ -2093,6 +2134,41 @@ project_shortcuts :: proc(state: ^Project_State) {
 			}
 		}
 	}
+}
+
+tool_shortcuts :: proc(state: ^Project_State) -> (current_tool: Tool) {
+	if ui_is_any_popup_open() do return
+	
+	/* sometimes we may want to temporarily override current selected tool
+	eg when user holds control key to color pick, in which case
+	we just return that tool enum */
+
+	// temp select color picker
+	if rl.IsKeyDown(.LEFT_CONTROL) {
+		return .Color_Picker
+	}
+	
+	// temp select go to
+	if rl.IsKeyDown(.LEFT_SHIFT) {
+		return .GoTo
+	}
+	
+	// select pen
+	if rl.IsKeyPressed(.P) {
+		state.current_tool = .Pen
+	}
+
+	// select color picker
+	if rl.IsKeyPressed(.I) {
+		state.current_tool = .Color_Picker
+	}
+
+	// select bucket fill 
+	if rl.IsKeyPressed(.B) {
+		state.current_tool = .Fill
+	}
+
+	return state.current_tool
 }
 
 action_preform :: proc(state: ^Project_State, action: Action) {
