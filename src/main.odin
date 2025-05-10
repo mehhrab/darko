@@ -238,6 +238,7 @@ main :: proc() {
 				}
 			}
 			case Welcome_State: {
+				welcome_shortcuts(&state)
 				welcome_screen_view(&state)
 
 				if rl.WindowShouldClose() {
@@ -1969,6 +1970,49 @@ app_shortcuts :: proc() {
 					
 				schedule_state_change(loaded_project)
 			}
+		}
+	}
+}
+
+welcome_shortcuts :: proc(state: ^Welcome_State) {
+	// open a recent project by pressing a number
+	index := -1
+	if rl.IsKeyPressed(.KP_1) || rl.IsKeyPressed(.ONE) {
+		index = 0
+	}
+	if rl.IsKeyPressed(.KP_2) || rl.IsKeyPressed(.TWO) {
+		index = 1
+	}
+	if rl.IsKeyPressed(.KP_3) || rl.IsKeyPressed(.THREE) {
+		index = 2
+	}
+	if rl.IsKeyPressed(.KP_4) || rl.IsKeyPressed(.FOUR) {
+		index = 3
+	}
+	if rl.IsKeyPressed(.KP_5) || rl.IsKeyPressed(.FIVE) {
+		index = 4
+	}
+	if rl.IsKeyPressed(.KP_6) || rl.IsKeyPressed(.SIX) {
+		index = 5
+	}
+	if rl.IsKeyPressed(.KP_7) || rl.IsKeyPressed(.SEVEN) {
+		index = 6
+	}
+	if rl.IsKeyPressed(.KP_8) || rl.IsKeyPressed(.EIGHT) {
+		index = 7
+	}
+
+	// recents are showed in reverse order in welcome screen
+	index = app.recent_projects.len - index - 1
+
+	if 0 <= index && index < app.recent_projects.len {
+		project: Project_State
+		ok := load_project_state(&project, app.recent_projects.data[index])
+		if ok {
+			schedule_state_change(project)
+		}
+		else {
+			ui_show_notif("Could not open project")
 		}
 	}
 }
