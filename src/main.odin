@@ -953,13 +953,16 @@ color_pallete_view :: proc(state: ^Project_State, rec: Rec) {
 	_, items := ui_begin_list_wrapped(ui_gen_id(), &scroll, &lerped_scroll, ui_default_widget_height(), state.pallete.colors.len, list_rec)
 	for item in items {
 		pallete_id := ui_gen_id(item.i)
+		is_selected := state.current_color == state.pallete.colors.data[item.i]
+		pallete_rec := is_selected ? rec_pad(item.rec, ui_px(4)) : item.rec
+
 		ui_update_widget(pallete_id, item.rec)
-		ui_draw_rec(hsv_to_rgb(state.pallete.colors.data[item.i]), item.rec)
+		ui_draw_rec(hsv_to_rgb(state.pallete.colors.data[item.i]), pallete_rec)
 		
 		if pallete_id == ui_ctx.hovered_widget && rl.IsMouseButtonReleased(.LEFT) {
 			state.current_color = state.pallete.colors.data[item.i]
 		}
-		if state.current_color == state.pallete.colors.data[item.i] {
+		if is_selected {
 			ui_draw_rec_outline(COLOR_TEXT_0, 2, item.rec)
 		}
 		else if pallete_id == ui_ctx.hovered_widget {
