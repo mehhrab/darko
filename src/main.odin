@@ -1238,6 +1238,7 @@ togglable_button :: proc(id: UI_ID, text: string, toggled: bool, rec: Rec, font_
 	active_style := UI_BUTTON_STYLE_DEFAULT
 	active_style.bg_color = COLOR_ACCENT_0
 	active_style.bg_color_hovered = COLOR_ACCENT_0
+	active_style.bg_color_active = COLOR_ACCENT_0
 	active_style.text_color = COLOR_BASE_0
 	
 	style := toggled ? active_style : UI_BUTTON_STYLE_DEFAULT
