@@ -394,7 +394,7 @@ ui_begin :: proc() {
 	}
 
 	if ui_ctx.current_notif.text != "" {
-		ui_ctx.current_notif.time += 0.01
+		ui_ctx.current_notif.time += 1 * rl.GetFrameTime()
 	}
 
 	if ui_ctx.text_mode_slider != ui_ctx.hovered_widget && rl.IsMouseButtonReleased(.LEFT) || rl.IsMouseButtonReleased(.RIGHT) {
