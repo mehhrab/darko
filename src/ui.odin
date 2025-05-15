@@ -960,21 +960,22 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 	padding := ui_px(10)
 	item_height := ui_default_widget_height()
 	popup_rec: Rec
+	
 	// try to keep popup rec inside the screen
-	if rec.x - padding - item_width < 0 {
-		popup_rec = { 
-			rec.x + padding, 
-			rec.y + rec.height + padding, 
-			item_width, 
-			item_height * f32(len(items)) 
-		}
-	}
-	else if rec.x + padding + item_width > f32(rl.GetScreenWidth()) {
+	if rec.x + padding + item_width > f32(rl.GetScreenWidth()) {
 		popup_rec = { 
 			rec.x + rec.width - item_width - padding, 
 			rec.y + rec.height + padding, 
 			item_width, 
 			item_height * f32(len(items))
+		}
+	}
+	else {
+		popup_rec = { 
+			rec.x + padding, 
+			rec.y + rec.height + padding, 
+			item_width, 
+			item_height * f32(len(items)) 
 		}
 	}
 
