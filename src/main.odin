@@ -1158,7 +1158,7 @@ exit_popup_view :: proc(state: ^Project_State) {
 	if open, rec := ui_begin_popup_title(popup_exit, "Confirm", popup_area); open {
 		area := rec_pad(rec, ui_px(16))
 		
-		ui_draw_text("Save chenges to the project?", rec_cut_top(&area, ui_default_widget_height()), align = { .Center, .Center })
+		ui_draw_text("Save changes to the project?", rec_cut_top(&area, ui_default_widget_height()), align = { .Center, .Center })
 		
 		rec_cut_top(&area, ui_px(8))
 		buttons_area := rec_cut_top(&area, ui_default_widget_height())
