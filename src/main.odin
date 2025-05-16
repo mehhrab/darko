@@ -1875,6 +1875,14 @@ change_layer_index :: proc(state: ^Project_State, from_index, to_index: int) {
 	action_do(state, Action_Change_Layer_Index { from_index = from_index, to_index = to_index })
 }
 
+clear_layer :: proc(state: ^Project_State, layer_index: int) {
+	action_do(state, Action_Image_Change {
+		before_image = rl.ImageCopy(get_current_layer(state).image),
+		after_image = rl.GenImageColor(state.width, state.height, rl.BLANK),
+		layer_index = state.current_layer,
+	})	
+}
+
 delete_layer :: proc(state: ^Project_State, layer_index: int) {
 	action_do(state, Action_Delete_Layer { layer_index = layer_index })
 }
@@ -2142,11 +2150,7 @@ project_shortcuts :: proc(state: ^Project_State) {
 
 			// clear current layer
 			if rl.IsKeyPressed(.F) {
-				action_do(state, Action_Image_Change {
-					before_image = rl.ImageCopy(get_current_layer(state).image),
-					after_image = rl.GenImageColor(state.width, state.height, rl.BLANK),
-					layer_index = state.current_layer,
-				})	
+				clear_layer(state, state.current_layer)
 			}
 
 			// delete current layer
