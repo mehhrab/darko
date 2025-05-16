@@ -225,6 +225,15 @@ UI_BUTTON_STYLE_RED :: UI_Button_Style {
 	font_size = 0,
 }
 
+UI_MENU_ITEM_STYLE_DEFAULT :: UI_Button_Style {
+	bg_color = COLOR_BASE_2,
+	bg_color_hovered = COLOR_BASE_3,
+	bg_color_active = COLOR_BASE_4,
+	text_color = COLOR_TEXT_0,
+	text_align = { .Left, .Center },
+	font_size = 0,
+}
+
 UI_SLIDER_STYLE :: struct {
 	bg_color: rl.Color,
 	progress_color: rl.Color,
@@ -951,12 +960,22 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := 
 	return clicked
 }
 
-ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_width: f32, rec: Rec) -> (clicked_item: UI_Menu_Item) {	
+ui_menu_button :: proc(
+	id: UI_ID, 
+	text: string, 
+	items: []UI_Menu_Item, 
+	item_width: f32, 
+	rec: Rec, 
+	style := UI_BUTTON_STYLE_DEFAULT,
+	item_style := UI_MENU_ITEM_STYLE_DEFAULT,
+	item_toggled_style := UI_MENU_ITEM_STYLE_DEFAULT
+) -> (
+	clicked_item: UI_Menu_Item
+) {	
 	clicked_item = {}
 
-	ui_update_widget(id, rec)
-	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT) {
-		ui_open_popup(id, false)	
+	if ui_button(id, text, rec, style = style) {
+		ui_open_popup(id, false)
 	}
 
 	padding := ui_px(10)
@@ -983,20 +1002,19 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 
 	if ui_begin_popup(id, popup_rec) {
 		menu_item_y := popup_rec.y
-		style := UI_BUTTON_STYLE_DEFAULT
-		style.font_size = ui_font_size()
-		style.text_align = { .Left, .Center }
 		for item, i in items {
+			toggled, is_toggleble := item.toggled.?
 			item_rec := Rec { popup_rec.x, menu_item_y, item_width, item_height }
-			if ui_button(item.id, item.text, item_rec, style = style) {
+			
+			if ui_button(item.id, item.text, item_rec, style = toggled ? item_toggled_style : item_style) {
 				clicked_item = item
 			}
 			
-			toggled, is_toggleble := item.toggled.?
 			if is_toggleble {
 				text_w := ui_calc_button_width(item.text)
 				toggle_rec := Rec { item_rec.x + text_w, item_rec.y, item_rec.width, item_rec.height }
-				ui_draw_text(toggled ? ICON_CHECK: ICON_X, toggle_rec)
+				color := false ? COLOR_ACCENT_0 : COLOR_TEXT_0
+				ui_draw_text(toggled ? ICON_CHECK: ICON_X, toggle_rec, color = color)
 			}
 
 			if item.shortcut != "" {
@@ -1014,24 +1032,6 @@ ui_menu_button :: proc(id: UI_ID, text: string, items: []UI_Menu_Item, item_widt
 	}
 	ui_end_popup()
 
-	color := COLOR_BASE_2
-	if ui_ctx.active_widget == id {
-		color = COLOR_BASE_4
-	}
-	else if ui_ctx.hovered_widget == id {
-		color = COLOR_BASE_3
-	}
-	ui_push_command(UI_Draw_Rect {
-		rec = rec,
-		color = color
-	})
-	ui_push_command(UI_Draw_Text {
-		rec = rec,
-		text = text,
-		size = ui_font_size(),
-		color = COLOR_TEXT_0,
-		align = ui_ctx.text_align,	
-	})
 	return clicked_item
 }
 
