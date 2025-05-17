@@ -18,10 +18,12 @@ UI_Ctx :: struct {
 	active_widget: UI_ID,
 	hovered_panel: UI_ID,
 	active_panel: UI_ID,
+	
 	text_mode_slider: UI_ID,
 	slider_text_buffer: [32]byte,
 	slider_text: strings.Builder,
 	slider_caret_x: i32,
+	
 	draw_commands: Draw_Commands,
 	clip_stack: sa.Small_Array(16, Rec),
 
@@ -30,7 +32,7 @@ UI_Ctx :: struct {
 	// HACK: we can only have one active notif
 	current_notif: UI_Notif,
 
-	// style:
+	act_on_press: bool,
 
 	scale: f32,
 	font: rl.Font,
@@ -405,7 +407,7 @@ ui_begin :: proc() {
 	top_popup := ui_get_top_popup()
 	mouse_in_top_popup := top_popup != nil && ui_is_mouse_in_rec(top_popup.rec)
 	if ui_is_any_popup_open() &&
-		rl.IsMouseButtonReleased(.LEFT) &&
+		ui_clicked(.LEFT) &&
 		mouse_in_top_popup == false &&
 		ui_ctx.active_widget == 0 &&
 		ui_ctx.active_panel == 0 {
@@ -416,7 +418,7 @@ ui_begin :: proc() {
 		ui_ctx.current_notif.time += 1 * rl.GetFrameTime()
 	}
 
-	if ui_ctx.text_mode_slider != ui_ctx.hovered_widget && rl.IsMouseButtonReleased(.LEFT) || rl.IsMouseButtonReleased(.RIGHT) {
+	if ui_ctx.text_mode_slider != ui_ctx.hovered_widget && ui_clicked(.LEFT) || ui_clicked(.RIGHT) {
 		ui_ctx.text_mode_slider = 0
 	}
 	
@@ -939,7 +941,7 @@ ui_calc_button_width :: proc(text: string) -> (w: f32) {
 ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := UI_BUTTON_STYLE_DEFAULT) -> (clicked: bool) {	
 	clicked = false
 	ui_update_widget(id, rec, blocking)
-	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT){
+	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && ui_clicked(.LEFT) {
 		clicked = true
 	}
 	font_size := style.font_size == 0 ? ui_font_size() : style.font_size
@@ -1053,7 +1055,7 @@ ui_path_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, styl
 	ui_update_widget(id, rec, blocking)
 	font_size := style.font_size == 0 ? ui_font_size() : style.font_size
 
-	clicked = ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT)
+	clicked = ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && ui_clicked(.LEFT)
 	bg_color := style.bg_color
 	if ui_ctx.active_widget == id {
 		bg_color = style.bg_color_active
@@ -1100,7 +1102,7 @@ ui_check_box :: proc(id: UI_ID, label: string, checked: ^bool, rec: Rec, style :
 		rec.height,
 	}
 	ui_update_widget(id, check_box_rec)
-	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT) {
+	if ui_ctx.hovered_widget == id && ui_ctx.active_widget == id && ui_clicked(.LEFT) {
 		checked^ = !checked^ 
 	}
 	ui_push_command(UI_Draw_Rect {
@@ -1198,7 +1200,7 @@ ui_slider_f32 :: proc(
 	
 	if ui_ctx.text_mode_slider != id {
 		// when right clicked write the value to slider_text_buffer and goto text mode
-		if ui_ctx.hovered_widget == id && rl.IsMouseButtonReleased(.RIGHT) {
+		if ui_ctx.hovered_widget == id && ui_clicked(.RIGHT) {
 			ui_ctx.text_mode_slider = id
 			strings.builder_reset(&ui_ctx.slider_text)
 			strings.write_string(&ui_ctx.slider_text, fmt.tprintf(format, value^))
@@ -1470,7 +1472,7 @@ ui_color_button :: proc(id: UI_ID, label: string, color: ^HSV, rec: Rec) {
 
 	color_rec := rec_take_right(&area, ui_default_widget_height())
 	ui_update_widget(id, color_rec)
-	if ui_ctx.active_widget == id && rl.IsMouseButtonReleased(.LEFT) {
+	if ui_ctx.active_widget == id && ui_clicked(.LEFT) {
 		ui_open_popup(id, false)
 	}
 	
@@ -1553,6 +1555,15 @@ ui_close_popup_on_esc :: proc(id: UI_ID) {
 ui_is_mouse_in_rec :: proc(rec: Rec) -> (is_inside: bool) {
 	mpos := rl.GetMousePosition()
 	return mpos.x > rec.x && mpos.y > rec.y && mpos.x < rec.x + rec.width && mpos.y < rec.y + rec.height
+}
+
+ui_clicked :: proc(button: rl.MouseButton) -> (res: bool) {
+	if ui_ctx.act_on_press {
+		return rl.IsMouseButtonPressed(button)
+	}
+	else {
+		return rl.IsMouseButtonReleased(button)
+	}
 }
 
 ui_calc_popup_height :: proc(item_count: i32, item_h, separator_h, padding: f32) -> (height: f32) {

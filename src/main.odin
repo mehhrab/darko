@@ -1051,7 +1051,7 @@ color_pallete_view :: proc(state: ^Project_State, rec: Rec) {
 		ui_update_widget(pallete_id, item.rec)
 		ui_draw_rec(hsv_to_rgb(state.pallete.colors.data[item.i]), pallete_rec)
 		
-		if pallete_id == ui_ctx.hovered_widget && rl.IsMouseButtonReleased(.LEFT) {
+		if pallete_id == ui_ctx.hovered_widget && ui_clicked(.LEFT) {
 			state.current_color = state.pallete.colors.data[item.i]
 		}
 		if is_selected {
@@ -1382,6 +1382,7 @@ load_app_data :: proc(path: string) {
 	app.new_project_width = i32(ini_read_int(loaded_map, "", "new_project_width"))
 	app.new_project_height = i32(ini_read_int(loaded_map, "", "new_project_height"))
 	ui_set_scale(ini_read_f32(loaded_map, "", "ui_scale"))
+	ui_ctx.act_on_press = ini_read_bool(loaded_map, "", "act_on_press")
 
 	app.active_tools.pen_size = ini_read_bool(loaded_map, "tool_bar", "pen_size")
 	app.active_tools.onion_skinning = ini_read_bool(loaded_map, "tool_bar", "onion_skinning")
@@ -1437,6 +1438,7 @@ save_app_data :: proc() {
 	ini.write_pair(file.stream, "unlock_fps", fmt.tprint(app.unlock_fps))
 	ini.write_pair(file.stream, "fav_palletes_len", fmt.tprint(app.fav_palletes.len))
 	ini.write_pair(file.stream, "ui_scale", fmt.tprint(ui_ctx.scale))
+	ini.write_pair(file.stream, "act_on_press", ui_ctx.act_on_press)
 
 	ini.write_section(file.stream, "tool_bar")
 	ini.write_pair(file.stream, "pen_size", fmt.tprint(app.active_tools.pen_size))
@@ -1448,7 +1450,6 @@ save_app_data :: proc() {
 	ini.write_pair(file.stream, "go_up_down", fmt.tprint(app.active_tools.go_up_down))
 	ini.write_pair(file.stream, "clear_layer", fmt.tprint(app.active_tools.clear_layer))
 	ini.write_pair(file.stream, "delete_layer", fmt.tprint(app.active_tools.delete_layer))
-
 
 	ini.write_section(file.stream, "recent_projects")
 	ini.write_pair(file.stream, "len", app.recent_projects.len)
