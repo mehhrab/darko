@@ -25,6 +25,7 @@ App :: struct {
 	new_project_width, new_project_height: i32,
 	recent_projects: sa.Small_Array(8, string),
 	fav_palletes: sa.Small_Array(24, Pallete),
+	active_tools: Active_Tools,
 	show_fps: bool,
 	unlock_fps: bool,
 	exit: bool,
@@ -100,6 +101,18 @@ Tool :: enum {
 }
 
 HSV :: distinct [3]f32
+
+Active_Tools :: struct {
+	pen_size: bool,
+	onion_skinning: bool,
+	add_layer_at_top: bool,
+	add_layer_above: bool,
+	duplicate_layer: bool,
+	move_layer: bool,
+	go_up_down: bool,
+	clear_layer: bool,
+	delete_layer: bool,
+}
 
 // popup ids used for opening them
 
@@ -620,64 +633,143 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 	}
 }
 
+tool_options_button :: proc(state: ^Project_State, rec: Rec) {
+	OPT_PEN_SIZE :: ICON_PEN + "  Pen size"
+	OPT_ONION_SKINNING :: ICON_EYE + "  Onion skinning"
+	OPT_ADD_LAYER_AT_TOP :: "+" + "  Add Layer At Top"
+	OPT_ADD_LAYER_ABOVE :: "+" + "  Add Layer Above"
+	OPT_DUPLICATE_LAYER :: ICON_COPY + "  Duplicate Layer"
+	OPT_MOVE_LAYER :: ICON_SWAP_VERT + "  Move Layer Up or Down"
+	OPT_GO_UP_DOWN :: ICON_SWAP_VERT + "  Go Up or Down"
+	OPT_CLEAR_LAYER :: ICON_X + "  Clear Layer"
+	OPT_DELETE_LAYER :: ICON_TRASH + "  Delete Layer"
+
+	options_items := [?]UI_Menu_Item {
+		ui_menu_item(ui_gen_id(), OPT_PEN_SIZE, toggled = app.active_tools.pen_size), 
+		ui_menu_item(ui_gen_id(), OPT_ONION_SKINNING, toggled = app.active_tools.onion_skinning), 
+		ui_menu_item(ui_gen_id(), OPT_ADD_LAYER_AT_TOP, toggled = app.active_tools.add_layer_at_top), 
+		ui_menu_item(ui_gen_id(), OPT_ADD_LAYER_ABOVE, toggled = app.active_tools.add_layer_above), 
+		ui_menu_item(ui_gen_id(), OPT_DUPLICATE_LAYER, toggled = app.active_tools.duplicate_layer), 
+		ui_menu_item(ui_gen_id(), OPT_MOVE_LAYER, toggled = app.active_tools.move_layer),
+		ui_menu_item(ui_gen_id(), OPT_GO_UP_DOWN, toggled = app.active_tools.go_up_down),
+		ui_menu_item(ui_gen_id(), OPT_CLEAR_LAYER, toggled = app.active_tools.clear_layer),
+		ui_menu_item(ui_gen_id(), OPT_DELETE_LAYER, toggled = app.active_tools.delete_layer),
+	}
+
+	style := UI_BUTTON_STYLE_TRANSPARENT
+	style.text_color = COLOR_BASE_4
+	clicked_item := ui_menu_button(ui_gen_id(), ICON_SETTINGS, options_items[:], ui_px(280), rec, style = style)
+
+	switch clicked_item.text {
+		case OPT_PEN_SIZE: app.active_tools.pen_size = !app.active_tools.pen_size
+		case OPT_ONION_SKINNING: app.active_tools.onion_skinning = !app.active_tools.onion_skinning
+		case OPT_ADD_LAYER_AT_TOP: app.active_tools.add_layer_at_top = !app.active_tools.add_layer_at_top
+		case OPT_ADD_LAYER_ABOVE: app.active_tools.add_layer_above = !app.active_tools.add_layer_above
+		case OPT_DUPLICATE_LAYER: app.active_tools.duplicate_layer = !app.active_tools.duplicate_layer
+		case OPT_MOVE_LAYER: app.active_tools.move_layer = !app.active_tools.move_layer
+		case OPT_GO_UP_DOWN: app.active_tools.go_up_down = !app.active_tools.go_up_down
+		case OPT_CLEAR_LAYER: app.active_tools.clear_layer = !app.active_tools.clear_layer
+		case OPT_DELETE_LAYER: app.active_tools.delete_layer = !app.active_tools.delete_layer
+	}
+}
+
 toolbar_view :: proc(state: ^Project_State, rec: Rec) {
 	ui_panel(ui_gen_id(), rec)
 	tools_area := rec_pad(rec, ui_px(8))
+
+	tool_options_button(state, rec_cut_right(&tools_area, ui_default_widget_height()))
 	
 	// draw current layer index and layer count
 	current_layer := state.current_layer + 1
 	layer_count := len(state.layers)
 	ui_draw_text(fmt.tprintf("Layer {}/{}", current_layer, layer_count), tools_area)
 
-	// delete button
-	delete_rec := rec_cut_right(&tools_area, ui_default_widget_height())
-	if ui_button(ui_gen_id(), ICON_TRASH, delete_rec, style = UI_BUTTON_STYLE_RED) {
-		if len(state.layers) > 1 {
-			delete_layer(state, state.current_layer)
-		}
-		else {
-			ui_show_notif("At least one layer is needed", UI_NOTIF_STYLE_ERROR)
-		}
-	}
-
-	// move up button
-	rec_cut_right(&tools_area, ui_px(8))
-	move_up_rec := rec_cut_right(&tools_area, ui_default_widget_height())
-	if ui_button(ui_gen_id(), ICON_UP, move_up_rec, style = UI_BUTTON_STYLE_ACCENT) {
-		if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
-			change_layer_index(state, state.current_layer, state.current_layer + 1)
+	if app.active_tools.delete_layer {
+		rec := rec_cut_right(&tools_area, ui_default_widget_height())
+		if ui_button(ui_gen_id(), ICON_TRASH, rec, style = UI_BUTTON_STYLE_RED) {
+			if len(state.layers) > 1 {
+				delete_layer(state, state.current_layer)
+			}
+			else {
+				ui_show_notif("At least one layer is needed", UI_NOTIF_STYLE_ERROR)
+			}
 		}
 	}
 
-	// move down button
-	move_down_rec := rec_cut_right(&tools_area, ui_default_widget_height())
-	if ui_button(ui_gen_id(), ICON_DOWN, move_down_rec, style = UI_BUTTON_STYLE_ACCENT) {
-		if len(state.layers) > 1 && state.current_layer > 0 {
-			change_layer_index(state, state.current_layer, state.current_layer - 1)
+	if app.active_tools.clear_layer {
+		rec := rec_cut_right(&tools_area, ui_default_widget_height())
+		if ui_button(ui_gen_id(), ICON_X, rec, style = UI_BUTTON_STYLE_RED) {
+			clear_layer(state, state.current_layer)
 		}
 	}
 
-	// duplicate button
-	rec_cut_right(&tools_area, ui_px(8))
-	duplicate_rec := rec_cut_right(&tools_area, ui_default_widget_height())
-	if ui_button(ui_gen_id(), ICON_COPY, duplicate_rec, style = UI_BUTTON_STYLE_ACCENT) {
-		duplicate_layer(state, state.current_layer, state.current_layer + 1)
+	if app.active_tools.move_layer {
+		TEXT_UP :: ICON_LAYERS + " " + ICON_UP
+		rec := rec_cut_right(&tools_area, ui_calc_button_width(TEXT_UP))
+		if ui_button(ui_gen_id(), TEXT_UP, rec, style = UI_BUTTON_STYLE_ACCENT) {
+			if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
+				change_layer_index(state, state.current_layer, state.current_layer + 1)
+			}
+		}
+		TEXT_DOWN :: ICON_LAYERS + " " + ICON_DOWN
+		rec = rec_cut_right(&tools_area, ui_calc_button_width(TEXT_DOWN))
+		if ui_button(ui_gen_id(), TEXT_DOWN, rec, style = UI_BUTTON_STYLE_ACCENT) {
+			if len(state.layers) > 1 && state.current_layer > 0 {
+				change_layer_index(state, state.current_layer, state.current_layer - 1)
+			}
+		}
 	}
 
-	// toggle onion skining
-	rec_cut_right(&tools_area, ui_px(8))
-	onion_rec := rec_cut_right(&tools_area, ui_default_widget_height())
-	onion_icon := state.onion_skinning ? ICON_EYE : ICON_EYE_OFF
-	if ui_button(ui_gen_id(), onion_icon, onion_rec, style = UI_BUTTON_STYLE_ACCENT) {
-		state.onion_skinning = !state.onion_skinning
+	
+	if app.active_tools.duplicate_layer {
+		rec := rec_cut_right(&tools_area, ui_default_widget_height())
+		if ui_button(ui_gen_id(), ICON_COPY, rec, style = UI_BUTTON_STYLE_ACCENT) {
+			duplicate_layer(state, state.current_layer, state.current_layer + 1)
+		}
+	}
+	
+	if app.active_tools.add_layer_above {
+		TEXT :: "Add above"
+		rec := rec_cut_right(&tools_area, ui_calc_button_width(TEXT))
+		if ui_button(ui_gen_id(), TEXT, rec, style = UI_BUTTON_STYLE_ACCENT) {
+			add_empty_layer(state, state.current_layer + 1)
+		}
+	}
+	
+	if app.active_tools.add_layer_at_top {
+		TEXT :: "Add top"
+		rec := rec_cut_right(&tools_area, ui_calc_button_width(TEXT))
+		if ui_button(ui_gen_id(), TEXT, rec, style = UI_BUTTON_STYLE_ACCENT) {
+			add_empty_layer(state, len(state.layers))
+		}
+	}
+	
+	if app.active_tools.onion_skinning {
+		rec := rec_cut_right(&tools_area, ui_default_widget_height())
+		onion_icon := state.onion_skinning ? ICON_EYE : ICON_EYE_OFF
+		if ui_button(ui_gen_id(), onion_icon, rec, style = UI_BUTTON_STYLE_ACCENT) {
+			state.onion_skinning = !state.onion_skinning
+		}
 	}
 
-	// pen size
-	rec_cut_right(&tools_area, ui_px(8))
-	size_slider_style := UI_SLIDER_STYLE_DEFAULT
-	size_slider_style.bg_color.a = 200
-	pen_size_rec := rec_cut_right(&tools_area, ui_px(150))
-	ui_slider_i32(ui_gen_id(), "Pen size", &state.pen_size, 1, 10, pen_size_rec, style = size_slider_style)
+	if app.active_tools.go_up_down {
+		rec := rec_cut_right(&tools_area, ui_default_widget_height())
+		if ui_button(ui_gen_id(), ICON_UP, rec, style = UI_BUTTON_STYLE_ACCENT) {
+			state.current_layer = clamp(state.current_layer + 1, 0, len(state.layers) - 1)
+		}
+
+		rec = rec_cut_right(&tools_area, ui_default_widget_height())
+		if ui_button(ui_gen_id(), ICON_DOWN, rec, style = UI_BUTTON_STYLE_ACCENT) {
+			state.current_layer = clamp(state.current_layer - 1, 0, len(state.layers) - 1)
+		}
+	}
+
+	if app.active_tools.pen_size {
+		size_slider_style := UI_SLIDER_STYLE_DEFAULT
+		size_slider_style.bg_color.a = 200
+		rec := rec_cut_right(&tools_area, ui_px(150))
+		ui_slider_i32(ui_gen_id(), "Pen size", &state.pen_size, 1, 10, rec, style = size_slider_style)
+	}
 }
 
 canvas_view :: proc(state: ^Project_State, rec: Rec) {
@@ -1291,6 +1383,16 @@ load_app_data :: proc(path: string) {
 	app.new_project_height = i32(ini_read_int(loaded_map, "", "new_project_height"))
 	ui_set_scale(ini_read_f32(loaded_map, "", "ui_scale"))
 
+	app.active_tools.pen_size = ini_read_bool(loaded_map, "tool_bar", "pen_size")
+	app.active_tools.onion_skinning = ini_read_bool(loaded_map, "tool_bar", "onion_skinning")
+	app.active_tools.add_layer_at_top = ini_read_bool(loaded_map, "tool_bar", "add_layer_at_top")
+	app.active_tools.add_layer_above = ini_read_bool(loaded_map, "tool_bar", "add_layer_above")
+	app.active_tools.duplicate_layer = ini_read_bool(loaded_map, "tool_bar", "duplicate_layer")
+	app.active_tools.move_layer = ini_read_bool(loaded_map, "tool_bar", "move_layer")
+	app.active_tools.go_up_down = ini_read_bool(loaded_map, "tool_bar", "go_up_down")
+	app.active_tools.clear_layer = ini_read_bool(loaded_map, "tool_bar", "clear_layer")
+	app.active_tools.delete_layer = ini_read_bool(loaded_map, "tool_bar", "delete_layer")
+
 	sa.clear(&app.recent_projects)
 	if "recent_projects" in loaded_map {
 		len := ini_read_int(loaded_map, "recent_projects", "len")
@@ -1335,6 +1437,18 @@ save_app_data :: proc() {
 	ini.write_pair(file.stream, "unlock_fps", fmt.tprint(app.unlock_fps))
 	ini.write_pair(file.stream, "fav_palletes_len", fmt.tprint(app.fav_palletes.len))
 	ini.write_pair(file.stream, "ui_scale", fmt.tprint(ui_ctx.scale))
+
+	ini.write_section(file.stream, "tool_bar")
+	ini.write_pair(file.stream, "pen_size", fmt.tprint(app.active_tools.pen_size))
+	ini.write_pair(file.stream, "onion_skinning", fmt.tprint(app.active_tools.onion_skinning))
+	ini.write_pair(file.stream, "add_layer_at_top", fmt.tprint(app.active_tools.add_layer_at_top))
+	ini.write_pair(file.stream, "add_layer_above", fmt.tprint(app.active_tools.add_layer_above))
+	ini.write_pair(file.stream, "duplicate_layer", fmt.tprint(app.active_tools.duplicate_layer))
+	ini.write_pair(file.stream, "move_layer", fmt.tprint(app.active_tools.move_layer))
+	ini.write_pair(file.stream, "go_up_down", fmt.tprint(app.active_tools.go_up_down))
+	ini.write_pair(file.stream, "clear_layer", fmt.tprint(app.active_tools.clear_layer))
+	ini.write_pair(file.stream, "delete_layer", fmt.tprint(app.active_tools.delete_layer))
+
 
 	ini.write_section(file.stream, "recent_projects")
 	ini.write_pair(file.stream, "len", app.recent_projects.len)
