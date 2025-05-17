@@ -330,8 +330,8 @@ ICON_PEN :: "\uf8ea"
 ICON_ERASER :: "\uf6fd"
 ICON_EYEDROPPER :: "\uf709"
 ICON_TRASH :: "\uf6bf"
-ICON_UP :: "\ufc35"
-ICON_DOWN :: "\ufc2c"
+ICON_UP :: "\uf55d"
+ICON_DOWN :: "\uf545"
 ICON_COPY :: "\uf68e"
 ICON_SETTINGS :: "\ufbf6"
 ICON_X :: "\uf655" 
@@ -342,6 +342,10 @@ ICON_EYE :: "\ufbce"
 ICON_EYE_OFF :: "\ufbcf"
 ICON_FILL :: "\uf765"
 ICON_DOTS_HORZ :: "\uf6d7"
+// ICON_DOUBLE_UP :: "\uf63e"
+// ICON_DOUBLE_DOWN :: "\uf63b"
+ICON_SWAP_VERT :: "\uf9e1"
+ICON_LAYERS :: "\uf827"
 
 ui_ctx: UI_Ctx
 
@@ -377,7 +381,11 @@ ui_load_font :: proc(size: i32) {
 	ICON_EYE +
 	ICON_EYE_OFF +
 	ICON_FILL +
-	ICON_DOTS_HORZ
+	ICON_DOTS_HORZ + 
+	// ICON_DOUBLE_UP +
+	// ICON_DOUBLE_DOWN +
+	ICON_SWAP_VERT +
+	ICON_LAYERS
 	
 	code_point_count: i32
 	code_points := rl.LoadCodepoints(CHARS + ICONS, &code_point_count)
