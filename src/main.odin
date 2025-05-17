@@ -791,8 +791,8 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 	
 	if ui_is_being_interacted() == false {
 		update_zoom(&state.zoom, 0.4, 0.1, 100)
-		update_tools(state, canvas_rec, current_tool)
 	}
+	update_tools(state, canvas_rec, current_tool)
 
 	state.lerped_current_layer = rl.Lerp(state.lerped_current_layer, f32(state.current_layer), rl.GetFrameTime() * 18)
 
@@ -1813,20 +1813,20 @@ mark_all_layers_dirty :: proc(state: ^Project_State) {
 }
 
 update_tools :: proc(state: ^Project_State, area: Rec, tool: Tool) {
+	can_have_input := ui_is_being_interacted() == false && ui_is_mouse_in_rec(area)
+	
 	// color picker
-	if tool == .Color_Picker && rl.IsMouseButtonPressed(.LEFT) {
-		if ui_is_mouse_in_rec(area) {
-			x, y := get_mouse_pos_in_canvas(state, area)
-			rgb_color := rl.GetImageColor(get_current_layer(state).image, x, y)
-			if rgb_color.a != 0 {
-				state.current_color = rgb_to_hsv(rgb_color)
-			}
+	if tool == .Color_Picker && can_have_input && rl.IsMouseButtonPressed(.LEFT) {
+		x, y := get_mouse_pos_in_canvas(state, area)
+		rgb_color := rl.GetImageColor(get_current_layer(state).image, x, y)
+		if rgb_color.a != 0 {
+			state.current_color = rgb_to_hsv(rgb_color)
 		}
 	}
 
 	// pen
-	if tool == .Pen &&  rl.IsMouseButtonDown(.LEFT) {
-		if ui_is_mouse_in_rec(area) {
+	if tool == .Pen  {
+		if can_have_input && rl.IsMouseButtonDown(.LEFT) {
 			begin_image_change(state)
 			x, y := get_mouse_pos_in_canvas(state, area)
 			color := hsv_to_rgb(state.current_color)
@@ -1839,14 +1839,15 @@ update_tools :: proc(state: ^Project_State, area: Rec, tool: Tool) {
 			}
 			mark_dirty_layers(state, state.current_layer)	
 		}
-	}
-	if rl.IsMouseButtonReleased(.LEFT) {
-		end_image_change(state)
+
+		if rl.IsMouseButtonReleased(.LEFT) {
+			end_image_change(state)
+		}
 	}
 
 	// eraser
-	if tool == .Eraser && rl.IsMouseButtonDown(.LEFT) {
-		if ui_is_mouse_in_rec(area) {
+	if tool == .Eraser {
+		if can_have_input && rl.IsMouseButtonDown(.LEFT) {
 			begin_image_change(state)
 			x, y := get_mouse_pos_in_canvas(state, area)
 			for i in 0..<state.pen_size {
@@ -1858,21 +1859,20 @@ update_tools :: proc(state: ^Project_State, area: Rec, tool: Tool) {
 			}
 			mark_dirty_layers(state, state.current_layer)
 		}
-	}
-	if rl.IsMouseButtonReleased(.RIGHT) {
-		end_image_change(state)
+
+		if rl.IsMouseButtonReleased(.LEFT) {
+			end_image_change(state)
+		}
 	}
 
 	// fill
-	if tool == .Fill && rl.IsMouseButtonPressed(.LEFT) {
-		if ui_is_mouse_in_rec(area) {
-			begin_image_change(state)
-			x, y := get_mouse_pos_in_canvas(state, area)
-			color := hsv_to_rgb(state.current_color)
-			fill(&get_current_layer(state).image, x, y, color)
-			mark_dirty_layers(state, state.current_layer)
-			end_image_change(state)
-		}
+	if tool == .Fill && can_have_input && rl.IsMouseButtonPressed(.LEFT) {
+		begin_image_change(state)
+		x, y := get_mouse_pos_in_canvas(state, area)
+		color := hsv_to_rgb(state.current_color)
+		fill(&get_current_layer(state).image, x, y, color)
+		mark_dirty_layers(state, state.current_layer)
+		end_image_change(state)
 	}
 }
 
