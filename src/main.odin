@@ -739,7 +739,7 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 			if tool_needs_preview && ui_is_mouse_in_rec(layer_rec) && ui_is_being_interacted() == false {
 				mx, my := get_mouse_pos_in_canvas(state, layer_rec)
 				pixel_size := layer_rec.width / f32(state.width)
-				pen_size := current_tool == .Color_Picker ? 1 : state.pen_size
+				pen_size := current_tool == .Color_Picker || current_tool == .Fill ? 1 : state.pen_size
 				x := f32(mx - (pen_size - 1) / 2) * pixel_size + layer_rec.x
 				y := f32(my - (pen_size - 1) / 2) * pixel_size + layer_rec.y
 				size := f32(pen_size) * pixel_size
