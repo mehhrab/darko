@@ -1432,24 +1432,24 @@ save_app_data :: proc() {
 		return
 	}
 
-	ini.write_pair(file.stream, "new_project_width", fmt.tprint(app.new_project_width))
-	ini.write_pair(file.stream, "new_project_height", fmt.tprint(app.new_project_height))
-	ini.write_pair(file.stream, "show_fps", fmt.tprint(app.show_fps))
-	ini.write_pair(file.stream, "unlock_fps", fmt.tprint(app.unlock_fps))
-	ini.write_pair(file.stream, "fav_palletes_len", fmt.tprint(app.fav_palletes.len))
-	ini.write_pair(file.stream, "ui_scale", fmt.tprint(ui_ctx.scale))
+	ini.write_pair(file.stream, "new_project_width", app.new_project_width)
+	ini.write_pair(file.stream, "new_project_height", app.new_project_height)
+	ini.write_pair(file.stream, "show_fps", app.show_fps)
+	ini.write_pair(file.stream, "unlock_fps", app.unlock_fps)
+	ini.write_pair(file.stream, "fav_palletes_len", app.fav_palletes.len)
+	ini.write_pair(file.stream, "ui_scale", ui_ctx.scale)
 	ini.write_pair(file.stream, "act_on_press", ui_ctx.act_on_press)
 
 	ini.write_section(file.stream, "tool_bar")
-	ini.write_pair(file.stream, "pen_size", fmt.tprint(app.active_tools.pen_size))
-	ini.write_pair(file.stream, "onion_skinning", fmt.tprint(app.active_tools.onion_skinning))
-	ini.write_pair(file.stream, "add_layer_at_top", fmt.tprint(app.active_tools.add_layer_at_top))
-	ini.write_pair(file.stream, "add_layer_above", fmt.tprint(app.active_tools.add_layer_above))
-	ini.write_pair(file.stream, "duplicate_layer", fmt.tprint(app.active_tools.duplicate_layer))
-	ini.write_pair(file.stream, "move_layer", fmt.tprint(app.active_tools.move_layer))
-	ini.write_pair(file.stream, "go_up_down", fmt.tprint(app.active_tools.go_up_down))
-	ini.write_pair(file.stream, "clear_layer", fmt.tprint(app.active_tools.clear_layer))
-	ini.write_pair(file.stream, "delete_layer", fmt.tprint(app.active_tools.delete_layer))
+	ini.write_pair(file.stream, "pen_size", app.active_tools.pen_size)
+	ini.write_pair(file.stream, "onion_skinning", app.active_tools.onion_skinning)
+	ini.write_pair(file.stream, "add_layer_at_top", app.active_tools.add_layer_at_top)
+	ini.write_pair(file.stream, "add_layer_above", app.active_tools.add_layer_above)
+	ini.write_pair(file.stream, "duplicate_layer", app.active_tools.duplicate_layer)
+	ini.write_pair(file.stream, "move_layer", app.active_tools.move_layer)
+	ini.write_pair(file.stream, "go_up_down", app.active_tools.go_up_down)
+	ini.write_pair(file.stream, "clear_layer", app.active_tools.clear_layer)
+	ini.write_pair(file.stream, "delete_layer", app.active_tools.delete_layer)
 
 	ini.write_section(file.stream, "recent_projects")
 	ini.write_pair(file.stream, "len", app.recent_projects.len)
@@ -1462,12 +1462,12 @@ save_app_data :: proc() {
 		pallete := &app.fav_palletes.data[i]
 		ini.write_section(file.stream, fmt.tprint("fav_pallete", i, sep = ""))
 		ini.write_pair(file.stream, "name", pallete.name)
-		ini.write_pair(file.stream, "len", fmt.tprint(pallete.colors.len))
+		ini.write_pair(file.stream, "len", pallete.colors.len)
 		for i in 0..<pallete.colors.len {
 			color := pallete.colors.data[i]
-			ini.write_pair(file.stream, fmt.tprint("h", i, sep = ""), fmt.tprint(color[0]))
-			ini.write_pair(file.stream, fmt.tprint("s", i, sep = ""), fmt.tprint(color[1]))
-			ini.write_pair(file.stream, fmt.tprint("v", i, sep = ""), fmt.tprint(color[2]))	
+			ini.write_pair(file.stream, fmt.tprint("h", i, sep = ""), color[0])
+			ini.write_pair(file.stream, fmt.tprint("s", i, sep = ""), color[1])
+			ini.write_pair(file.stream, fmt.tprint("v", i, sep = ""), color[2])	
 		}
 	}
 }
@@ -1626,43 +1626,43 @@ save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	}
 
 	ini.write_pair(file.stream, "export_dir", state.export_dir)
-	ini.write_pair(file.stream, "zoom", fmt.tprint(state.zoom))
-	ini.write_pair(file.stream, "spacing", fmt.tprint(state.spacing))
-	ini.write_pair(file.stream, "current_layer", fmt.tprint(state.current_layer))
-	ini.write_pair(file.stream, "preview_zoom", fmt.tprint(state.preview_zoom))
-	ini.write_pair(file.stream, "preview_rotation", fmt.tprint(state.preview_rotation))
-	ini.write_pair(file.stream, "preview_rotation_speed", fmt.tprint(state.preview_rotation_speed))
-	ini.write_pair(file.stream, "auto_rotate_preview", fmt.tprint(state.auto_rotate_preview))
-	ini.write_pair(file.stream, "width", fmt.tprint(state.width))
-	ini.write_pair(file.stream, "height", fmt.tprint(state.height))
-	ini.write_pair(file.stream, "hide_grid", fmt.tprint(state.hide_grid))
-	ini.write_pair(file.stream, "onion_skinning", fmt.tprint(state.onion_skinning))
-	ini.write_pair(file.stream, "show_bg", fmt.tprint(state.show_bg))
-	ini.write_pair(file.stream, "pen_size", fmt.tprint(state.pen_size))
+	ini.write_pair(file.stream, "zoom", state.zoom)
+	ini.write_pair(file.stream, "spacing", state.spacing)
+	ini.write_pair(file.stream, "current_layer", state.current_layer)
+	ini.write_pair(file.stream, "preview_zoom", state.preview_zoom)
+	ini.write_pair(file.stream, "preview_rotation", state.preview_rotation)
+	ini.write_pair(file.stream, "preview_rotation_speed", state.preview_rotation_speed)
+	ini.write_pair(file.stream, "auto_rotate_preview", state.auto_rotate_preview)
+	ini.write_pair(file.stream, "width", state.width)
+	ini.write_pair(file.stream, "height", state.height)
+	ini.write_pair(file.stream, "hide_grid", state.hide_grid)
+	ini.write_pair(file.stream, "onion_skinning", state.onion_skinning)
+	ini.write_pair(file.stream, "show_bg", state.show_bg)
+	ini.write_pair(file.stream, "pen_size", state.pen_size)
 
 	ini.write_section(file.stream, "current_color")
-	ini.write_pair(file.stream, "h", fmt.tprint(state.current_color[0]))
-	ini.write_pair(file.stream, "s", fmt.tprint(state.current_color[1]))
-	ini.write_pair(file.stream, "v", fmt.tprint(state.current_color[2]))
+	ini.write_pair(file.stream, "h", state.current_color[0])
+	ini.write_pair(file.stream, "s", state.current_color[1])
+	ini.write_pair(file.stream, "v", state.current_color[2])
 
 	ini.write_section(file.stream, "preview_bg_color")
-	ini.write_pair(file.stream, "h", fmt.tprint(state.preview_bg_color[0]))
-	ini.write_pair(file.stream, "s", fmt.tprint(state.preview_bg_color[1]))
-	ini.write_pair(file.stream, "v", fmt.tprint(state.preview_bg_color[2]))
+	ini.write_pair(file.stream, "h", state.preview_bg_color[0])
+	ini.write_pair(file.stream, "s", state.preview_bg_color[1])
+	ini.write_pair(file.stream, "v", state.preview_bg_color[2])
 
 	ini.write_section(file.stream, "bg_color1")
-	ini.write_pair(file.stream, "h", fmt.tprint(state.bg_color1[0]))
-	ini.write_pair(file.stream, "s", fmt.tprint(state.bg_color1[1]))
-	ini.write_pair(file.stream, "v", fmt.tprint(state.bg_color1[2]))
+	ini.write_pair(file.stream, "h", state.bg_color1[0])
+	ini.write_pair(file.stream, "s", state.bg_color1[1])
+	ini.write_pair(file.stream, "v", state.bg_color1[2])
 
 	ini.write_section(file.stream, "bg_color2")
-	ini.write_pair(file.stream, "h", fmt.tprint(state.bg_color2[0]))
-	ini.write_pair(file.stream, "s", fmt.tprint(state.bg_color2[1]))
-	ini.write_pair(file.stream, "v", fmt.tprint(state.bg_color2[2]))
+	ini.write_pair(file.stream, "h", state.bg_color2[0])
+	ini.write_pair(file.stream, "s", state.bg_color2[1])
+	ini.write_pair(file.stream, "v", state.bg_color2[2])
 
 	ini.write_section(file.stream, "pallete")
 	ini.write_pair(file.stream, "name", state.pallete.name)
-	ini.write_pair(file.stream, "len", fmt.tprint(state.pallete.colors.len))
+	ini.write_pair(file.stream, "len", state.pallete.colors.len)
 	for i in 0..<state.pallete.colors.len {
 		color := state.pallete.colors.data[i]
 		ini.write_pair(file.stream, fmt.tprint("h", i, sep = ""), fmt.tprint(color[0]))
@@ -1709,9 +1709,9 @@ export_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 		return
 	}
 
-	ini.write_pair(file.stream, "spacing", fmt.tprint(state.spacing))
-	ini.write_pair(file.stream, "width", fmt.tprint(state.width))
-	ini.write_pair(file.stream, "height", fmt.tprint(state.height))
+	ini.write_pair(file.stream, "spacing", state.spacing)
+	ini.write_pair(file.stream, "width", state.width)
+	ini.write_pair(file.stream, "height", state.height)
 
 	// save layers into one image
 	sprites := rl.GenImageColor(state.width * i32(len(state.layers)), state.height, rl.BLANK)
