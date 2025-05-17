@@ -1386,6 +1386,7 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	state.dirty_layers = make([dynamic]int)
 	state.bg_color1 = HSV { 240, 0.3, 0.7 }
 	state.bg_color2 = HSV { 240, 0.3, 1 }
+	state.pen_size = 1
 	create_bg_texture(state)
 	
 	layer: Layer
@@ -1424,6 +1425,7 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	loaded_state.hide_grid = ini_read_bool(loaded_map, "", "hide_grid")
 	loaded_state.onion_skinning = ini_read_bool(loaded_map, "", "onion_skinning")
 	loaded_state.show_bg = ini_read_bool(loaded_map, "", "show_bg")
+	loaded_state.pen_size = i32(ini_read_int(loaded_map, "", "pen_size", 1))
 
 	loaded_state.current_color[0] = ini_read_f32(loaded_map, "current_color", "h")
 	loaded_state.current_color[1] = ini_read_f32(loaded_map, "current_color", "s")
@@ -1521,6 +1523,7 @@ save_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	ini.write_pair(file.stream, "hide_grid", fmt.tprint(state.hide_grid))
 	ini.write_pair(file.stream, "onion_skinning", fmt.tprint(state.onion_skinning))
 	ini.write_pair(file.stream, "show_bg", fmt.tprint(state.show_bg))
+	ini.write_pair(file.stream, "pen_size", fmt.tprint(state.pen_size))
 
 	ini.write_section(file.stream, "current_color")
 	ini.write_pair(file.stream, "h", fmt.tprint(state.current_color[0]))
