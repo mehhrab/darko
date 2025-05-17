@@ -169,8 +169,8 @@ COLOR_BASE_1 :: rl.Color { 48, 52, 70, 255 }
 COLOR_BASE_2 :: rl.Color { 65, 69, 89, 255 }
 COLOR_BASE_3 :: rl.Color { 81, 87, 109, 255 }
 COLOR_BASE_4 :: rl.Color { 115, 121, 148, 255 }
-COLOR_ACCENT_0 :: rl.Color{ 176, 131, 240, 255 }
-COLOR_ACCENT_1 :: rl.Color { 242, 131, 240, 255 }
+COLOR_ACCENT_0 :: rl.Color{ 206, 151, 240, 255 }
+COLOR_ACCENT_1 :: rl.Color { 172, 161, 255, 255 }
 COLOR_ERROR_0 :: rl.Color { 255, 101, 125, 255 }
 COLOR_TEXT_0 :: rl.Color { 200, 209, 218, 255 }
 // transparent colors:
