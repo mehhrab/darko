@@ -187,6 +187,7 @@ main :: proc() {
 	rl.SetTargetFPS(TARGET_FPS)
 	rl.SetConfigFlags({ rl.ConfigFlags.WINDOW_RESIZABLE, rl.ConfigFlags.MSAA_4X_HINT })
 	rl.InitWindow(1200, 700, "Darko")
+	defer rl.CloseWindow()
 	rl.SetExitKey(nil)
 
 	ntf.Init()
@@ -299,7 +300,6 @@ main :: proc() {
 		ui_clear_temp_state()
 		free_all(context.temp_allocator)
 	}	
-	rl.CloseWindow()
 }
 
 // frontend code
