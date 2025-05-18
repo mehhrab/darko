@@ -739,6 +739,8 @@ ui_begin_list :: proc(
 	has_scroll_bar := rec.height < items_h * f32(items_count) 
 	max_scroll_y := (items_h * f32(items_count) - rec.height) * -1
 	if has_scroll_bar {
+		thumb_h := rec.height * (rec.height / ((items_h * f32(items_count))))
+		
 		if ui_ctx.hovered_panel == id {
 			scroll^ += rl.GetMouseWheelMove() * 10
 		}
@@ -747,8 +749,9 @@ ui_begin_list :: proc(
 		ui_update_widget(id, scroll_bar_rec)
 		
 		if ui_ctx.active_widget == id && rl.IsMouseButtonDown(.LEFT) {
-			scroll^ = 0 + (rl.GetMousePosition().y - rec.y) * (max_scroll_y - 0) / rec.height
+			scroll^ = 0 + (rl.GetMousePosition().y - (rec.y + thumb_h / 2)) * (max_scroll_y - 0) / (rec.height - thumb_h)
 		}
+
 		if scroll^ > 0 {
 			scroll^ = 0
 		}
@@ -756,16 +759,13 @@ ui_begin_list :: proc(
 			scroll^ = max_scroll_y
 		}
 		
-		thumb_h := rec.height * (rec.height / ((items_h * f32(items_count))))
-		thumb_y := scroll_bar_rec.y + (lerped_scroll^ / max_scroll_y) * (scroll_bar_rec.height) - thumb_h / 2
+		thumb_y := (scroll_bar_rec.y) + (lerped_scroll^ / max_scroll_y) * (scroll_bar_rec.height - thumb_h)
 		thumb_rec := Rec {
 			x = scroll_bar_rec.x,
 			y = thumb_y,
 			width = scroll_bar_rec.width,
 			height = thumb_h
 		}
-		// this probably can be removed
-		thumb_rec.y = clamp(thumb_rec.y, scroll_bar_rec.y, scroll_bar_rec.y + scroll_bar_rec.height - thumb_h)
 		
 		ui_push_command(UI_Draw_Rect {
 			color = COLOR_BASE_0,
@@ -824,14 +824,17 @@ ui_begin_list_wrapped :: proc(
 		rec = rec,
 	})
 	
-	// max_scroll_y := (items_h * f32(items_count) - rec.height) * -1
 	row_count := math.ceil((item_size + ui_px(8)) * f32(items_count) / (rec.width - ui_px(14)))
 	has_scroll_bar := rec.height < ((item_size + ui_px(8))) * row_count  
 	max_scroll_y := rec.height - ((item_size + ui_px(8)) * row_count)
+	
 	if max_scroll_y > 0 {
 		max_scroll_y = 0
 	}
+	
 	if has_scroll_bar {
+		thumb_h := rec.height * (rec.height / (((item_size + ui_px(8)) * row_count)))
+		
 		if ui_ctx.hovered_panel == id {
 			scroll^ += rl.GetMouseWheelMove() * 10
 		}
@@ -840,7 +843,7 @@ ui_begin_list_wrapped :: proc(
 		ui_update_widget(id, scroll_bar_rec)
 			
 		if ui_ctx.active_widget == id && rl.IsMouseButtonDown(.LEFT) {
-			scroll^ = 0 + (rl.GetMousePosition().y - rec.y) * (max_scroll_y - 0) / rec.height
+			scroll^ = 0 + (rl.GetMousePosition().y - (rec.y + thumb_h / 2)) * (max_scroll_y - 0) / (rec.height - thumb_h)
 		}
 		if scroll^ > 0 {
 			scroll^ = 0
@@ -849,17 +852,14 @@ ui_begin_list_wrapped :: proc(
 			scroll^ = max_scroll_y
 		}
 		
-		thumb_h := rec.height * (rec.height / (((item_size + ui_px(8)) * row_count)))
 		thumb_h = clamp(thumb_h, ui_px(8), rec.height)
-		thumb_y := scroll_bar_rec.y + (lerped_scroll^ / max_scroll_y) * (scroll_bar_rec.height) - thumb_h / 2
+		thumb_y := scroll_bar_rec.y + (lerped_scroll^ / max_scroll_y) * (scroll_bar_rec.height - thumb_h)
 		thumb_rec := Rec {
 			x = scroll_bar_rec.x,
 			y = thumb_y,
 			width = scroll_bar_rec.width,
 			height = thumb_h
 		}
-		// this probably can be removed
-		thumb_rec.y = clamp(thumb_rec.y, scroll_bar_rec.y, scroll_bar_rec.y + scroll_bar_rec.height - thumb_h)
 
 		ui_push_command(UI_Draw_Rect {
 			color = COLOR_BASE_0,
