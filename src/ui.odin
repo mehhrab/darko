@@ -958,20 +958,17 @@ ui_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := 
 	return clicked
 }
 
-ui_menu_button :: proc(
+ui_begin_menu_button :: proc(
 	id: UI_ID, 
 	text: string, 
-	items: []UI_Menu_Item, 
 	item_width: f32, 
+	item_count: i32,
 	rec: Rec, 
-	style := UI_BUTTON_STYLE_DEFAULT,
-	item_style := UI_MENU_ITEM_STYLE_DEFAULT,
-	item_toggled_style := UI_MENU_ITEM_STYLE_DEFAULT
+	style := UI_BUTTON_STYLE_DEFAULT
 ) -> (
-	clicked_item: UI_Menu_Item
-) {	
-	clicked_item = {}
-
+	open: bool,
+	content_rec: Rec
+) {
 	if ui_button(id, text, rec, style = style) {
 		ui_open_popup(id, false)
 	}
@@ -986,7 +983,7 @@ ui_menu_button :: proc(
 			rec.x + rec.width - item_width - padding, 
 			rec.y + rec.height + padding, 
 			item_width, 
-			item_height * f32(len(items))
+			item_height * f32(item_count)
 		}
 	}
 	else {
@@ -994,47 +991,38 @@ ui_menu_button :: proc(
 			rec.x + padding, 
 			rec.y + rec.height + padding, 
 			item_width, 
-			item_height * f32(len(items)) 
+			item_height * f32(item_count) 
 		}
 	}
 
-	if ui_begin_popup(id, popup_rec) {
-		menu_item_y := popup_rec.y
-		for item, i in items {
-			toggled, is_toggleble := item.toggled.?
-			item_rec := Rec { popup_rec.x, menu_item_y, item_width, item_height }
-			
-			if ui_button(item.id, item.text, item_rec, style = toggled ? item_toggled_style : item_style) {
-				clicked_item = item
-			}
-			
-			if is_toggleble {
-				text_w := ui_calc_button_width(item.text)
-				toggle_rec := Rec { item_rec.x + text_w, item_rec.y, item_rec.width, item_rec.height }
-				color := false ? COLOR_ACCENT_0 : COLOR_TEXT_0
-				ui_draw_text(toggled ? ICON_CHECK: ICON_X, toggle_rec, color = color)
-			}
-
-			if item.shortcut != "" {
-				item_rec.width -= padding
-				ui_draw_text(item.shortcut, item_rec, { .Right, .Center }, rl.ColorAlpha(COLOR_TEXT_0, 0.6))
-			}
-			if item.separator {
-				sep_rec := item_rec
-				sep_rec.y += item_height - 1
-				sep_rec.height = 1
-				ui_draw_rec(COLOR_BASE_0, sep_rec)
-			}
-			menu_item_y += item_height
-		}
-	}
-	ui_end_popup()
-
-	return clicked_item
+	return ui_begin_popup(id, popup_rec), popup_rec
 }
 
-ui_menu_item :: proc(id: UI_ID, text: string, shortcut := "", separator := false, toggled: Maybe(bool) = nil) -> UI_Menu_Item {
-	return UI_Menu_Item { id, text, shortcut, separator, toggled }
+ui_end_menu_button :: proc() {
+	ui_end_popup()
+}
+
+ui_menu_item :: proc(id: UI_ID, text: string, rec: ^Rec, shortcut := "", toggleble: Maybe(bool) = nil) -> (clicked: bool) {
+	style :=  UI_BUTTON_STYLE_DEFAULT
+	style.text_align = { .Left, .Center }
+	item_rec := rec_cut_top(rec, ui_default_widget_height())
+	clicked = ui_button(id, text, item_rec, style = style)
+	
+	toggled, can_toggle := toggleble.?
+	if can_toggle {
+		text_w := ui_calc_button_width(text)
+		toggle_rec := Rec { item_rec.x + text_w, item_rec.y, item_rec.width, item_rec.height }
+		color := false ? COLOR_ACCENT_0 : COLOR_TEXT_0
+		ui_draw_text(toggled ? ICON_CHECK: ICON_X, toggle_rec, color = color)
+	}
+
+	if shortcut != "" {
+		shortcut_rec := item_rec
+		shortcut_rec.width -= ui_px(10)
+		ui_draw_text(shortcut, shortcut_rec, { .Right, .Center }, rl.ColorAlpha(COLOR_TEXT_0, 0.6))
+	}
+	
+	return clicked
 }
 
 ui_path_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, style := UI_BUTTON_STYLE_DEFAULT) -> (clicked: bool) {	

@@ -426,28 +426,14 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 	area := rec
 	ui_panel(ui_gen_id(), area, { bg_color = COLOR_BASE_2 })
 
-	FILE_NEW_PROJ :: "New project" 
-	FILE_OPEN_PROJ :: "Open project" 
-	FILE_SAVE_PROJ :: "Save project" 
-	FILE_EXPORT_PROJ :: "Export project"
-	FILE_WELCOME_SCREEN_view :: "Go to welcome screen" 
-	
-	file_items := [?]UI_Menu_Item {
-		ui_menu_item(ui_gen_id(), FILE_NEW_PROJ, "N"),
-		ui_menu_item(ui_gen_id(), FILE_OPEN_PROJ, "O"),
-		ui_menu_item(ui_gen_id(), FILE_SAVE_PROJ, "S"),
-		ui_menu_item(ui_gen_id(), FILE_EXPORT_PROJ, "E"),
-		ui_menu_item(ui_gen_id(), FILE_WELCOME_SCREEN_view, "W"),
-	}
 	file_rec := rec_cut_left(&area, ui_calc_button_width("File"))
-	file_clicked_item := ui_menu_button(ui_gen_id(), "File", file_items[:], ui_px(300), file_rec)
-	
-	switch file_clicked_item.text {
-		case FILE_NEW_PROJ: {
+	if open, content_rec := ui_begin_menu_button(ui_gen_id(), "File", ui_px(300), 5, file_rec); open {
+		area := content_rec
+		if ui_menu_item(ui_gen_id(), "New project", &area, "N") {
 			ui_close_current_popup()
 			ui_open_popup(popup_new_project)
 		}
-		case FILE_OPEN_PROJ: {
+		if ui_menu_item(ui_gen_id(), "Open project", &area, "O") {
 			confirm_project_exit(state, proc(state: ^Project_State) {
 				ui_close_all_popups()
 		
@@ -469,7 +455,7 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 				schedule_state_change(loaded_project)
 			})
 		}
-		case FILE_SAVE_PROJ: {
+		if ui_menu_item(ui_gen_id(), "Save project", &area, "S") {
 			save_scope: {
 				ui_close_all_popups()
 				
@@ -491,7 +477,7 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 				ui_show_notif("Project is saved")
 			}
 		}
-		case FILE_EXPORT_PROJ: {
+		if ui_menu_item(ui_gen_id(), "Export project", &area, "E") {
 			export_scope: {
 				ui_close_all_popups()
 				
@@ -512,162 +498,116 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 				ui_show_notif("Project is exported")
 			}
 		}
-		case FILE_WELCOME_SCREEN_view: {
+		if ui_menu_item(ui_gen_id(), "Go to welcome screen", &area, "W") {
 			go_to_welcome_screen(state)
 		}
 	}
+	ui_end_menu_button()
 	
-	EDIT_COPY :: "Copy"
-	EDIT_PASTE :: "Paste"
-	EDIT_UNDO :: "Undo"
-	EDIT_REDO :: "Redo"
-	
-	edit_items := [?]UI_Menu_Item {
-		ui_menu_item(ui_gen_id(), EDIT_COPY, "C"),
-		ui_menu_item(ui_gen_id(), EDIT_PASTE, "V"),
-		ui_menu_item(ui_gen_id(), EDIT_UNDO, "Z"),
-		ui_menu_item(ui_gen_id(), EDIT_REDO, "Y"),
-	}
 	edit_rec := rec_cut_left(&area, ui_calc_button_width("Edit"))
-	edit_clicked_item := ui_menu_button(ui_gen_id(), "Edit", edit_items[:], ui_px(300), edit_rec)
-	
-	switch edit_clicked_item.text {
-		case EDIT_COPY: {
+	if open, content_rec := ui_begin_menu_button(ui_gen_id(), "Edit", ui_px(300), 4, edit_rec); open {
+		area := content_rec
+		if ui_menu_item(ui_gen_id(), "Copy", &area, "C") {
 			copy_layer(state, get_current_layer(state)) 
 		}
-		case EDIT_PASTE: {
+		if ui_menu_item(ui_gen_id(), "Paste", &area, "V") {
 			paste_layer(state, state.current_layer)
 		}
-		case EDIT_UNDO: {
+		if ui_menu_item(ui_gen_id(), "Undo", &area, "Z") {
 			undo(state)
 		}
-		case EDIT_REDO: {
+		if ui_menu_item(ui_gen_id(), "Redo", &area, "Y") {
 			redo(state)
 		}
 	}
+	ui_end_menu_button()
 
-	LAYER_ADD_ABOVE :: "Add above"
-	LAYER_ADD_TOP :: "Add at top"
-	LAYER_DUPLICATE :: "Duplicate"
-	LAYER_CLEAR :: "Clear" 
-	LAYER_MOVE_UP :: "Move up"
-	LAYER_MOVE_DOWN :: "Move down"
-	LAYER_DELETE :: "Delete"
-	
-	layer_items := [?]UI_Menu_Item {
-		ui_menu_item(ui_gen_id(), LAYER_ADD_ABOVE, "Space"),
-		ui_menu_item(ui_gen_id(), LAYER_ADD_TOP, "Ctrl + Space"),
-		ui_menu_item(ui_gen_id(), LAYER_DUPLICATE, "D"),
-		ui_menu_item(ui_gen_id(), LAYER_MOVE_UP, "Alt + Up"),
-		ui_menu_item(ui_gen_id(), LAYER_MOVE_DOWN, "Alt + Down"),
-		ui_menu_item(ui_gen_id(), LAYER_CLEAR, "F"),
-		ui_menu_item(ui_gen_id(), LAYER_DELETE, "X"),
-	}
 	layer_rec := rec_cut_left(&area, ui_calc_button_width("Layer"))
-	layer_clicked_item := ui_menu_button(ui_gen_id(), "Layer", layer_items[:], ui_px(300), layer_rec)
-	
-	switch layer_clicked_item.text {
-		case LAYER_ADD_ABOVE: {
+	if open, content_rec := ui_begin_menu_button(ui_gen_id(), "Layer", ui_px(300), 7, layer_rec); open {
+		area := content_rec
+		if ui_menu_item(ui_gen_id(), "Add above", &area, "Space") {
 			add_empty_layer(state, state.current_layer + 1)
 		}
-		case LAYER_ADD_TOP: {
+		if ui_menu_item(ui_gen_id(), "Add top", &area, "Ctrl + Space") {
 			add_empty_layer(state, len(state.layers))
 		}
-		case LAYER_DUPLICATE: {
+		if ui_menu_item(ui_gen_id(), "Duplicate", &area, "D") {
 			duplicate_layer(state, state.current_layer, state.current_layer + 1)
 		}
-		case LAYER_MOVE_UP: {
+		if ui_menu_item(ui_gen_id(), "Move up", &area, "Alt + Up") {
 			if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
 				change_layer_index(state, state.current_layer, state.current_layer + 1)
 			}
 		}
-		case LAYER_MOVE_DOWN: {
+		if ui_menu_item(ui_gen_id(), "Move down", &area, "Alt + Down") {
 			if len(state.layers) > 1 && state.current_layer > 0 {
 				change_layer_index(state, state.current_layer, state.current_layer - 1)
 			}
 		}
-		case LAYER_CLEAR: {
-			action_do(state, Action_Image_Change {
-				before_image = rl.ImageCopy(get_current_layer(state).image),
-				after_image = rl.GenImageColor(state.width, state.height, rl.BLANK),
-				layer_index = state.current_layer,
-			})
+		if ui_menu_item(ui_gen_id(), "Clear", &area, "F") {
+			clear_layer(state, state.current_layer)
 		}
-		case LAYER_DELETE: {
+		if ui_menu_item(ui_gen_id(), "Delete", &area, "X") {
 			if len(state.layers) > 1 {
 				delete_layer(state, state.current_layer)
 			}
 		}
 	}
+	ui_end_menu_button()
 
-	VIEW_TOGGLE_GRID :: "Show grid"
-	VIEW_SHOW_BG :: "Show bg"
-	VIEW_CHANGE_BG_COLORS :: "Change bg colors"
-	VIEW_ONION_SKINNING :: "Onion skinning"
-
-	view_items := [?]UI_Menu_Item {
-		ui_menu_item(ui_gen_id(), VIEW_TOGGLE_GRID, toggled = !state.hide_grid),
-		ui_menu_item(ui_gen_id(), VIEW_SHOW_BG, toggled = state.show_bg),
-		ui_menu_item(ui_gen_id(), VIEW_CHANGE_BG_COLORS),
-		ui_menu_item(ui_gen_id(), VIEW_ONION_SKINNING, "Tab", toggled = state.onion_skinning),
-	}
 	view_rec := rec_cut_left(&area, ui_calc_button_width("View"))
-	view_clicked_item := ui_menu_button(ui_gen_id(), "View", view_items[:], ui_px(300), view_rec)
-
-	switch view_clicked_item.text {
-		case VIEW_TOGGLE_GRID: {
+	if open, content_rec := ui_begin_menu_button(ui_gen_id(), "View", ui_px(300), 4, view_rec); open {
+		area := content_rec
+		if ui_menu_item(ui_gen_id(), "Show grid", &area, toggleble = !state.hide_grid) {
 			state.hide_grid = !state.hide_grid
 		}
-		case VIEW_SHOW_BG: {
+		if ui_menu_item(ui_gen_id(), "Show bg", &area, toggleble = state.show_bg) {
 			state.show_bg = !state.show_bg
 		}
-		case VIEW_CHANGE_BG_COLORS: {
+		if ui_menu_item(ui_gen_id(), "Change bg colors", &area) {
 			ui_open_popup(popup_bg_colors)
 		}
-		case VIEW_ONION_SKINNING: {
+		if ui_menu_item(ui_gen_id(), "Onion skinning", &area, "Tab") {
 			state.onion_skinning = !state.onion_skinning
 		}
 	}
+	ui_end_menu_button()
 }
 
 tool_options_button :: proc(state: ^Project_State, rec: Rec) {
-	OPT_PEN_SIZE :: ICON_PEN + "  Pen size"
-	OPT_ONION_SKINNING :: ICON_EYE + "  Onion skinning"
-	OPT_ADD_LAYER_AT_TOP :: "+" + "  Add Layer At Top"
-	OPT_ADD_LAYER_ABOVE :: "+" + "  Add Layer Above"
-	OPT_DUPLICATE_LAYER :: ICON_COPY + "  Duplicate Layer"
-	OPT_MOVE_LAYER :: ICON_SWAP_VERT + "  Move Layer Up or Down"
-	OPT_GO_UP_DOWN :: ICON_SWAP_VERT + "  Go Up or Down"
-	OPT_CLEAR_LAYER :: ICON_X + "  Clear Layer"
-	OPT_DELETE_LAYER :: ICON_TRASH + "  Delete Layer"
-
-	options_items := [?]UI_Menu_Item {
-		ui_menu_item(ui_gen_id(), OPT_PEN_SIZE, toggled = app.active_tools.pen_size), 
-		ui_menu_item(ui_gen_id(), OPT_ONION_SKINNING, toggled = app.active_tools.onion_skinning), 
-		ui_menu_item(ui_gen_id(), OPT_ADD_LAYER_AT_TOP, toggled = app.active_tools.add_layer_at_top), 
-		ui_menu_item(ui_gen_id(), OPT_ADD_LAYER_ABOVE, toggled = app.active_tools.add_layer_above), 
-		ui_menu_item(ui_gen_id(), OPT_DUPLICATE_LAYER, toggled = app.active_tools.duplicate_layer), 
-		ui_menu_item(ui_gen_id(), OPT_MOVE_LAYER, toggled = app.active_tools.move_layer),
-		ui_menu_item(ui_gen_id(), OPT_GO_UP_DOWN, toggled = app.active_tools.go_up_down),
-		ui_menu_item(ui_gen_id(), OPT_CLEAR_LAYER, toggled = app.active_tools.clear_layer),
-		ui_menu_item(ui_gen_id(), OPT_DELETE_LAYER, toggled = app.active_tools.delete_layer),
-	}
-
 	style := UI_BUTTON_STYLE_TRANSPARENT
 	style.text_color = COLOR_BASE_4
-	clicked_item := ui_menu_button(ui_gen_id(), ICON_SETTINGS, options_items[:], ui_px(280), rec, style = style)
-
-	switch clicked_item.text {
-		case OPT_PEN_SIZE: app.active_tools.pen_size = !app.active_tools.pen_size
-		case OPT_ONION_SKINNING: app.active_tools.onion_skinning = !app.active_tools.onion_skinning
-		case OPT_ADD_LAYER_AT_TOP: app.active_tools.add_layer_at_top = !app.active_tools.add_layer_at_top
-		case OPT_ADD_LAYER_ABOVE: app.active_tools.add_layer_above = !app.active_tools.add_layer_above
-		case OPT_DUPLICATE_LAYER: app.active_tools.duplicate_layer = !app.active_tools.duplicate_layer
-		case OPT_MOVE_LAYER: app.active_tools.move_layer = !app.active_tools.move_layer
-		case OPT_GO_UP_DOWN: app.active_tools.go_up_down = !app.active_tools.go_up_down
-		case OPT_CLEAR_LAYER: app.active_tools.clear_layer = !app.active_tools.clear_layer
-		case OPT_DELETE_LAYER: app.active_tools.delete_layer = !app.active_tools.delete_layer
+	if open, content_rec := ui_begin_menu_button(ui_gen_id(), ICON_SETTINGS, ui_px(300), 9, rec, style); open {
+		area := content_rec
+		if ui_menu_item(ui_gen_id(), ICON_PEN + "  Pen size", &area, toggleble = app.active_tools.pen_size) {
+			app.active_tools.pen_size = !app.active_tools.pen_size
+		} 
+		if ui_menu_item(ui_gen_id(), ICON_EYE + "  Onion skinning", &area, toggleble = app.active_tools.onion_skinning) {
+			app.active_tools.onion_skinning = !app.active_tools.onion_skinning
+		} 
+		if ui_menu_item(ui_gen_id(), "+" + "  Add Layer At Top", &area, toggleble = app.active_tools.add_layer_at_top) {
+			app.active_tools.add_layer_at_top = !app.active_tools.add_layer_at_top
+		} 
+		if ui_menu_item(ui_gen_id(), "+" + "  Add Layer Above", &area, toggleble = app.active_tools.add_layer_above) {
+			app.active_tools.add_layer_above = !app.active_tools.add_layer_above
+		} 
+		if ui_menu_item(ui_gen_id(), ICON_COPY + "  Duplicate Layer", &area, toggleble = app.active_tools.duplicate_layer) {
+			app.active_tools.duplicate_layer = !app.active_tools.duplicate_layer
+		} 
+		if ui_menu_item(ui_gen_id(), ICON_SWAP_VERT + "  Move Layer Up or Down", &area, toggleble = app.active_tools.move_layer) {
+			app.active_tools.move_layer = !app.active_tools.move_layer
+		}
+		if ui_menu_item(ui_gen_id(), ICON_SWAP_VERT + "  Go Up or Down", &area, toggleble = app.active_tools.go_up_down) {
+			app.active_tools.go_up_down = !app.active_tools.go_up_down
+		}
+		if ui_menu_item(ui_gen_id(), ICON_X + "  Clear Layer", &area, toggleble = app.active_tools.clear_layer) {
+			app.active_tools.clear_layer = !app.active_tools.clear_layer
+		}
+		if ui_menu_item(ui_gen_id(), ICON_TRASH + "  Delete Layer", &area, toggleble = app.active_tools.delete_layer) {
+			app.active_tools.delete_layer = !app.active_tools.delete_layer
+		}
 	}
+	ui_end_menu_button()
 }
 
 toolbar_view :: proc(state: ^Project_State, rec: Rec) {
@@ -972,59 +912,55 @@ color_pallete_view :: proc(state: ^Project_State, rec: Rec) {
 	
 	// load pallete button
 	load_rec := rec_cut_right(&buttons_area, ui_calc_button_width("load"))
-	FROM_FILE :: "From file"
-	FROM_FAV :: "From favorites"
-	load_items := [?]UI_Menu_Item {
-		ui_menu_item(ui_gen_id(), FROM_FILE),
-		ui_menu_item(ui_gen_id(), FROM_FAV),
-	}
-	clicked_item := ui_menu_button(ui_gen_id(), "Load", load_items[:], ui_px(160), load_rec)
-
-	if clicked_item.text == FROM_FILE {
-		from_file_scope: {
+	if open, content_rec :=  ui_begin_menu_button(ui_gen_id(), "Load", ui_px(160), 2, load_rec); open {
+		area := content_rec
+		if ui_menu_item(ui_gen_id(), "From file", &area) {
+			from_file_scope: {
+				ui_close_current_popup()
+		
+				path, res := pick_file_dilaog("", context.temp_allocator)
+				if res == .Error {
+					ui_show_notif("Failed to load pallete", UI_NOTIF_STYLE_ERROR)
+				}
+				else if res == .Cancel {
+					break from_file_scope
+				}
+				path_cstring := strings.clone_to_cstring(path, context.temp_allocator)
+		
+				/* sa.clear() isn't enough to clear the palletes since 
+				we do slice.contains() a couple of lines below */  
+				for i in 0..<state.pallete.colors.len {
+					state.pallete.colors.data[i] = {}
+				}
+				sa.clear(&state.pallete.colors)
+		
+				image := rl.LoadImage(path_cstring)
+				defer rl.UnloadImage(image)
+				color_count := image.width * image.height
+				for i in 0..<(color_count) {			
+					x := i % image.width
+					y := i32(i / image.width)
+					color := rgb_to_hsv(rl.GetImageColor(image, x, y))
+					if slice.contains(state.pallete.colors.data[:], color) {
+						continue
+					}
+					if state.pallete.colors.len >= len(state.pallete.colors.data) {
+						ui_show_notif("Image color count over the limit", UI_NOTIF_STYLE_ERROR)
+						break
+					}
+					sa.append(&state.pallete.colors, color)
+				}
+		
+				delete(state.pallete.name)
+				state.pallete.name = shorten_path(path)
+			}
+		}
+		if ui_menu_item(ui_gen_id(), "From favorites", &area) {
 			ui_close_current_popup()
-	
-			path, res := pick_file_dilaog("", context.temp_allocator)
-			if res == .Error {
-				ui_show_notif("Failed to load pallete", UI_NOTIF_STYLE_ERROR)
-			}
-			else if res == .Cancel {
-				break from_file_scope
-			}
-			path_cstring := strings.clone_to_cstring(path, context.temp_allocator)
-	
-			/* sa.clear() isn't enough to clear the palletes since 
-			we do slice.contains() a couple of lines below */  
-			for i in 0..<state.pallete.colors.len {
-				state.pallete.colors.data[i] = {}
-			}
-			sa.clear(&state.pallete.colors)
-	
-			image := rl.LoadImage(path_cstring)
-			defer rl.UnloadImage(image)
-			color_count := image.width * image.height
-			for i in 0..<(color_count) {			
-				x := i % image.width
-				y := i32(i / image.width)
-				color := rgb_to_hsv(rl.GetImageColor(image, x, y))
-				if slice.contains(state.pallete.colors.data[:], color) {
-					continue
-				}
-				if state.pallete.colors.len >= len(state.pallete.colors.data) {
-					ui_show_notif("Image color count over the limit", UI_NOTIF_STYLE_ERROR)
-					break
-				}
-				sa.append(&state.pallete.colors, color)
-			}
-	
-			delete(state.pallete.name)
-			state.pallete.name = shorten_path(path)
+			ui_open_popup(popup_fav_palletes)
 		}
 	}
-	else if clicked_item.text == FROM_FAV {
-		ui_close_current_popup()
-		ui_open_popup(popup_fav_palletes)
-	}
+	ui_end_menu_button()
 
 	ui_draw_text(state.pallete.name, buttons_area, { .Center, .Center })
 
