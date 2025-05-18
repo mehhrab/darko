@@ -432,6 +432,22 @@ ui_end :: proc() {
 	}
 
 	ui_draw_notif()
+
+	for i := ui_ctx.open_popups.len - 1; i >= 0; i -= 1 {
+		if ui_ctx.open_popups.data[i].darker_window {
+			bg := UI_Draw_Rect {
+				color = { 0, 0, 0, 100 },
+				rec = { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) },
+			}
+			if i == 0 {
+				sa.append(&ui_ctx.draw_commands, bg)
+			}
+			else {
+				sa.append(&ui_ctx.open_popups.data[i - 1].draw_commands, bg)
+			}
+			break
+		}
+	}
 }
 
 ui_gen_id :: proc(i := 0, loc := #caller_location) -> UI_ID {
@@ -443,12 +459,12 @@ ui_gen_id :: proc(i := 0, loc := #caller_location) -> UI_ID {
 // this is ugly but gets the job done.
 ui_get_draw_commmands :: proc() -> (commands: [][]UI_Draw_Command) {
 	c := make_dynamic_array([dynamic][]UI_Draw_Command, context.temp_allocator)
-	append_elem(&c, ui_ctx.draw_commands.data[:])
+	append_elem(&c, sa.slice(&ui_ctx.draw_commands))
 	
 	for i in 0..<ui_ctx.open_popups.len {
-		append_elem(&c, ui_ctx.open_popups.data[i].draw_commands.data[:])
+		append_elem(&c, sa.slice(&ui_ctx.open_popups.data[i].draw_commands))
 	}
-	append_elem(&c, ui_ctx.current_notif.draw_commands.data[:])
+	append_elem(&c, sa.slice(&ui_ctx.current_notif.draw_commands))
 
 	return c[:]
 }
