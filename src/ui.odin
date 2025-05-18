@@ -451,9 +451,9 @@ ui_end :: proc() {
 }
 
 ui_gen_id :: proc(i := 0, loc := #caller_location) -> UI_ID {
-    text := fmt.aprintfln("{}{}{}", i, loc.procedure, loc.line, allocator = context.temp_allocator)
-    id := hash.fnv32(mem.byte_slice(raw_data(text), len(text)))
-    return id
+	text := fmt.aprintfln("{}{}{}", i, loc.procedure, loc.line, allocator = context.temp_allocator)
+	id := hash.fnv32(mem.byte_slice(raw_data(text), len(text)))
+	return id
 }
 
 // this is ugly but gets the job done.
