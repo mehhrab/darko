@@ -2064,11 +2064,11 @@ app_shortcuts :: proc() {
 
 	// zoom in ui
 	if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.EQUAL) {
-		ui_set_scale(ui_ctx.scale + 0.2)
+		ui_set_scale(ui_ctx.scale + 0.1)
 	}
 	// zoom out ui
 	if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.MINUS) {
-		ui_set_scale(ui_ctx.scale - 0.2)
+		ui_set_scale(ui_ctx.scale - 0.1)
 	}
 
 	// update these shortcuts when no textbox is active
