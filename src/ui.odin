@@ -132,6 +132,7 @@ UI_Draw_Text :: struct {
 UI_Draw_Texture :: struct {
 	texture: rl.Texture,
 	rec: Rec,
+	tint: rl.Color,
 }
 
 UI_Draw_Gradient_H :: struct {
@@ -1481,6 +1482,10 @@ ui_color_button :: proc(id: UI_ID, label: string, color: ^HSV, rec: Rec) {
 ui_draw_text :: proc(text: string, rec: Rec, align := UI_Align { .Left, .Center }, color := COLOR_TEXT_0, size := f32(0)) {
 	size := size == 0 ? ui_font_size() : size
 	ui_push_command(UI_Draw_Text { text = text, rec = rec, align = align, color = color, size = size })
+}
+
+ui_draw_texture :: proc(texture: rl.Texture, rec: Rec, tint := rl.WHITE) {
+	ui_push_command(UI_Draw_Texture { texture = texture, rec = rec, tint = tint })
 }
 
 ui_draw_rec :: proc(color: rl.Color, rec: Rec) {

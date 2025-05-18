@@ -319,10 +319,7 @@ welcome_screen_view :: proc(state: ^Welcome_State) {
 	mascot_size := ui_px(right_area.width / 2)
 	mascot_rec := rec_center_in_area({ 0, 0, mascot_size , mascot_size }, right_area)
 	mascot_rec.y += f32(math.cos(rl.GetTime())) * 10
-	ui_push_command(UI_Draw_Texture {
-		rec = mascot_rec,
-		texture = state.mascot, 
-	})
+	ui_draw_texture(state.mascot, mascot_rec)
 
 	left_area = rec_pad(left_area, ui_px(16))
 	ui_begin_clip(left_area)
@@ -801,17 +798,18 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 		layer_rec.y -= (canvas_h + ui_px(16) * state.zoom) * (f32(i) - state.lerped_current_layer)		
 		
 		if state.show_bg {
-			ui_push_command(UI_Draw_Texture {
-				texture = state.bg_texture,
-				rec = layer_rec
-			})
+			ui_draw_texture(state.bg_texture, layer_rec)
 		}
 		
 		if i == state.current_layer {
 			// TOOD: just use a UI_Draw_Texture
-			ui_push_command(UI_Draw_Canvas {
-				rec = layer_rec,
-			})
+			// ui_push_command(UI_Draw_Canvas {
+			// 	rec = layer_rec,
+			// })
+			if state.onion_skinning && i > 0 {
+				ui_draw_texture(state.layers[i - 1].texture, layer_rec, { 255, 255, 255, 100 })	
+			}
+			ui_draw_texture(state.layers[i].texture, layer_rec)	
 
 			if state.zoom > 1.2 {
 				if state.hide_grid == false {
@@ -849,10 +847,7 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 				state.current_layer = i
 			}
 
-			ui_push_command(UI_Draw_Texture {
-				texture = state.layers[i].texture,
-				rec = layer_rec,
-			})
+			ui_draw_texture(state.layers[i].texture, layer_rec)
 			ui_draw_rec_outline(can_go_to ? COLOR_BASE_3 : COLOR_BASE_1, 2, layer_rec)
 		}
 	}
@@ -2504,7 +2499,7 @@ process_commands :: proc(draw_commands: [][]UI_Draw_Command) {
 				}
 				case UI_Draw_Texture: {
 					src_rec := Rec { 0, 0, f32(kind.texture.width), f32(kind.texture.height) }
-					rl.DrawTexturePro(kind.texture, src_rec, kind.rec, { 0, 0 }, 0, rl.WHITE)
+					rl.DrawTexturePro(kind.texture, src_rec, kind.rec, { 0, 0 }, 0, kind.tint)
 				}
 				case UI_Draw_Gradient_H: {
 					x := i32(math.ceil_f32(kind.rec.x))
