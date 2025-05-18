@@ -2462,111 +2462,113 @@ redo :: proc(state: ^Project_State) {
 	}	
 }
 
-process_commands :: proc(commands: []UI_Draw_Command) {
-	for command in commands
-	{
-		switch kind in command {
-			case UI_Draw_Rect: {
-				rl.DrawRectangleRec(kind.rec, kind.color)
-			}
-			case UI_Draw_Rect_Outline: {
-				rl.DrawRectangleLinesEx(kind.rec, kind.thickness, kind.color)
-			}
-			case UI_Draw_Text: {
-				x := f32(0)
-				y := f32(0)
-
-				text := strings.clone_to_cstring(kind.text, context.temp_allocator)
-				text_size := rl.MeasureTextEx(ui_ctx.font, text, kind.size, 0)
-				
-				if kind.align.horizontal == .Left {
-					x = kind.rec.x
+process_commands :: proc(draw_commands: [][]UI_Draw_Command) {
+	for commands in draw_commands {
+		for command in commands
+		{
+			switch kind in command {
+				case UI_Draw_Rect: {
+					rl.DrawRectangleRec(kind.rec, kind.color)
 				}
-				else if kind.align.horizontal == .Center {
-					x = kind.rec.x + kind.rec.width / 2 - text_size.x / 2
+				case UI_Draw_Rect_Outline: {
+					rl.DrawRectangleLinesEx(kind.rec, kind.thickness, kind.color)
 				}
-				else if kind.align.horizontal == .Right {
-					x = kind.rec.x + kind.rec.width - text_size.x
+				case UI_Draw_Text: {
+					x := f32(0)
+					y := f32(0)
+	
+					text := strings.clone_to_cstring(kind.text, context.temp_allocator)
+					text_size := rl.MeasureTextEx(ui_ctx.font, text, kind.size, 0)
+					
+					if kind.align.horizontal == .Left {
+						x = kind.rec.x
+					}
+					else if kind.align.horizontal == .Center {
+						x = kind.rec.x + kind.rec.width / 2 - text_size.x / 2
+					}
+					else if kind.align.horizontal == .Right {
+						x = kind.rec.x + kind.rec.width - text_size.x
+					}
+	
+					if kind.align.vertical == .Top {
+						y = kind.rec.y
+					}
+					else if kind.align.vertical == .Center {
+						y = kind.rec.y + kind.rec.height / 2 - text_size.y / 2
+					}
+					else if kind.align.vertical == .Bottom {
+						y = kind.rec.y + kind.rec.height - text_size.y
+					}
+	
+					rl.DrawTextEx(ui_ctx.font, text, { x, y }, kind.size, 0, kind.color)
 				}
-
-				if kind.align.vertical == .Top {
-					y = kind.rec.y
+				case UI_Draw_Texture: {
+					src_rec := Rec { 0, 0, f32(kind.texture.width), f32(kind.texture.height) }
+					rl.DrawTexturePro(kind.texture, src_rec, kind.rec, { 0, 0 }, 0, rl.WHITE)
 				}
-				else if kind.align.vertical == .Center {
-					y = kind.rec.y + kind.rec.height / 2 - text_size.y / 2
+				case UI_Draw_Gradient_H: {
+					x := i32(math.ceil_f32(kind.rec.x))
+					y := i32(math.ceil_f32(kind.rec.y))
+					w := i32(math.ceil_f32(kind.rec.width))
+					h := i32(math.ceil_f32(kind.rec.height))
+					rl.DrawRectangleGradientH(x, y, w, h, kind.left_color, kind.right_color)
 				}
-				else if kind.align.vertical == .Bottom {
-					y = kind.rec.y + kind.rec.height - text_size.y
+				case UI_Draw_Gradient_V: {
+					x := i32(math.ceil_f32(kind.rec.x))
+					y := i32(math.ceil_f32(kind.rec.y))
+					w := i32(math.ceil_f32(kind.rec.width))
+					h := i32(math.ceil_f32(kind.rec.height))
+					rl.DrawRectangleGradientV(x, y, w, h, kind.top_color, kind.bottom_color)
 				}
-
-				rl.DrawTextEx(ui_ctx.font, text, { x, y }, kind.size, 0, kind.color)
-			}
-			case UI_Draw_Texture: {
-				src_rec := Rec { 0, 0, f32(kind.texture.width), f32(kind.texture.height) }
-				rl.DrawTexturePro(kind.texture, src_rec, kind.rec, { 0, 0 }, 0, rl.WHITE)
-			}
-			case UI_Draw_Gradient_H: {
-				x := i32(math.ceil_f32(kind.rec.x))
-				y := i32(math.ceil_f32(kind.rec.y))
-				w := i32(math.ceil_f32(kind.rec.width))
-				h := i32(math.ceil_f32(kind.rec.height))
-				rl.DrawRectangleGradientH(x, y, w, h, kind.left_color, kind.right_color)
-			}
-			case UI_Draw_Gradient_V: {
-				x := i32(math.ceil_f32(kind.rec.x))
-				y := i32(math.ceil_f32(kind.rec.y))
-				w := i32(math.ceil_f32(kind.rec.width))
-				h := i32(math.ceil_f32(kind.rec.height))
-				rl.DrawRectangleGradientV(x, y, w, h, kind.top_color, kind.bottom_color)
-			}
-			case UI_Clip: {
-				if kind.rec != {} {
+				case UI_Clip: {
+					if kind.rec != {} {
+						x := i32(math.round(kind.rec.x))
+						y := i32(math.round(kind.rec.y))
+						w := i32(math.round(kind.rec.width))
+						h := i32(math.round(kind.rec.height))
+						rl.BeginScissorMode(x, y, w, h)
+					}
+					else {
+						rl.EndScissorMode()
+					}
+				}
+				case UI_Draw_Canvas: {
+					// TODO: just draw these to a render texture
+					project, project_exists := app.state.(Project_State)
+					assert(project_exists)
+					draw_canvas(&project, kind.rec)
+				}
+				case UI_Draw_Grid: {
+					// TODO: just draw these to a render texture
+					project, project_exists := app.state.(Project_State)
+					assert(project_exists)
+					draw_grid(project.width, project.height, kind.rec)
+				}
+				case UI_Draw_Preview: {
+					// TODO: just draw these to a render texture
+					project, project_exists := app.state.(Project_State)
+					assert(project_exists)
+					
 					x := i32(math.round(kind.rec.x))
 					y := i32(math.round(kind.rec.y))
 					w := i32(math.round(kind.rec.width))
 					h := i32(math.round(kind.rec.height))
-					rl.BeginScissorMode(x, y, w, h)
+					
+					bottom_color := hsv_to_rgb(project.preview_bg_color)
+					top_color := hsv_to_rgb({
+						f32(int(project.preview_bg_color[0] - 20) % 360),
+						project.preview_bg_color[1],
+						project.preview_bg_color[2] / 2,
+					})
+					rl.DrawRectangleGradientV(x, y, w, h, top_color, bottom_color)
+	
+					px, py := rec_get_center_point(kind.rec)
+					draw_sprite_stack(&project.layers, px, py, project.lerped_preview_zoom, project.preview_rotation, project.spacing)
+					
+					rl.DrawTextEx(ui_ctx.font, "Preview", { kind.rec.x + 10, kind.rec.y + 10 }, ui_font_size(), 0, { 255, 255, 255, 100 })
+					
+					rl.DrawRectangleLinesEx(kind.rec, 1, COLOR_BASE_0)
 				}
-				else {
-					rl.EndScissorMode()
-				}
-			}
-			case UI_Draw_Canvas: {
-				// TODO: just draw these to a render texture
-				project, project_exists := app.state.(Project_State)
-				assert(project_exists)
-				draw_canvas(&project, kind.rec)
-			}
-			case UI_Draw_Grid: {
-				// TODO: just draw these to a render texture
-				project, project_exists := app.state.(Project_State)
-				assert(project_exists)
-				draw_grid(project.width, project.height, kind.rec)
-			}
-			case UI_Draw_Preview: {
-				// TODO: just draw these to a render texture
-				project, project_exists := app.state.(Project_State)
-				assert(project_exists)
-				
-				x := i32(math.round(kind.rec.x))
-				y := i32(math.round(kind.rec.y))
-				w := i32(math.round(kind.rec.width))
-				h := i32(math.round(kind.rec.height))
-				
-				bottom_color := hsv_to_rgb(project.preview_bg_color)
-				top_color := hsv_to_rgb({
-					f32(int(project.preview_bg_color[0] - 20) % 360),
-					project.preview_bg_color[1],
-					project.preview_bg_color[2] / 2,
-				})
-				rl.DrawRectangleGradientV(x, y, w, h, top_color, bottom_color)
-
-				px, py := rec_get_center_point(kind.rec)
-				draw_sprite_stack(&project.layers, px, py, project.lerped_preview_zoom, project.preview_rotation, project.spacing)
-				
-				rl.DrawTextEx(ui_ctx.font, "Preview", { kind.rec.x + 10, kind.rec.y + 10 }, ui_font_size(), 0, { 255, 255, 255, 100 })
-				
-				rl.DrawRectangleLinesEx(kind.rec, 1, COLOR_BASE_0)
 			}
 		}
 	}

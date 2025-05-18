@@ -441,45 +441,16 @@ ui_gen_id :: proc(i := 0, loc := #caller_location) -> UI_ID {
 }
 
 // this is ugly but gets the job done.
-ui_get_draw_commmands :: proc() -> (commands: []UI_Draw_Command) {
-	len := ui_ctx.draw_commands.len + ui_ctx.current_notif.draw_commands.len 
-	popup_with_darker_window := -1
-	for i in 0..<ui_ctx.open_popups.len {
-		if ui_ctx.open_popups.data[i].darker_window {
-			popup_with_darker_window = i
-		}
-	}
-	if popup_with_darker_window != -1 {
-		len += 1
-	}
-	for i in 0..<ui_ctx.open_popups.len {
-		len += ui_ctx.open_popups.data[i].draw_commands.len
-	}
+ui_get_draw_commmands :: proc() -> (commands: [][]UI_Draw_Command) {
+	c := make_dynamic_array([dynamic][]UI_Draw_Command, context.temp_allocator)
+	append_elem(&c, ui_ctx.draw_commands.data[:])
 	
-	commands = make_slice([]UI_Draw_Command, len, context.temp_allocator)
-	
-	append_draw_commands :: proc(host: ^[]UI_Draw_Command, commands: ^Draw_Commands, index: ^int) {
-		for i in 0..<commands.len {
-			host[index^ + i] = commands.data[i] 
-		}
-		index^ += commands.len
+	for i in 0..<ui_ctx.open_popups.len {
+		append_elem(&c, ui_ctx.open_popups.data[i].draw_commands.data[:])
 	}
+	append_elem(&c, ui_ctx.current_notif.draw_commands.data[:])
 
-	index := 0
-	append_draw_commands(&commands, &ui_ctx.draw_commands, &index)
-	for i in 0..<ui_ctx.open_popups.len {
-		if popup_with_darker_window == i {
-			commands[index] = UI_Draw_Rect {
-				color = { 0, 0, 0, 100 },
-				rec = { 0, 0, f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) },
-			}
-			index += 1
-		}
-		append_draw_commands(&commands, &ui_ctx.open_popups.data[i].draw_commands, &index)
-	}
-	append_draw_commands(&commands, &ui_ctx.current_notif.draw_commands, &index)
-	
-	return commands
+	return c[:]
 }
 
 ui_clear_temp_state :: proc() {
