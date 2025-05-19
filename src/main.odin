@@ -444,11 +444,11 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 	file_rec := rec_cut_left(&area, ui_calc_button_width("File"))
 	if open, content_rec := ui_begin_menu_button(ui_gen_id(), "File", ui_px(300), 5, file_rec); open {
 		area := content_rec
-		if ui_menu_item(ui_gen_id(), "New project", &area, "N") {
+		if ui_menu_item(ui_gen_id(), "New project", &area, "Ctrl + N") {
 			ui_close_current_popup()
 			ui_open_popup(popup_new_project)
 		}
-		if ui_menu_item(ui_gen_id(), "Open project", &area, "O") {
+		if ui_menu_item(ui_gen_id(), "Open project", &area, "Ctrl + O") {
 			confirm_project_exit(state, proc(state: ^Project_State) {
 				ui_close_all_popups()
 		
@@ -470,7 +470,7 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 				schedule_state_change(loaded_project)
 			})
 		}
-		if ui_menu_item(ui_gen_id(), "Save project", &area, "S") {
+		if ui_menu_item(ui_gen_id(), "Save project", &area, "Ctrl + S") {
 			save_scope: {
 				ui_close_all_popups()
 				
@@ -492,7 +492,7 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 				ui_show_notif("Project is saved")
 			}
 		}
-		if ui_menu_item(ui_gen_id(), "Export project", &area, "E") {
+		if ui_menu_item(ui_gen_id(), "Export project", &area, "Ctrl + E") {
 			export_scope: {
 				ui_close_all_popups()
 				
@@ -522,16 +522,16 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 	edit_rec := rec_cut_left(&area, ui_calc_button_width("Edit"))
 	if open, content_rec := ui_begin_menu_button(ui_gen_id(), "Edit", ui_px(300), 4, edit_rec); open {
 		area := content_rec
-		if ui_menu_item(ui_gen_id(), "Copy", &area, "C") {
+		if ui_menu_item(ui_gen_id(), "Copy", &area, "Ctrl + C") {
 			copy_layer(state, get_current_layer(state)) 
 		}
-		if ui_menu_item(ui_gen_id(), "Paste", &area, "V") {
+		if ui_menu_item(ui_gen_id(), "Paste", &area, "Ctrl + V") {
 			paste_layer(state, state.current_layer)
 		}
-		if ui_menu_item(ui_gen_id(), "Undo", &area, "Z") {
+		if ui_menu_item(ui_gen_id(), "Undo", &area, "Ctrl + Z") {
 			undo(state)
 		}
-		if ui_menu_item(ui_gen_id(), "Redo", &area, "Y") {
+		if ui_menu_item(ui_gen_id(), "Redo", &area, "Ctrl + Y") {
 			redo(state)
 		}
 	}
@@ -2049,32 +2049,34 @@ app_shortcuts :: proc() {
 
 	// update these shortcuts when no textbox is active
 	if ui_ctx.text_mode_slider == 0 {
-		// new project
-		if rl.IsKeyPressed(.N) {
-			ui_open_popup(popup_new_project)
-		}
+		if rl.IsKeyDown(.LEFT_CONTROL) { 
+			// new project
+			if rl.IsKeyPressed(.N) {
+				ui_open_popup(popup_new_project)
+			}
 
-		// open project
-		if rl.IsKeyPressed(.O) {
-			open_scope: {
-				ui_close_all_popups()
-				
-				path, res := pick_folder_dialog("", context.temp_allocator)
-				if res == .Error {
-					ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-				}
-				else if res == .Cancel {
-					break open_scope
-				}
-		
-				loaded_project: Project_State
-				loaded := load_project_state(&loaded_project, path)
-				if loaded == false {
-					ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-					break open_scope
-				}
+			// open project
+			if rl.IsKeyPressed(.O) {
+				open_scope: {
+					ui_close_all_popups()
 					
-				schedule_state_change(loaded_project)
+					path, res := pick_folder_dialog("", context.temp_allocator)
+					if res == .Error {
+						ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+					}
+					else if res == .Cancel {
+						break open_scope
+					}
+			
+					loaded_project: Project_State
+					loaded := load_project_state(&loaded_project, path)
+					if loaded == false {
+						ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+						break open_scope
+					}
+						
+					schedule_state_change(loaded_project)
+				}
 			}
 		}
 	}
@@ -2126,41 +2128,6 @@ welcome_shortcuts :: proc(state: ^Welcome_State) {
 project_shortcuts :: proc(state: ^Project_State) {
 	if ui_is_any_popup_open() == false {
 		if rl.IsKeyDown(.LEFT_CONTROL) {
-			// translate layer
-			if rl.IsKeyPressed(.LEFT) {
-				translate_layer(state, state.current_layer, -1, 0)
-			}
-			else if rl.IsKeyPressed(.RIGHT) {
-				translate_layer(state, state.current_layer, 1, 0)
-			}
-			else if rl.IsKeyPressed(.UP) {
-				translate_layer(state, state.current_layer, 0, -1)
-			}
-			else if rl.IsKeyPressed(.DOWN) {
-				translate_layer(state, state.current_layer, 0, 1)
-			}
-
-			// create new layer at the top
-			if rl.IsKeyPressed(.SPACE) {
-				add_empty_layer(state, len(state.layers))
-			}		
-		}
-		else if rl.IsKeyDown(.LEFT_ALT) {
-			// move layer up
-			if rl.IsKeyPressed(.UP) {
-				if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
-					change_layer_index(state, state.current_layer, state.current_layer + 1)
-				}
-			}
-
-			// move layer down
-			if rl.IsKeyPressed(.DOWN) {
-				if len(state.layers) > 1 && state.current_layer > 0 {
-					change_layer_index(state, state.current_layer, state.current_layer - 1)
-				}
-			}
-		}
-		else {			
 			// save project
 			if rl.IsKeyPressed(.S) {
 				save_scope: {								
@@ -2211,6 +2178,61 @@ project_shortcuts :: proc(state: ^Project_State) {
 				}			
 			}
 
+			// undo
+			if rl.IsKeyPressed(.Z) {
+				undo(state)
+			}
+
+			// redo
+			if rl.IsKeyPressed(.Y) {
+				redo(state)
+			}
+
+			// copy
+			if rl.IsKeyPressed(.C) {
+				copy_layer(state, get_current_layer(state))
+			}
+
+			// paste
+			if rl.IsKeyPressed(.V) {
+				paste_layer(state, state.current_layer)
+			}
+
+			// translate layer
+			if rl.IsKeyPressed(.LEFT) {
+				translate_layer(state, state.current_layer, -1, 0)
+			}
+			else if rl.IsKeyPressed(.RIGHT) {
+				translate_layer(state, state.current_layer, 1, 0)
+			}
+			else if rl.IsKeyPressed(.UP) {
+				translate_layer(state, state.current_layer, 0, -1)
+			}
+			else if rl.IsKeyPressed(.DOWN) {
+				translate_layer(state, state.current_layer, 0, 1)
+			}
+
+			// create new layer at the top
+			if rl.IsKeyPressed(.SPACE) {
+				add_empty_layer(state, len(state.layers))
+			}		
+		}
+		else if rl.IsKeyDown(.LEFT_ALT) {
+			// move layer up
+			if rl.IsKeyPressed(.UP) {
+				if len(state.layers) > 1 && state.current_layer < len(state.layers) - 1 {
+					change_layer_index(state, state.current_layer, state.current_layer + 1)
+				}
+			}
+
+			// move layer down
+			if rl.IsKeyPressed(.DOWN) {
+				if len(state.layers) > 1 && state.current_layer > 0 {
+					change_layer_index(state, state.current_layer, state.current_layer - 1)
+				}
+			}
+		}
+		else {			
 			// create new layer above the current
 			if rl.IsKeyPressed(.SPACE) {
 				add_empty_layer(state, state.current_layer + 1)
@@ -2254,26 +2276,6 @@ project_shortcuts :: proc(state: ^Project_State) {
 				}
 			}
 
-			// undo
-			if rl.IsKeyPressed(.Z) {
-				undo(state)
-			}
-
-			// redo
-			if rl.IsKeyPressed(.Y) {
-				redo(state)
-			}
-
-			// copy
-			if rl.IsKeyPressed(.C) {
-				copy_layer(state, get_current_layer(state))
-			}
-
-			// paste
-			if rl.IsKeyPressed(.V) {
-				paste_layer(state, state.current_layer)
-			}
-
 			// go to welcome screen
 			if rl.IsKeyPressed(.W) {
 				go_to_welcome_screen(state)
@@ -2302,6 +2304,10 @@ tool_shortcuts :: proc(state: ^Project_State) -> (current_tool: Tool) {
 	// select pen
 	if rl.IsKeyPressed(.P) {
 		state.current_tool = .Pen
+	}
+
+	if rl.IsKeyPressed(.E) {
+		state.current_tool = .Eraser
 	}
 
 	// select color picker
