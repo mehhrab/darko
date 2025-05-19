@@ -121,6 +121,7 @@ popup_preview_settings := ui_gen_id()
 popup_fav_palletes := ui_gen_id()
 popup_bg_colors := ui_gen_id()
 popup_exit := ui_gen_id()
+popup_settings := ui_gen_id()
 
 // undo redo actions
 
@@ -261,6 +262,7 @@ main :: proc() {
 			}
 		}
 		new_project_popup_view(&app.state)
+		settings_popup_view()
 		ui_end()
 
 		// draw
@@ -388,6 +390,14 @@ welcome_screen_view :: proc(state: ^Welcome_State) {
 		ui_draw_text("Recent projects", recent_rec)
 	}
 	ui_end_clip()
+
+	settings_rec := rec_take_right(&screen_rec, ui_px(100))
+	settings_rec.height = ui_default_widget_height()
+	style := UI_BUTTON_STYLE_TRANSPARENT
+	style.text_color = COLOR_BASE_0
+	if ui_button(ui_gen_id(), "Settings", settings_rec, style = style) {
+		ui_open_popup(popup_settings)
+	}
 }
 
 project_view :: proc(state: ^Project_State) {
@@ -425,6 +435,11 @@ project_view :: proc(state: ^Project_State) {
 menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 	area := rec
 	ui_panel(ui_gen_id(), area, { bg_color = COLOR_BASE_2 })
+
+	settings_rec := rec_take_right(&area, ui_px(100))
+	if ui_button(ui_gen_id(), "Settings", settings_rec) {
+		ui_open_popup(popup_settings)
+	}
 
 	file_rec := rec_cut_left(&area, ui_calc_button_width("File"))
 	if open, content_rec := ui_begin_menu_button(ui_gen_id(), "File", ui_px(300), 5, file_rec); open {
@@ -1169,6 +1184,36 @@ bg_colors_popup_view :: proc(state: ^Project_State) {
 		if rl.IsMouseButtonReleased(.LEFT) {
 			create_bg_texture(state)
 		}
+	}
+	ui_end_popup()
+}
+
+settings_popup_view :: proc() {
+	screen_rec := ui_get_screen_rec()
+	
+	ui_close_popup_on_esc(popup_settings)
+	popup_h := ui_calc_popup_height(6, ui_default_widget_height(), ui_px(8), ui_px(16))
+	popup_area := rec_center_in_area({ 0, 0, ui_px(500), popup_h }, screen_rec)
+	if open, rec := ui_begin_popup_title(popup_settings, "Settings", popup_area); open 
+	{
+		area := rec_pad(popup_area, ui_px(16))
+		
+		ui_check_box(ui_gen_id(), "Act on press", &ui_ctx.act_on_press, rec_cut_top(&area, ui_default_widget_height()))
+		ui_draw_text("Will determine if ui clicks should be registerd\nimmediatly or when the button is released",
+			rec_cut_top(&area, ui_default_widget_height()),
+			color = COLOR_BASE_4)
+		rec_cut_top(&area, ui_px(16))
+
+		ui_check_box(ui_gen_id(), "Enable animations", &ui_ctx.act_on_press, rec_cut_top(&area, ui_default_widget_height()))
+		rec_cut_top(&area, ui_px(8))
+		
+		ui_check_box(ui_gen_id(), "Enable custom cursors", &ui_ctx.act_on_press, rec_cut_top(&area, ui_default_widget_height()))
+		rec_cut_top(&area, ui_px(8))
+		
+		ui_check_box(ui_gen_id(), "Darken right side of welcome screen", &ui_ctx.act_on_press, rec_cut_top(&area, ui_default_widget_height()))
+		rec_cut_top(&area, ui_px(8))
+		
+		ui_slider_f32(ui_gen_id(), "UI Scale", &ui_ctx.scale, 0.5, 2, rec_cut_top(&area, ui_default_widget_height()))
 	}
 	ui_end_popup()
 }
