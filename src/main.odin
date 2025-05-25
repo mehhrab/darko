@@ -26,6 +26,7 @@ App :: struct {
 	recent_projects: sa.Small_Array(8, string),
 	fav_palletes: sa.Small_Array(24, Pallete),
 	active_tools: Active_Tools,
+	enable_custom_cursors: bool,
 	show_fps: bool,
 	unlock_fps: bool,
 	exit: bool,
@@ -808,7 +809,7 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 	}
 
 	// draw cursor
-	if ui_is_mouse_in_rec(area) && ui_is_being_interacted() == false {
+	if app.enable_custom_cursors && ui_is_mouse_in_rec(area) && ui_is_being_interacted() == false {
 		cursor_icon := ""
 		switch current_tool {
 			case .Pen: cursor_icon = ICON_PEN
@@ -1192,28 +1193,24 @@ settings_popup_view :: proc() {
 	screen_rec := ui_get_screen_rec()
 	
 	ui_close_popup_on_esc(popup_settings)
-	popup_h := ui_calc_popup_height(6, ui_default_widget_height(), ui_px(8), ui_px(16))
+	popup_h := ui_calc_popup_height(5, ui_default_widget_height(), ui_px(8), ui_px(16))
 	popup_area := rec_center_in_area({ 0, 0, ui_px(500), popup_h }, screen_rec)
 	if open, rec := ui_begin_popup_title(popup_settings, "Settings", popup_area); open 
 	{
 		area := rec_pad(popup_area, ui_px(16))
 		
-		ui_check_box(ui_gen_id(), "Act on press", &ui_ctx.act_on_press, rec_cut_top(&area, ui_default_widget_height()))
-		ui_draw_text("Will determine if ui clicks should be registerd\nimmediatly or when the button is released",
-			rec_cut_top(&area, ui_default_widget_height()),
-			color = COLOR_BASE_4)
-		rec_cut_top(&area, ui_px(16))
-
-		ui_check_box(ui_gen_id(), "Enable animations", &ui_ctx.act_on_press, rec_cut_top(&area, ui_default_widget_height()))
+		ui_slider_f32(ui_gen_id(), "UI Scale", &ui_ctx.scale, 0.5, 2, rec_cut_top(&area, ui_default_widget_height()))
 		rec_cut_top(&area, ui_px(8))
 		
-		ui_check_box(ui_gen_id(), "Enable custom cursors", &ui_ctx.act_on_press, rec_cut_top(&area, ui_default_widget_height()))
+		ui_check_box(ui_gen_id(), "Enable custom cursors", &app.enable_custom_cursors, rec_cut_top(&area, ui_default_widget_height()))
 		rec_cut_top(&area, ui_px(8))
 		
 		ui_check_box(ui_gen_id(), "Darken right side of welcome screen", &ui_ctx.act_on_press, rec_cut_top(&area, ui_default_widget_height()))
 		rec_cut_top(&area, ui_px(8))
 		
-		ui_slider_f32(ui_gen_id(), "UI Scale", &ui_ctx.scale, 0.5, 2, rec_cut_top(&area, ui_default_widget_height()))
+		ui_check_box(ui_gen_id(), "Act on press", &ui_ctx.act_on_press, rec_cut_top(&area, ui_default_widget_height()))
+		PRESS_TEXT :: "Will determine if ui clicks should be registerd\nimmediatly or when the button is released"
+		ui_draw_text(PRESS_TEXT, rec_cut_top(&area, ui_default_widget_height()), color = COLOR_BASE_4)
 	}
 	ui_end_popup()
 }
@@ -1319,6 +1316,7 @@ togglable_button :: proc(id: UI_ID, text: string, toggled: bool, rec: Rec, font_
 init_app :: proc() {
 	app.new_project_width = 16
 	app.new_project_height = 16
+	app.enable_custom_cursors = true
 }
 
 deinit_app :: proc() {
@@ -1359,6 +1357,7 @@ load_app_data :: proc(path: string) {
 	app.new_project_height = i32(ini_read_int(loaded_map, "", "new_project_height"))
 	ui_set_scale(ini_read_f32(loaded_map, "", "ui_scale"))
 	ui_ctx.act_on_press = ini_read_bool(loaded_map, "", "act_on_press")
+	app.enable_custom_cursors = ini_read_bool(loaded_map, "", "enable_custom_cursors", true)
 
 	app.active_tools.pen_size = ini_read_bool(loaded_map, "tool_bar", "pen_size")
 	app.active_tools.onion_skinning = ini_read_bool(loaded_map, "tool_bar", "onion_skinning")
@@ -1415,6 +1414,7 @@ save_app_data :: proc() {
 	ini.write_pair(file.stream, "fav_palletes_len", app.fav_palletes.len)
 	ini.write_pair(file.stream, "ui_scale", ui_ctx.scale)
 	ini.write_pair(file.stream, "act_on_press", ui_ctx.act_on_press)
+	ini.write_pair(file.stream, "enable_custom_cursors", app.enable_custom_cursors)
 
 	ini.write_section(file.stream, "tool_bar")
 	ini.write_pair(file.stream, "pen_size", app.active_tools.pen_size)
