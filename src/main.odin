@@ -26,6 +26,7 @@ App :: struct {
 	recent_projects: sa.Small_Array(8, string),
 	fav_palletes: sa.Small_Array(24, Pallete),
 	active_tools: Active_Tools,
+	darken_welcome_screen: bool,
 	enable_custom_cursors: bool,
 	show_fps: bool,
 	unlock_fps: bool,
@@ -311,18 +312,21 @@ welcome_screen_view :: proc(state: ^Welcome_State) {
 	screen_rec := ui_get_screen_rec()
 	screen_area := screen_rec
 	
+	dark_mode := app.darken_welcome_screen
+
 	right_area := rec_cut_right(&screen_area, screen_area.width / 2)
 	left_area := screen_area
 	ui_push_command(UI_Draw_Gradient_V { 
-		top_color = COLOR_ACCENT_0, 
-		bottom_color = COLOR_ACCENT_1, 
+		top_color = dark_mode ? COLOR_BASE_0 : COLOR_ACCENT_0, 
+		bottom_color = dark_mode ? COLOR_BASE_1 : COLOR_ACCENT_1, 
 		rec = right_area
 	})
 	
 	mascot_size := ui_px(right_area.width / 2)
 	mascot_rec := rec_center_in_area({ 0, 0, mascot_size , mascot_size }, right_area)
 	mascot_rec.y += f32(math.cos(rl.GetTime())) * 10
-	ui_draw_texture(state.mascot, mascot_rec)
+	mascot_color := dark_mode ? COLOR_ACCENT_0 : COLOR_BASE_0 
+	ui_draw_texture(state.mascot, mascot_rec, mascot_color)
 
 	left_area = rec_pad(left_area, ui_px(16))
 	ui_begin_clip(left_area)
@@ -1205,7 +1209,7 @@ settings_popup_view :: proc() {
 		ui_check_box(ui_gen_id(), "Enable custom cursors", &app.enable_custom_cursors, rec_cut_top(&area, ui_default_widget_height()))
 		rec_cut_top(&area, ui_px(8))
 		
-		ui_check_box(ui_gen_id(), "Darken right side of welcome screen", &ui_ctx.act_on_press, rec_cut_top(&area, ui_default_widget_height()))
+		ui_check_box(ui_gen_id(), "Darken right side of welcome screen", &app.darken_welcome_screen, rec_cut_top(&area, ui_default_widget_height()))
 		rec_cut_top(&area, ui_px(8))
 		
 		ui_check_box(ui_gen_id(), "Act on press", &ui_ctx.act_on_press, rec_cut_top(&area, ui_default_widget_height()))
