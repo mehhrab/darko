@@ -313,15 +313,15 @@ welcome_screen_view :: proc(state: ^Welcome_State) {
 	
 	dark_mode := app.darken_welcome_screen
 
-	right_area := rec_cut_right(&screen_area, screen_area.width / 2)
-	left_area := screen_area
+	left_area := rec_cut_left(&screen_area, ui_px(500))
+	right_area := screen_area
 	ui_push_command(UI_Draw_Gradient_V { 
 		top_color = dark_mode ? COLOR_BASE_0 : COLOR_ACCENT_0, 
 		bottom_color = dark_mode ? COLOR_BASE_1 : COLOR_ACCENT_1, 
 		rec = right_area
 	})
 	
-	mascot_size := ui_px(right_area.width / 2)
+	mascot_size := ui_px(right_area.width / 3)
 	mascot_rec := rec_center_in_area({ 0, 0, mascot_size , mascot_size }, right_area)
 	mascot_rec.y += f32(math.cos(rl.GetTime())) * 10
 	mascot_color := dark_mode ? COLOR_ACCENT_0 : COLOR_BASE_0 
@@ -411,7 +411,7 @@ project_view :: proc(state: ^Project_State) {
 
 	screen_area := screen_rec
 
-	right_panel_area := rec_cut_right(&screen_area, ui_px(screen_area.width / 3))
+	right_panel_area := rec_cut_right(&screen_area, ui_px(350))
 	middle_panel_area := screen_area
 	
 	layer_props_area := rec_cut_top(&middle_panel_area, ui_default_widget_height() + ui_px(16))
@@ -1475,7 +1475,7 @@ init_project_state :: proc(state: ^Project_State, width, height: i32) {
 	state.lerped_preview_zoom = 1
 	state.preview_rotation = 0
 	state.preview_zoom = 10
-	state.preview_bg_color = { 230, 0.3, 0.5 }
+	state.preview_bg_color = { 250, 0.3, 0.6 }
 	state.layers = make([dynamic]Layer)
 	state.undos = make([dynamic]Action)
 	state.redos = make([dynamic]Action)
