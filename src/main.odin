@@ -111,7 +111,6 @@ Active_Tools :: struct {
 	add_layer_above: bool,
 	duplicate_layer: bool,
 	move_layer: bool,
-	go_up_down: bool,
 	clear_layer: bool,
 	delete_layer: bool,
 }
@@ -597,7 +596,7 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 tool_options_button :: proc(state: ^Project_State, rec: Rec) {
 	style := UI_BUTTON_STYLE_TRANSPARENT
 	style.text_color = COLOR_BASE_4
-	if open, content_rec := ui_begin_menu_button(ui_gen_id(), ICON_SETTINGS, ui_px(300), 9, rec, style); open {
+	if open, content_rec := ui_begin_menu_button(ui_gen_id(), ICON_SETTINGS, ui_px(300), 8, rec, style); open {
 		area := content_rec
 		if ui_menu_item(ui_gen_id(), ICON_PEN + "  Pen size", &area, toggleble = app.active_tools.pen_size) {
 			app.active_tools.pen_size = !app.active_tools.pen_size
@@ -616,9 +615,6 @@ tool_options_button :: proc(state: ^Project_State, rec: Rec) {
 		} 
 		if ui_menu_item(ui_gen_id(), ICON_SWAP_VERT + "  Move Layer Up or Down", &area, toggleble = app.active_tools.move_layer) {
 			app.active_tools.move_layer = !app.active_tools.move_layer
-		}
-		if ui_menu_item(ui_gen_id(), ICON_SWAP_VERT + "  Go Up or Down", &area, toggleble = app.active_tools.go_up_down) {
-			app.active_tools.go_up_down = !app.active_tools.go_up_down
 		}
 		if ui_menu_item(ui_gen_id(), ICON_X + "  Clear Layer", &area, toggleble = app.active_tools.clear_layer) {
 			app.active_tools.clear_layer = !app.active_tools.clear_layer
@@ -706,18 +702,6 @@ toolbar_view :: proc(state: ^Project_State, rec: Rec) {
 		onion_icon := state.onion_skinning ? ICON_EYE : ICON_EYE_OFF
 		if ui_button(ui_gen_id(), onion_icon, rec, style = UI_BUTTON_STYLE_ACCENT) {
 			state.onion_skinning = !state.onion_skinning
-		}
-	}
-
-	if app.active_tools.go_up_down {
-		rec := rec_cut_right(&tools_area, ui_default_widget_height())
-		if ui_button(ui_gen_id(), ICON_UP, rec, style = UI_BUTTON_STYLE_ACCENT) {
-			state.current_layer = clamp(state.current_layer + 1, 0, len(state.layers) - 1)
-		}
-
-		rec = rec_cut_right(&tools_area, ui_default_widget_height())
-		if ui_button(ui_gen_id(), ICON_DOWN, rec, style = UI_BUTTON_STYLE_ACCENT) {
-			state.current_layer = clamp(state.current_layer - 1, 0, len(state.layers) - 1)
 		}
 	}
 
@@ -846,7 +830,7 @@ tool_box_view :: proc(state: ^Project_State, rec: Rec) {
 	tool_size := ui_px(40)
 
 	area := rec_cut_right(&padded_rec, tool_size)
-	area.height = tool_size * 4 + 2
+	area.height = tool_size * 6 + 2
 	
 	ui_panel(ui_gen_id(), area)
 	ui_draw_rec_outline(COLOR_BASE_0, 1, area)
@@ -871,6 +855,23 @@ tool_box_view :: proc(state: ^Project_State, rec: Rec) {
 	fill_rec := rec_cut_top(&area, tool_size)
 	if togglable_button(ui_gen_id(), ICON_FILL, state.current_tool == .Fill, fill_rec, ui_font_size() * 1.4) {
 		state.current_tool = .Fill
+	}
+	
+	go_style := UI_BUTTON_STYLE_DEFAULT
+	go_style.bg_color = COLOR_BASE_1
+
+	up_rec := rec_cut_top(&area, tool_size)
+	if ui_button(ui_gen_id(), ICON_UP, up_rec, style = go_style) {
+		if state.current_layer < len(state.layers) - 1 {
+			state.current_layer += 1
+		}
+	}
+
+	down_rec := rec_cut_top(&area, tool_size)
+	if ui_button(ui_gen_id(), ICON_DOWN, down_rec, style = go_style) {
+		if 0 < state.current_layer {
+			state.current_layer -= 1
+		}
 	}
 }
 
@@ -1213,7 +1214,7 @@ settings_popup_view :: proc() {
 		rec_cut_top(&area, ui_px(8))
 		
 		ui_check_box(ui_gen_id(), "Act on press", &ui_ctx.act_on_press, rec_cut_top(&area, ui_default_widget_height()))
-		PRESS_TEXT :: "Will determine if ui clicks should be registerd\nimmediatly or when the button is released"
+		PRESS_TEXT :: "Determines if ui clicks should be registerd\nimmediatly or when the button is released"
 		ui_draw_text(PRESS_TEXT, rec_cut_top(&area, ui_default_widget_height()), color = COLOR_BASE_4)
 	}
 	ui_end_popup()
@@ -1370,7 +1371,6 @@ load_app_data :: proc(path: string) {
 	app.active_tools.add_layer_above = ini_read_bool(loaded_map, "tool_bar", "add_layer_above")
 	app.active_tools.duplicate_layer = ini_read_bool(loaded_map, "tool_bar", "duplicate_layer")
 	app.active_tools.move_layer = ini_read_bool(loaded_map, "tool_bar", "move_layer")
-	app.active_tools.go_up_down = ini_read_bool(loaded_map, "tool_bar", "go_up_down")
 	app.active_tools.clear_layer = ini_read_bool(loaded_map, "tool_bar", "clear_layer")
 	app.active_tools.delete_layer = ini_read_bool(loaded_map, "tool_bar", "delete_layer")
 
@@ -1421,7 +1421,7 @@ save_app_data :: proc() {
 	ini.write_pair(file.stream, "act_on_press", ui_ctx.act_on_press)
 	ini.write_pair(file.stream, "enable_custom_cursors", app.enable_custom_cursors)
 	ini.write_pair(file.stream, "darken_welcome_screen", app.darken_welcome_screen)
-	
+
 	ini.write_section(file.stream, "tool_bar")
 	ini.write_pair(file.stream, "pen_size", app.active_tools.pen_size)
 	ini.write_pair(file.stream, "onion_skinning", app.active_tools.onion_skinning)
@@ -1429,7 +1429,6 @@ save_app_data :: proc() {
 	ini.write_pair(file.stream, "add_layer_above", app.active_tools.add_layer_above)
 	ini.write_pair(file.stream, "duplicate_layer", app.active_tools.duplicate_layer)
 	ini.write_pair(file.stream, "move_layer", app.active_tools.move_layer)
-	ini.write_pair(file.stream, "go_up_down", app.active_tools.go_up_down)
 	ini.write_pair(file.stream, "clear_layer", app.active_tools.clear_layer)
 	ini.write_pair(file.stream, "delete_layer", app.active_tools.delete_layer)
 
