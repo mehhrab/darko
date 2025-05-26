@@ -399,7 +399,7 @@ welcome_screen_view :: proc(state: ^Welcome_State) {
 	settings_rec := rec_take_right(&screen_rec, ui_px(100))
 	settings_rec.height = ui_default_widget_height()
 	style := UI_BUTTON_STYLE_TRANSPARENT
-	style.text_color = COLOR_BASE_0
+	style.text_color = app.darken_welcome_screen ? COLOR_BASE_4 : COLOR_BASE_0 
 	if ui_button(ui_gen_id(), "Settings", settings_rec, style = style) {
 		ui_open_popup(popup_settings)
 	}
@@ -1362,6 +1362,7 @@ load_app_data :: proc(path: string) {
 	ui_set_scale(ini_read_f32(loaded_map, "", "ui_scale"))
 	ui_ctx.act_on_press = ini_read_bool(loaded_map, "", "act_on_press")
 	app.enable_custom_cursors = ini_read_bool(loaded_map, "", "enable_custom_cursors", true)
+	app.darken_welcome_screen = ini_read_bool(loaded_map, "", "darken_welcome_screen")
 
 	app.active_tools.pen_size = ini_read_bool(loaded_map, "tool_bar", "pen_size")
 	app.active_tools.onion_skinning = ini_read_bool(loaded_map, "tool_bar", "onion_skinning")
@@ -1419,7 +1420,8 @@ save_app_data :: proc() {
 	ini.write_pair(file.stream, "ui_scale", ui_ctx.scale)
 	ini.write_pair(file.stream, "act_on_press", ui_ctx.act_on_press)
 	ini.write_pair(file.stream, "enable_custom_cursors", app.enable_custom_cursors)
-
+	ini.write_pair(file.stream, "darken_welcome_screen", app.darken_welcome_screen)
+	
 	ini.write_section(file.stream, "tool_bar")
 	ini.write_pair(file.stream, "pen_size", app.active_tools.pen_size)
 	ini.write_pair(file.stream, "onion_skinning", app.active_tools.onion_skinning)
