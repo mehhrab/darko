@@ -643,9 +643,6 @@ toolbar_view :: proc(state: ^Project_State, rec: Rec) {
 			if len(state.layers) > 1 {
 				delete_layer(state, state.current_layer)
 			}
-			else {
-				ui_show_notif("At least one layer is needed", UI_NOTIF_STYLE_ERROR)
-			}
 		}
 	}
 
@@ -1129,8 +1126,6 @@ new_project_popup_view :: proc(state: ^Screen_State) {
 				init_project_state(&project, app.new_project_width, app.new_project_height)
 				schedule_state_change(project)
 				ui_close_all_popups()
-			
-				ui_show_notif(ICON_CHECK + " Project is created")
 			}
 			project, project_open := &app.state.(Project_State)
 			if project_open && is_saved(project) == false {
@@ -1738,7 +1733,6 @@ open_project :: proc(state: ^Project_State) {
 	}
 	rl.SetWindowTitle(fmt.ctprintf("Darko - {}", state.dir))
 	app.state = state^
-	ui_show_notif(ICON_CHECK + " Project is opened")
 }
 
 close_project :: proc(state: ^Project_State) {
