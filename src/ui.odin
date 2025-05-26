@@ -1507,9 +1507,13 @@ ui_begin_clip :: proc(rec: Rec) {
 }
 
 ui_end_clip :: proc() {
-	ui_push_command(UI_Clip { })
+	ui_push_command(UI_Clip {})
 	if ui_ctx.clip_stack.len > 0 {
 		sa.pop_back(&ui_ctx.clip_stack)
+		if ui_ctx.clip_stack.len > 0 {		
+			last_rec := ui_ctx.clip_stack.data[ui_ctx.clip_stack.len - 1]
+			ui_push_command(UI_Clip { rec = last_rec })
+		}
 	}
 }
 
