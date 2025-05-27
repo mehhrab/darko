@@ -447,25 +447,7 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 			try_save_prject(state, true)
 		}
 		if ui_menu_item(ui_gen_id(), "Export project", &area, "Ctrl + E") {
-			export_scope: {
-				ui_close_all_popups()
-				
-				path, res := pick_folder_dialog(state.export_dir, context.temp_allocator)
-				if res == .Error {
-					ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
-				}
-				else if res == .Cancel {
-					break export_scope
-				}
-		
-				exported := export_project_state(state, path)
-				if exported == false {
-					ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
-					break export_scope
-				}
-		
-				ui_show_notif("Project is exported")
-			}
+			try_export_project(state)
 		}
 		if ui_menu_item(ui_gen_id(), "Go to welcome screen", &area, "W") {
 			go_to_welcome_screen(state)
@@ -1722,6 +1704,27 @@ try_save_prject :: proc(state: ^Project_State, force_open_dialog := false) -> (s
 	return saved
 }
 
+try_export_project :: proc(state: ^Project_State) -> (exported: bool) {
+	exported = false
+
+	path, res := pick_folder_dialog(state.export_dir, context.temp_allocator)
+	if res == .Error {
+		ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
+	}
+	else if res == .Cancel {
+		return false
+	}
+
+	exported = export_project_state(state, path)
+	if exported == false {
+		ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
+		return false
+	}
+
+	ui_show_notif("Project is exported")
+	return true
+}
+
 add_recent_project :: proc(path: string) {
 	// remove first recent when recent_projects is full
 	if app.recent_projects.len >= len(app.recent_projects.data) {
@@ -2098,23 +2101,7 @@ project_shortcuts :: proc(state: ^Project_State) {
 
 			// export project
 			if rl.IsKeyPressed(.E) {
-				export_scope: {													
-					path, res := pick_folder_dialog(state.export_dir, context.temp_allocator)
-					if res == .Error {
-						ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
-					}
-					else if res == .Cancel {
-						break export_scope
-					}
-			
-					exported := export_project_state(state, path)
-					if exported == false {
-						ui_show_notif("Failed to export project", UI_NOTIF_STYLE_ERROR)
-						break export_scope
-					}
-			
-					ui_show_notif("Project is exported")
-				}			
+				try_export_project(state)
 			}
 
 			// undo
