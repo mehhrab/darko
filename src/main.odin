@@ -1208,7 +1208,14 @@ settings_popup_view :: proc() {
 		ui_check_box(ui_gen_id(), "Darken right side of welcome screen", &app.darken_welcome_screen, rec_cut_top(&area, ui_default_widget_height()))
 		rec_cut_top(&area, ui_px(8))
 		
-		ui_check_box(ui_gen_id(), "Act on press", &ui_ctx.act_on_press, rec_cut_top(&area, ui_default_widget_height()))
+		/* HACK: ther's a funny bug where if act_on_press is true and you click on 
+		the checkbox you toggle it to false (clicks are now registered when you release the mouse button)
+		and if you release the mouse button while on the checkbox you toggle it on again */ 
+		press := ui_ctx.act_on_press
+		ui_ctx.act_on_press = true
+		ui_check_box(ui_gen_id(), "Act on press", &press, rec_cut_top(&area, ui_default_widget_height()))
+		ui_ctx.act_on_press = press
+
 		PRESS_TEXT :: "Determines if ui clicks should be registerd\nimmediatly or when the button is released"
 		ui_draw_text(PRESS_TEXT, rec_cut_top(&area, ui_default_widget_height()), color = COLOR_BASE_4)
 	}
