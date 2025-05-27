@@ -353,7 +353,7 @@ welcome_screen_view :: proc(state: ^Welcome_State) {
 	
 	open_button_rec := rec_cut_left(&buttons_area, buttons_area.width - ui_px(8))
 	if ui_button(ui_gen_id(), "Open", open_button_rec) {
-		show_open_project_dialog()
+		try_open_project()
 	}
 
 	if app.recent_projects.len == 0 {
@@ -441,7 +441,7 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 			ui_open_popup(popup_new_project)
 		}
 		if ui_menu_item(ui_gen_id(), "Open project", &area, "Ctrl + O") {
-			show_open_project_dialog()
+			try_open_project()
 		}
 		if ui_menu_item(ui_gen_id(), "Save project", &area, "Ctrl + S") {
 			try_save_prject(state, true)
@@ -1658,7 +1658,7 @@ deinit_project_state :: proc(state: ^Project_State) {
 	delete(state.pallete.name)
 }
 
-show_open_project_dialog :: proc() {
+try_open_project :: proc() {
 	_open :: proc(default_dir := "") {
 		ui_close_all_popups()
 		if default_dir != "" {
@@ -2039,7 +2039,7 @@ app_shortcuts :: proc() {
 
 			// open project
 			if rl.IsKeyPressed(.O) {
-				show_open_project_dialog()
+				try_open_project()
 			}
 		}
 	}
