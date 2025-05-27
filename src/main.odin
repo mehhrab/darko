@@ -279,7 +279,7 @@ main :: proc() {
 			// cleanup previous state
 			switch &state in app.state {
 				case Project_State: {
-					close_project(&state)
+					deinit_project_state(&state)
 				}
 				case Welcome_State: {
 					deinit_welcome_state(&state)
@@ -289,7 +289,12 @@ main :: proc() {
 			// switch to the new state
 			switch &state in next_state {
 				case Project_State: {
-					open_project(&state)
+					// new projects don't have a dir
+					if state.dir != "" {
+						add_recent_project(state.dir)
+					}
+					rl.SetWindowTitle(fmt.ctprintf("Darko - {}", state.dir))
+					app.state = state
 				}
 				case Welcome_State: {
 					rl.SetWindowTitle("Darko")
@@ -348,24 +353,7 @@ welcome_screen_view :: proc(state: ^Welcome_State) {
 	
 	open_button_rec := rec_cut_left(&buttons_area, buttons_area.width - ui_px(8))
 	if ui_button(ui_gen_id(), "Open", open_button_rec) {
-		open_scope: {
-			path, res := pick_folder_dialog("", context.temp_allocator)
-			if res == .Error {
-				ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-			}
-			else if res == .Cancel {
-				break open_scope
-			}
-	
-			loaded_project: Project_State
-			loaded := load_project_state(&loaded_project, path)
-			if loaded == false {
-				ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-				break open_scope
-			}
-			
-			schedule_state_change(loaded_project)
-		}
+		show_open_project_dialog()
 	}
 
 	if app.recent_projects.len == 0 {
@@ -453,26 +441,7 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 			ui_open_popup(popup_new_project)
 		}
 		if ui_menu_item(ui_gen_id(), "Open project", &area, "Ctrl + O") {
-			confirm_project_exit(state, proc(state: ^Project_State) {
-				ui_close_all_popups()
-		
-				path, res := pick_folder_dialog(state.dir, context.temp_allocator)
-				if res == .Error {
-					ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-				}
-				else if res == .Cancel {
-					return
-				}
-		
-				loaded_project: Project_State
-				loaded := load_project_state(&loaded_project, path)
-				if loaded == false {
-					ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-					return
-				}
-					
-				schedule_state_change(loaded_project)
-			})
+			show_open_project_dialog()
 		}
 		if ui_menu_item(ui_gen_id(), "Save project", &area, "Ctrl + S") {
 			save_scope: {
@@ -1329,7 +1298,7 @@ init_app :: proc() {
 deinit_app :: proc() {
 	switch &state in app.state {
 		case Project_State: {
-			close_project(&state)
+			deinit_project_state(&state)
 		}
 		case Welcome_State: {
 			deinit_welcome_state(&state)
@@ -1733,17 +1702,42 @@ deinit_project_state :: proc(state: ^Project_State) {
 	delete(state.pallete.name)
 }
 
-open_project :: proc(state: ^Project_State) {
-	// new projects don't have a dir
-	if state.dir != "" {
-		add_recent_project(state.dir)
+show_open_project_dialog :: proc() {
+	_open :: proc(default_dir := "") {
+		ui_close_all_popups()
+		if default_dir != "" {
+			fmt.printfln(default_dir)
+		}
+		path, res := pick_folder_dialog(default_dir, context.temp_allocator)
+		if res == .Error {
+			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+		}
+		else if res == .Cancel {
+			return
+		}
+	
+		loaded_project: Project_State
+		loaded := load_project_state(&loaded_project, path)
+		if loaded == false {
+			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
+			return
+		}
+			
+		schedule_state_change(loaded_project)
 	}
-	rl.SetWindowTitle(fmt.ctprintf("Darko - {}", state.dir))
-	app.state = state^
-}
-
-close_project :: proc(state: ^Project_State) {
-	deinit_project_state(state)
+	switch &state in app.state {
+		case Welcome_State: {
+			_open()
+		}
+		case Project_State: {
+			if is_saved(&state) {
+				_open(state.dir)
+			}
+			else {
+				confirm_project_exit(&state, proc(state: ^Project_State) { _open(state.dir) })
+			}
+		}
+	}
 }
 
 add_recent_project :: proc(path: string) {
@@ -2063,26 +2057,7 @@ app_shortcuts :: proc() {
 
 			// open project
 			if rl.IsKeyPressed(.O) {
-				open_scope: {
-					ui_close_all_popups()
-					
-					path, res := pick_folder_dialog("", context.temp_allocator)
-					if res == .Error {
-						ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-					}
-					else if res == .Cancel {
-						break open_scope
-					}
-			
-					loaded_project: Project_State
-					loaded := load_project_state(&loaded_project, path)
-					if loaded == false {
-						ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
-						break open_scope
-					}
-						
-					schedule_state_change(loaded_project)
-				}
+				show_open_project_dialog()
 			}
 		}
 	}
