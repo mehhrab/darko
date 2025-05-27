@@ -444,26 +444,7 @@ menu_bar_view :: proc(state: ^Project_State, rec: Rec) {
 			show_open_project_dialog()
 		}
 		if ui_menu_item(ui_gen_id(), "Save project", &area, "Ctrl + S") {
-			save_scope: {
-				ui_close_all_popups()
-				
-				path, res := pick_folder_dialog(state.dir, context.temp_allocator)
-				if res == .Error {
-					ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
-				}
-				else if res == .Cancel {
-					break save_scope
-				}
-		
-				saved := save_project_state(state, path)
-				if saved == false {
-					ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
-					break save_scope
-				}
-		
-				add_recent_project(state.dir)
-				ui_show_notif("Project is saved")
-			}
+			try_save_prject(state, true)
 		}
 		if ui_menu_item(ui_gen_id(), "Export project", &area, "Ctrl + E") {
 			export_scope: {
@@ -1217,32 +1198,7 @@ exit_popup_view :: proc(state: ^Project_State) {
 		
 		rec_cut_right(&buttons_area, ui_px(4))
 		if ui_button(ui_gen_id(), "Yes", rec_cut_right(&buttons_area, button_w)) || rl.IsKeyPressed(.ENTER) || rl.IsKeyPressed(.Y) {
-			saved := false
-			save_scope: {								
-				if state.dir == "" {
-					path, res := pick_folder_dialog(state.dir, context.temp_allocator)
-					if res == .Error {
-						ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
-					}
-					else if res == .Cancel {
-						break save_scope
-					}
-			
-					saved = save_project_state(state, path)
-					ui_show_notif("Project is saved")
-				}
-				else {
-					saved = save_project_state(state, state.dir)
-				}
-
-				if saved == false {
-					ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
-					break save_scope
-				}
-		
-				add_recent_project(state.dir)
-			}
-			exiting = saved
+			exiting = try_save_prject(state)
 		}
 		
 		if exiting {
@@ -1740,6 +1696,32 @@ show_open_project_dialog :: proc() {
 	}
 }
 
+try_save_prject :: proc(state: ^Project_State, force_open_dialog := false) -> (saved: bool) {
+	saved = false
+	
+	path := state.dir
+	if force_open_dialog || path == "" {
+		res := ntf.Result {}
+		path, res = pick_folder_dialog(state.dir, context.temp_allocator)
+		if res == .Error {
+			ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+		}
+		else if res == .Cancel {
+			return saved
+		}
+	}
+
+	saved = save_project_state(state, path)
+	if saved == false {
+		ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
+		return saved
+	}
+
+	add_recent_project(state.dir)
+	ui_show_notif("Project is saved")
+	return saved
+}
+
 add_recent_project :: proc(path: string) {
 	// remove first recent when recent_projects is full
 	if app.recent_projects.len >= len(app.recent_projects.data) {
@@ -2111,32 +2093,8 @@ project_shortcuts :: proc(state: ^Project_State) {
 		if rl.IsKeyDown(.LEFT_CONTROL) {
 			// save project
 			if rl.IsKeyPressed(.S) {
-				save_scope: {								
-					saved := false
-					if state.dir == "" {
-						path, res := pick_folder_dialog(state.dir, context.temp_allocator)
-						if res == .Error {
-							ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
-						}
-						else if res == .Cancel {
-							break save_scope
-						}
-				
-						saved = save_project_state(state, path)
-						ui_show_notif("Project is saved")
-					}
-					else {
-						saved = save_project_state(state, state.dir)
-					}
-
-					if saved == false {
-						ui_show_notif("Failed to save project", UI_NOTIF_STYLE_ERROR)
-						break save_scope
-					}
-			
-					add_recent_project(state.dir)
-				}								
-			}			
+				try_save_prject(state)
+			}
 
 			// export project
 			if rl.IsKeyPressed(.E) {
