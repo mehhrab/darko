@@ -1865,8 +1865,8 @@ end_image_change :: proc(state: ^Project_State) {
 
 get_mouse_pos_in_canvas :: proc(state: ^Project_State, canvas: Rec) -> (x, y: i32) {
 	mpos := rl.GetMousePosition()
-	px := i32((mpos.x - canvas.x) / (canvas.width / f32(state.width)))
-	py := i32((mpos.y - canvas.y) / (canvas.height / f32(state.height)))
+	px := i32(math.floor((mpos.x - canvas.x) / (canvas.width / f32(state.width))))
+	py := i32(math.floor((mpos.y - canvas.y) / (canvas.height / f32(state.height))))
 	return px, py
 }
 
