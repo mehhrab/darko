@@ -1043,9 +1043,14 @@ ui_path_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, styl
 		rec = rec,
 		color = bg_color
 	})
+
 	bslash_index := strings.last_index(text, "\\")
-	text_cstring := strings.clone_to_cstring(text[:bslash_index + 1], context.temp_allocator)
-	path_width := rl.MeasureTextEx(ui_ctx.font, text_cstring, font_size, 0)[0]
+
+	project_cstring := strings.clone_to_cstring(text[bslash_index:], context.temp_allocator)
+	project_width := rl.MeasureTextEx(ui_ctx.font, project_cstring, ui_font_size(), 0)[0]
+
+	path_cstring := strings.clone_to_cstring(text[:bslash_index + 1], context.temp_allocator)
+	path_width := rl.MeasureTextEx(ui_ctx.font, path_cstring, font_size, 0)[0]
 	path_color := style.text_color
 	path_color.a = 100
 
@@ -1057,13 +1062,35 @@ ui_path_button :: proc(id: UI_ID, text: string, rec: Rec, blocking := true, styl
 		color = path_color,
 		align = style.text_align,
 	})
-	ui_push_command(UI_Draw_Text {
-		rec = rec_pad_ex(rec, 10 + f32(path_width), 10, 10, 10),
-		text = text[bslash_index + 1:],
-		size = font_size,
-		color = style.text_color,
-		align = style.text_align,
-	})
+
+	// handle long text
+	if path_width + project_width > rec.width {
+		ui_push_command(UI_Draw_Rect {
+			color = bg_color,
+			rec = { rec.x + rec.width - project_width, rec.y, project_width, rec.height },
+		})
+		ui_push_command(UI_Draw_Gradient_H {
+			left_color = rl.ColorAlpha(bg_color, 0),
+			right_color = bg_color,
+			rec = { rec.x + rec.width - project_width - ui_px(100), rec.y, ui_px(100), rec.height }
+		})
+		ui_push_command(UI_Draw_Text {
+			rec = rec_pad(rec, 10),
+			text = text[bslash_index + 1:],
+			size = font_size,
+			color = style.text_color,
+			align = { .Right, .Center },
+		})
+	}
+	else {
+		ui_push_command(UI_Draw_Text {
+			rec = rec_pad_ex(rec, 10 + f32(path_width), 10, 10, 10),
+			text = text[bslash_index + 1:],
+			size = font_size,
+			color = style.text_color,
+			align = style.text_align,
+		})
+	}
 	ui_end_clip()
 
 	return clicked
