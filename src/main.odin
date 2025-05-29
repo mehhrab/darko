@@ -699,7 +699,7 @@ canvas_view :: proc(state: ^Project_State, rec: Rec) {
 			
 			// draw cursor preview
 			tool_needs_preview := current_tool != .GoTo
-			if tool_needs_preview && ui_is_mouse_in_rec(layer_rec) && ui_is_being_interacted() == false {
+			if tool_needs_preview && ui_is_being_interacted() == false {
 				mx, my := get_mouse_pos_in_canvas(state, layer_rec)
 				pixel_size := layer_rec.width / f32(state.width)
 				pen_size := current_tool == .Color_Picker || current_tool == .Fill ? 1 : state.pen_size
@@ -1775,7 +1775,7 @@ mark_all_layers_dirty :: proc(state: ^Project_State) {
 }
 
 update_tools :: proc(state: ^Project_State, area: Rec, tool: Tool) {
-	can_have_input := ui_is_being_interacted() == false && ui_is_mouse_in_rec(area)
+	can_have_input := ui_is_being_interacted() == false
 	
 	// color picker
 	if tool == .Color_Picker && can_have_input && rl.IsMouseButtonPressed(.LEFT) {
