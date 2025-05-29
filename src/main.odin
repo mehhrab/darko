@@ -1871,6 +1871,9 @@ get_mouse_pos_in_canvas :: proc(state: ^Project_State, canvas: Rec) -> (x, y: i3
 }
 
 fill :: proc(image: ^rl.Image, x, y: i32, color: rl.Color) {
+	if x < 0 || y < 0 || image.width <= x || image.height <= y {
+		return
+	}
 	current_color := rl.GetImageColor(image^, x, y)
 	if current_color == color {
 		return
