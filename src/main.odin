@@ -198,12 +198,11 @@ main :: proc() {
 	ui_init_ctx()
 	defer ui_deinit_ctx()
 	
-	if os.exists("data.ini") {
-		load_app_data("data.ini")
+	if os.exists("data.ini") == false {
+		file, create_err := os.create("data.ini")
+		defer os.close(file)
 	}
-	else {
-		init_app()
-	}
+	load_app_data("data.ini")
 
 	welcome_state := Welcome_State {}
 	init_welcome_state(&welcome_state)
@@ -1227,12 +1226,6 @@ togglable_button :: proc(id: UI_ID, text: string, toggled: bool, rec: Rec, font_
 
 // backend code
 
-init_app :: proc() {
-	app.new_project_width = 16
-	app.new_project_height = 16
-	app.enable_custom_cursors = true
-}
-
 deinit_app :: proc() {
 	switch &state in app.state {
 		case Project_State: {
@@ -1267,21 +1260,21 @@ load_app_data :: proc(path: string) {
 	
 	app.show_fps = ini_read_bool(loaded_map, "", "show_fps")
 	app.unlock_fps = ini_read_bool(loaded_map, "", "unlock_fps")
-	app.new_project_width = i32(ini_read_int(loaded_map, "", "new_project_width"))
-	app.new_project_height = i32(ini_read_int(loaded_map, "", "new_project_height"))
+	app.new_project_width = i32(ini_read_int(loaded_map, "", "new_project_width", 16))
+	app.new_project_height = i32(ini_read_int(loaded_map, "", "new_project_height", 16))
 	ui_set_scale(ini_read_f32(loaded_map, "", "ui_scale"))
 	ui_ctx.act_on_press = ini_read_bool(loaded_map, "", "act_on_press")
 	app.enable_custom_cursors = ini_read_bool(loaded_map, "", "enable_custom_cursors", true)
 	app.darken_welcome_screen = ini_read_bool(loaded_map, "", "darken_welcome_screen")
 
-	app.active_tools.pen_size = ini_read_bool(loaded_map, "tool_bar", "pen_size")
+	app.active_tools.pen_size = ini_read_bool(loaded_map, "tool_bar", "pen_size", true)
 	app.active_tools.onion_skinning = ini_read_bool(loaded_map, "tool_bar", "onion_skinning")
-	app.active_tools.add_layer_at_top = ini_read_bool(loaded_map, "tool_bar", "add_layer_at_top")
-	app.active_tools.add_layer_above = ini_read_bool(loaded_map, "tool_bar", "add_layer_above")
-	app.active_tools.duplicate_layer = ini_read_bool(loaded_map, "tool_bar", "duplicate_layer")
+	app.active_tools.add_layer_at_top = ini_read_bool(loaded_map, "tool_bar", "add_layer_at_top", true)
+	app.active_tools.add_layer_above = ini_read_bool(loaded_map, "tool_bar", "add_layer_above", true)
+	app.active_tools.duplicate_layer = ini_read_bool(loaded_map, "tool_bar", "duplicate_layer", true)
 	app.active_tools.move_layer = ini_read_bool(loaded_map, "tool_bar", "move_layer")
 	app.active_tools.clear_layer = ini_read_bool(loaded_map, "tool_bar", "clear_layer")
-	app.active_tools.delete_layer = ini_read_bool(loaded_map, "tool_bar", "delete_layer")
+	app.active_tools.delete_layer = ini_read_bool(loaded_map, "tool_bar", "delete_layer", true)
 
 	sa.clear(&app.recent_projects)
 	if "recent_projects" in loaded_map {
