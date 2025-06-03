@@ -1054,7 +1054,7 @@ new_project_popup_view :: proc(state: ^Screen_State) {
 		if ui_button(ui_gen_id(), "Create", area) || (can_shortcut && rl.IsKeyPressed(.ENTER)) {
 			create_project :: proc() {
 				project: Project_State
-				init_project_state(&project, app.new_project_width, app.new_project_height)
+				load_project_state(&project, "", app.new_project_width, app.new_project_height)
 				schedule_state_change(project)
 				ui_close_all_popups()
 			}
@@ -1366,60 +1366,34 @@ deinit_welcome_state :: proc(state: ^Welcome_State) {
 	rl.UnloadTexture(state.mascot)
 } 
 
-init_project_state :: proc(state: ^Project_State, width, height: i32) {
-	state.zoom = 1
-	state.spacing = 1
-	state.width = width
-	state.height = height
-	state.layers = make([dynamic]Layer)
-	state.current_color = { 200, 0.5, 0.1 }		
-	state.lerped_zoom = 0
-	state.lerped_preview_zoom = 1
-	state.preview_rotation = 0
-	state.preview_zoom = 10
-	state.preview_bg_color = { 250, 0.3, 0.6 }
-	state.layers = make([dynamic]Layer)
-	state.undos = make([dynamic]Action)
-	state.redos = make([dynamic]Action)
-	state.dirty_layers = make([dynamic]int)
-	state.bg_color1 = HSV { 240, 0.3, 0.7 }
-	state.bg_color2 = HSV { 240, 0.3, 1 }
-	state.pen_size = 1
-	create_bg_texture(state)
-	
-	layer: Layer
-	init_layer(&layer, width, height)
-	append(&state.layers, layer)
-}
+/* loads project state
+use an empty string for dir to make a blank project
+TODO: return an error value instead of a bool */
+load_project_state :: proc(state: ^Project_State, dir: string, default_w := i32(16), default_h := i32(16)) -> (ok: bool) {
+	data_path := fmt.tprint(dir, "\\project.ini", sep = "")
+	cstring_data_path := fmt.ctprint(data_path)
 
-// TODO: return an error value instead of a bool
-load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
-	data_exists := os.exists(fmt.tprintf("{}{}", dir, "\\project.ini"))
-	sprites_exists := os.exists(fmt.tprintf("{}{}", dir, "\\sprites.png"))
-	if (data_exists || sprites_exists) == false {
+	sprites_path := fmt.tprint(dir, "\\sprites.png", sep = "")
+	cstring_sprites_path := fmt.ctprint(sprites_path)
+
+	loaded_map, alloc_err, loaded := ini.load_map_from_path(data_path, context.temp_allocator)
+	assert(alloc_err == nil)
+	if dir != "" && loaded == false {
 		return false
 	}
 
-	loaded_map, alloc_err, loaded:= ini.load_map_from_path(fmt.tprintf("{}{}", dir, "\\project.ini"), context.temp_allocator)
-	assert(alloc_err == nil)
-	if loaded == false {
-		return
-	}
-	
-	fmt.printfln("loaded project map: {}", loaded_map) 
-	
 	loaded_state: Project_State
 	
 	loaded_state.export_dir = ini_read_string(loaded_map, "", "export_dir")
 	loaded_state.zoom = ini_read_f32(loaded_map, "", "zoom", 1)
 	loaded_state.spacing = ini_read_f32(loaded_map, "", "spacing")
 	loaded_state.current_layer = ini_read_int(loaded_map, "", "current_layer", 0)
-	loaded_state.preview_zoom = ini_read_f32(loaded_map, "", "preview_zoom", 1)
+	loaded_state.preview_zoom = ini_read_f32(loaded_map, "", "preview_zoom", 10)
 	loaded_state.preview_rotation = ini_read_f32(loaded_map, "", "preview_rotation")
 	loaded_state.preview_rotation_speed = ini_read_f32(loaded_map, "", "preview_rotation_speed")
 	loaded_state.auto_rotate_preview = ini_read_bool(loaded_map, "", "auto_rotate_preview")
-	loaded_state.width = i32(ini_read_int(loaded_map, "", "width"))
-	loaded_state.height = i32(ini_read_int(loaded_map, "", "height"))
+	loaded_state.width = i32(ini_read_int(loaded_map, "", "width", int(default_w)))
+	loaded_state.height = i32(ini_read_int(loaded_map, "", "height", int(default_h)))
 	loaded_state.hide_grid = ini_read_bool(loaded_map, "", "hide_grid")
 	loaded_state.onion_skinning = ini_read_bool(loaded_map, "", "onion_skinning")
 	loaded_state.show_bg = ini_read_bool(loaded_map, "", "show_bg")
@@ -1464,8 +1438,15 @@ load_project_state :: proc(state: ^Project_State, dir: string) -> (ok: bool) {
 	loaded_state.dirty_layers = make([dynamic]int)
 
 	// load layers
-	sprites := rl.LoadImage(fmt.ctprintf("{}{}", dir, "\\sprites.png"))
+	sprites := rl.Image {}
 	defer rl.UnloadImage(sprites)
+	
+	if os.exists(sprites_path) {
+		sprites = rl.LoadImage(cstring_sprites_path)
+	}
+	else {
+		sprites = rl.GenImageColor(default_w, default_h, rl.BLANK)
+	}
 
 	layer_w := f32(loaded_state.width)
 	layer_h := f32(loaded_state.height)
