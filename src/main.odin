@@ -235,6 +235,7 @@ main :: proc() {
 					rl.SetWindowTitle(fmt.ctprint("Darko - ", state.dir, star))
 				}
 				saved_last_frame = is_saved(&state)
+				process_dirty_layers(&state)
 				
 				// show the confirm exit popup when user closes the window
 				if rl.WindowShouldClose() {
@@ -2339,6 +2340,20 @@ redo :: proc(state: ^Project_State) {
 		action_preform(state, action)
 		append(&state.undos, action)
 	}	
+}
+
+process_dirty_layers :: proc(state: ^Project_State) {
+	// update the textures for dirty layers
+	if len(state.dirty_layers) > 0 {
+		for layer, i in state.layers {
+			if slice.contains(state.dirty_layers[:], i) {
+				colors := rl.LoadImageColors(layer.image)
+				defer rl.UnloadImageColors(colors)
+				rl.UpdateTexture(layer.texture, colors)
+			}
+		}
+		clear(&state.dirty_layers)
+	}
 }
 
 process_commands :: proc(draw_commands: [][]UI_Draw_Command) {
