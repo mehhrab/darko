@@ -198,10 +198,6 @@ main :: proc() {
 	ui_init_ctx()
 	defer ui_deinit_ctx()
 	
-	if os.exists("data.ini") == false {
-		file, create_err := os.create("data.ini")
-		defer os.close(file)
-	}
 	load_app_data("data.ini")
 
 	welcome_state := Welcome_State {}
@@ -1245,9 +1241,9 @@ deinit_app :: proc() {
 }
 
 load_app_data :: proc(path: string) {
-	file_exists := os.exists(path)
-	if file_exists == false {
-		return
+	if os.exists("data.ini") == false {
+		file, create_err := os.create("data.ini")
+		defer os.close(file)
 	}
 
 	loaded_map, alloc_err, loaded := ini.load_map_from_path(path, context.temp_allocator)
@@ -1255,8 +1251,6 @@ load_app_data :: proc(path: string) {
 	if loaded == false {
 		return
 	}
-
-	fmt.printfln("loaded app map: {}", loaded_map) 
 	
 	app.show_fps = ini_read_bool(loaded_map, "", "show_fps")
 	app.unlock_fps = ini_read_bool(loaded_map, "", "unlock_fps")
