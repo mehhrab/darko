@@ -214,28 +214,8 @@ main :: proc() {
 			case Project_State: {
 				project_shortcuts(&state)				
 				project_view(&state)
-
-				// update the textures for dirty layers
-				if len(state.dirty_layers) > 0 {
-					for layer, i in state.layers {
-						if slice.contains(state.dirty_layers[:], i) {
-							colors := rl.LoadImageColors(layer.image)
-							defer rl.UnloadImageColors(colors)
-							rl.UpdateTexture(layer.texture, colors)
-						}
-					}
-					clear(&state.dirty_layers)
-				}
-				
-				// put a star in the window title when an unsaved change exists
-				@(static) saved_last_frame := true
-				saved := is_saved(&state)
-				if saved != saved_last_frame {
-					star := saved == false ? "*" : ""
-					rl.SetWindowTitle(fmt.ctprint("Darko - ", state.dir, star))
-				}
-				saved_last_frame = is_saved(&state)
 				process_dirty_layers(&state)
+				update_title(&state)
 				
 				// show the confirm exit popup when user closes the window
 				if rl.WindowShouldClose() {
@@ -2354,6 +2334,17 @@ process_dirty_layers :: proc(state: ^Project_State) {
 		}
 		clear(&state.dirty_layers)
 	}
+}
+
+// puts a star in the window title when an unsaved change exists
+update_title :: proc(state: ^Project_State) {
+	@(static) saved_last_frame := true
+	saved := is_saved(state)
+	if saved != saved_last_frame {
+		star := saved == false ? "*" : ""
+		rl.SetWindowTitle(fmt.ctprint("Darko - ", state.dir, star))
+	}
+	saved_last_frame = is_saved(state)
 }
 
 process_commands :: proc(draw_commands: [][]UI_Draw_Command) {
