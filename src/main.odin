@@ -1852,6 +1852,52 @@ dfs :: proc(image: ^rl.Image, x, y: i32, prev_color, new_color: rl.Color) {
 	}
 }
 
+// taken from https://github.com/raysan5/raylib/blob/abf255fbe73f8b15d52285746f127b376660fa40/src/rtextures.c#L3490
+get_line_positions :: proc(x1, y1, x2, y2: i32, allocator := context.allocator) -> (positions: [][2]i32) {
+	pos_list := make([dynamic][2]i32, allocator)
+
+	short_len := y2 - y1
+	long_len := x2 - x1
+	y_longer := false
+	
+	if math.abs(short_len) > abs(long_len) {
+		temp := short_len
+		short_len = long_len
+		long_len = temp
+		y_longer = true
+	}
+
+	end_val := long_len
+	sgn_inc := i32(1)
+
+	if long_len < 0 {
+		long_len = -long_len
+		sgn_inc = -1
+	}
+
+	dec_inc := long_len == 0 ? 0 : (short_len << 16) / long_len
+	if y_longer {
+		i := i32(0)
+		j := i32(0)
+		for i != end_val {
+			append(&pos_list, [2]i32 { x1 + (j >> 16), y1 + i })
+			i += sgn_inc
+			j += dec_inc
+		} 
+	}
+	else {
+		i := i32(0)
+		j := i32(0)
+		for i != end_val {
+			append(&pos_list, [2]i32 { x1 + i, y1 + (j >> 16) })
+			i += sgn_inc
+			j += dec_inc
+		} 
+	}
+
+	return pos_list[:]
+}
+
 translate_layer :: proc(state: ^Project_State, layer_index, x, y: int) {
 	before_image := rl.ImageCopy(state.layers[layer_index].image)
 	after_image := rl.ImageCopy(before_image)
