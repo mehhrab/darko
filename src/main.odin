@@ -1385,9 +1385,9 @@ load_project_state :: proc(state: ^Project_State, dir: string, default_w := i32(
 	loaded_state.current_color[1] = ini_read_f32(loaded_map, "current_color", "s")
 	loaded_state.current_color[2] = ini_read_f32(loaded_map, "current_color", "v")
 	
-	loaded_state.preview_bg_color[0] = ini_read_f32(loaded_map, "preview_bg_color", "h", 240)
-	loaded_state.preview_bg_color[1] = ini_read_f32(loaded_map, "preview_bg_color", "s", 0.3)
-	loaded_state.preview_bg_color[2] = ini_read_f32(loaded_map, "preview_bg_color", "v", 0.5)
+	loaded_state.preview_bg_color[0] = ini_read_f32(loaded_map, "preview_bg_color", "h", 250)
+	loaded_state.preview_bg_color[1] = ini_read_f32(loaded_map, "preview_bg_color", "s", 0.35)
+	loaded_state.preview_bg_color[2] = ini_read_f32(loaded_map, "preview_bg_color", "v", 0.7)
 
 	loaded_state.bg_color1[0] = ini_read_f32(loaded_map, "bg_color1", "h", 240)
 	loaded_state.bg_color1[1] = ini_read_f32(loaded_map, "bg_color1", "s", 0.3)
