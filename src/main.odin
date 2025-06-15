@@ -55,6 +55,7 @@ Project_State :: struct {
 	
 	current_tool: Tool,
 	pen_size: i32,
+	cursor: Cursor,
 	current_color: HSV,
 	current_layer: int,
 	lerped_current_layer: f32,
@@ -92,6 +93,12 @@ Layer :: struct {
 Pallete :: struct {
 	name: string,
 	colors: sa.Small_Array(256, HSV),
+}
+
+Cursor :: struct {
+	x, y: i32,
+	last_mx, last_my: i32,
+	active: bool,
 }
 
 Tool :: enum {
@@ -1739,20 +1746,25 @@ update_tools :: proc(state: ^Project_State, area: Rec, tool: Tool) {
 	if tool == .Pen  {
 		if can_have_input && rl.IsMouseButtonDown(.LEFT) {
 			begin_image_change(state)
-			x, y := get_mouse_pos_in_canvas(state, area)
-			color := hsv_to_rgb(state.current_color)
-			for i in 0..<state.pen_size {
-				for j in 0..<state.pen_size {
-					x := x + i - (state.pen_size - 1) / 2
-					y := y + j - (state.pen_size - 1) / 2
-					rl.ImageDrawPixel(&get_current_layer(state).image, x, y, color)
+			
+			color := hsv_to_rgb(state.current_color)			
+			positions := cursor_get_positions(state, area, context.temp_allocator)
+			for pos in positions {
+				for i in 0..<state.pen_size {
+					for j in 0..<state.pen_size {
+						x := pos.x + i - (state.pen_size - 1) / 2
+						y := pos.y + j - (state.pen_size - 1) / 2
+						rl.ImageDrawPixel(&get_current_layer(state).image, x, y, color)
+					}
 				}
 			}
+			
 			mark_dirty_layers(state, state.current_layer)	
 		}
 
 		if rl.IsMouseButtonReleased(.LEFT) {
 			end_image_change(state)
+			cursor_mouse_up(state)
 		}
 	}
 
@@ -1760,19 +1772,25 @@ update_tools :: proc(state: ^Project_State, area: Rec, tool: Tool) {
 	if tool == .Eraser {
 		if can_have_input && rl.IsMouseButtonDown(.LEFT) {
 			begin_image_change(state)
-			x, y := get_mouse_pos_in_canvas(state, area)
-			for i in 0..<state.pen_size {
-				for j in 0..<state.pen_size {
-					x := x + i - (state.pen_size - 1) / 2
-					y := y + j - (state.pen_size - 1) / 2
-					rl.ImageDrawPixel(&get_current_layer(state).image, x, y, rl.BLANK)
+			
+			color := hsv_to_rgb(state.current_color)			
+			positions := cursor_get_positions(state, area, context.temp_allocator)
+			for pos in positions {
+				for i in 0..<state.pen_size {
+					for j in 0..<state.pen_size {
+						x := pos.x + i - (state.pen_size - 1) / 2
+						y := pos.y + j - (state.pen_size - 1) / 2
+						rl.ImageDrawPixel(&get_current_layer(state).image, x, y, rl.BLANK)
+					}
 				}
 			}
-			mark_dirty_layers(state, state.current_layer)
+			
+			mark_dirty_layers(state, state.current_layer)	
 		}
 
 		if rl.IsMouseButtonReleased(.LEFT) {
 			end_image_change(state)
+			cursor_mouse_up(state)
 		}
 	}
 
@@ -1785,6 +1803,29 @@ update_tools :: proc(state: ^Project_State, area: Rec, tool: Tool) {
 		mark_dirty_layers(state, state.current_layer)
 		end_image_change(state)
 	}
+}
+
+cursor_get_positions :: proc(state: ^Project_State, canvas_rec: Rec, allocator := context.allocator) -> (positions: [][2]i32) {
+	pos_list := make([dynamic][2]i32, allocator)
+
+	x, y := get_mouse_pos_in_canvas(state, canvas_rec)
+	state.cursor.x = x
+	state.cursor.y = y
+	
+	if state.cursor.active {
+		append(&pos_list, ..get_line_positions(state.cursor.last_mx, state.cursor.last_my, x, y, allocator))
+	}
+	append(&pos_list, [2]i32 { x, y })
+	
+	state.cursor.last_mx = x
+	state.cursor.last_my = y
+	state.cursor.active = true
+	
+	return pos_list[:]
+}
+
+cursor_mouse_up :: proc(state: ^Project_State) {
+	state.cursor.active = false
 }
 
 begin_image_change :: proc(state: ^Project_State) {
