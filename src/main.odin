@@ -1029,10 +1029,10 @@ new_project_popup_view :: proc(state: ^Screen_State) {
 	
 	if open, rec := ui_begin_popup_title(popup_new_project, "New project", popup_rec); open {
 		area := rec_pad(rec, ui_px(16))
-		ui_slider_i32(ui_gen_id(), "Width", &app.new_project_width, 2, 30, rec_cut_top(&area, ui_default_widget_height()))
+		ui_slider_i32(ui_gen_id(), "Width", &app.new_project_width, 2, 32, rec_cut_top(&area, ui_default_widget_height()))
 		rec_delete_top(&area, ui_px(8))
 		
-		ui_slider_i32(ui_gen_id(), "Height", &app.new_project_height, 2, 30, rec_cut_top(&area, ui_default_widget_height()))
+		ui_slider_i32(ui_gen_id(), "Height", &app.new_project_height, 2, 32, rec_cut_top(&area, ui_default_widget_height()))
 		rec_delete_top(&area, ui_px(8))
 		
 		if ui_button(ui_gen_id(), "Create", area) || (can_shortcut && rl.IsKeyPressed(.ENTER)) {
