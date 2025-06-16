@@ -1167,7 +1167,6 @@ exit_popup_view :: proc(state: ^Project_State) {
 		}
 		
 		if exiting {
-			fmt.printfln("exiting")
 			state.exit_popup_confirm(state)
 		}
 	}
@@ -1599,9 +1598,7 @@ deinit_project_state :: proc(state: ^Project_State) {
 try_open_project :: proc() {
 	_open :: proc(default_dir := "") {
 		ui_close_all_popups()
-		if default_dir != "" {
-			fmt.printfln(default_dir)
-		}
+		
 		path, res := pick_folder_dialog(default_dir, context.temp_allocator)
 		if res == .Error {
 			ui_show_notif("Failed to open project", UI_NOTIF_STYLE_ERROR)
@@ -1846,9 +1843,6 @@ end_image_change :: proc(state: ^Project_State) {
 			action.after_image = rl.ImageCopy(get_current_layer(state).image)
 			action_do(state, action)
 			state.temp_undo = nil			
-		}
-		else {
-			fmt.printfln("something is fucked")
 		}
 	}
 }
@@ -2393,7 +2387,6 @@ action_do :: proc(state: ^Project_State, action: Action) {
 
 undo :: proc(state: ^Project_State) {
 	if len(state.undos) > 0 {
-		fmt.printfln("undo")
 		action := pop(&state.undos)
 		action_unpreform(state, action)
 		append(&state.redos, action)
@@ -2402,7 +2395,6 @@ undo :: proc(state: ^Project_State) {
 
 redo :: proc(state: ^Project_State) {
 	if len(state.redos) > 0 {
-		fmt.printfln("redo")
 		action := pop(&state.redos)
 		action_preform(state, action)
 		append(&state.undos, action)
