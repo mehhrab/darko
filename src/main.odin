@@ -2046,34 +2046,34 @@ draw_grid :: proc(slice_w, slice_h: i32, rec: Rec) {
 }
 
 app_shortcuts :: proc() {
-	// toggle unlock_fps
-	if rl.IsKeyPressed(.F1) {
-		app.unlock_fps = !app.unlock_fps
-		if app.unlock_fps {
-			rl.SetTargetFPS(-1)
+	if rl.IsKeyDown(.LEFT_CONTROL) {
+		// toggle unlock_fps
+		if rl.IsKeyPressed(.F1) {
+			app.unlock_fps = !app.unlock_fps
+			if app.unlock_fps {
+				rl.SetTargetFPS(-1)
+			}
+			else {
+				rl.SetTargetFPS(TARGET_FPS)
+			}
 		}
-		else {
-			rl.SetTargetFPS(TARGET_FPS)
+	
+		// toggle show_fps
+		if rl.IsKeyPressed(.F2) {
+			app.show_fps = !app.show_fps
 		}
-	}
-
-	// toggle show_fps
-	if rl.IsKeyPressed(.F2) {
-		app.show_fps = !app.show_fps
-	}
-
-	// zoom in ui
-	if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.EQUAL) {
-		ui_set_scale(ui_ctx.scale + 0.1)
-	}
-	// zoom out ui
-	if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.MINUS) {
-		ui_set_scale(ui_ctx.scale - 0.1)
-	}
-
-	// update these shortcuts when no textbox is active
-	if ui_ctx.text_mode_slider == 0 {
-		if rl.IsKeyDown(.LEFT_CONTROL) { 
+	
+		// zoom in ui
+		if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.EQUAL) {
+			ui_set_scale(ui_ctx.scale + 0.1)
+		}
+		// zoom out ui
+		if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.MINUS) {
+			ui_set_scale(ui_ctx.scale - 0.1)
+		}
+	
+		// update these shortcuts when no textbox is active
+		if ui_ctx.text_mode_slider == 0 {
 			// new project
 			if rl.IsKeyPressed(.N) {
 				ui_open_popup(popup_new_project)
