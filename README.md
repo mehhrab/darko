@@ -11,6 +11,7 @@ Make 3D pixels using Sprite Stacking
 - Saving / Exporting
 
 ## Building
+- Current odin version i use is dev-2025-04-nightly:990cc56
 - Clone the repository recursively
 - On the command line run `build debug` or `build release`
 
